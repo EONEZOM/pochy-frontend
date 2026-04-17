@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import RegisterPWA from "./register-pwa";
-import Providers from "./providers";
+import RegisterPWA from "../workers/register-pwa";
+import QueryProvider from "@/providers/query-provider";
 import "@/styles/reset.css";
 import "@/styles/globals.css";
 
@@ -34,7 +34,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-white">
         <RegisterPWA />
-        <Providers>{children}</Providers>
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );
