@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PouChy | 나만의 화장대",
-  description: "나만의 화장대를 만들어보세요",
+  title: "POCHY | 나만의 화장대",
+  description: "나만의 화장대를 만들고 공유해보세요!",
   manifest: "/manifest.json",
 };
 
