@@ -1,6 +1,12 @@
+const OPENAPI_BASE_URL = process.env.OPENAPI_BASE_URL;
+if (!OPENAPI_BASE_URL) {
+  throw new Error("OPENAPI_BASE_URL is required");
+}
+
+
 module.exports = {
   pouchy: {
-    input: "http://백엔드-스웨거-주소/v3/api-docs",
+    input: `${OPENAPI_BASE_URL.replace(/\/$/, "")}/v3/api-docs`,
     output: {
       mode: "tags-split",
       target: "./src/api/generated/pouchy.ts",
