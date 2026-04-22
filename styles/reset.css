@@ -5,10 +5,11 @@
   box-sizing: border-box;
 }
 
-* {
+/* 이 부분 margin, padding 0 때문에 p값 m값 적용안되서 한참 찾음 */
+/* * {
   margin: 0;
   padding: 0;
-}
+} */
 
 html,
 body {

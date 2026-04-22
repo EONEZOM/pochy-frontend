@@ -23,15 +23,21 @@ export async function POST(req: Request) {
                     {
                       "results": [
                         {
-                          "brand": "string",
+                          "brand_name": "string",
                           "product_name": "string",
-                          "product_type": "string",
-                          "key_features": ["string"],
+                          "category": "string",
+                          "product_detail": ["string"],
                           "is_cosmetic": boolean,
                           "confidence_score": number
                         }
                       ]
                     }
+
+                    [데이터 추출 규칙]
+                    1. brand_name: 이미지에서 식별된 브랜드명을 추출하세요.
+                    2. product_name: 제품 본체에 적힌 제품명을 추출하세요.
+                    3. category: 다음 중 가장 적절한 하나를 선택하세요: [Face, Eyes, Lip, Brow, SkinCare, Etc].
+                    4. product_details: 제형, 주요 성분, 제품 특징으로 요약(배열 형식)
 
                     [분석 가이드라인]
                     1. 이미지 중앙의 실물 제품 용기에 적힌 텍스트를 최우선으로 합니다.
@@ -44,7 +50,7 @@ export async function POST(req: Request) {
             { type: 'text', text: '이미지 속 모든 화장품 정보를 추출해줘.' },
             ...images.map((img: string) => ({
               type: 'image_url' as const,
-              image_url: { url: img, detail: 'low' as const },
+              image_url: { url: img, detail: 'high' as const },
             })),
           ],
         },
