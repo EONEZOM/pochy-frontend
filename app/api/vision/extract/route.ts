@@ -39,7 +39,7 @@ export async function POST(req: Request) {
                     2. image_index: 첫 번째 이미지는 0, 두 번째 이미지는 1 순으로 정확히 매칭하세요.
                     3. brand_name: 식별된 브랜드명.
                     4. product_name: 제품 본체의 제품명.
-                    5. category: [Face, Eyes, Lip, Brow, SkinCare, Etc] 중 선택.
+                    5. category: [페이스, 아이, 립, 브로우, 스킨케어, 기타] 중 선택.
                     6. product_details: 제형, 성분, 특징 요약(배열).
 
                     [분석 가이드라인]

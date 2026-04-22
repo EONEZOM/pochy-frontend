@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "brand_name": "Refilled",
+    "product_name": "Her Recovery Gel",
+    "category": "SkinCare",
+    "product_details": "젤 제형, 수분 공급, 저자극",
+    "user_memo": "여름에 쓰기 좋을 것 같음",
+    "image_url": "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=500"
+  },
+  {
+    "id": 2,
+    "brand_name": "Prelude",
+    "product_name": "Dinlo 로즈 플러핑 립틴트",
+    "category": "Lip",
+    "product_details": "매트, 장미색, 플러핑 효과",
+    "user_memo": "색감이 너무 예쁨",
+    "image_url": "https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?q=80&w=500"
+  },
+  {
+    "id": 3,
+    "brand_name": "코드글로컬러",
+    "product_name": "프루티 볼륨 립글로스",
+    "category": "Lip",
+    "product_details": "글로시, 과일향, 고광택",
+    "user_memo": "탕후루립 만들기 좋음",
+    "image_url": "https://images.unsplash.com/photo-1599733594230-6b823276abcc?q=80&w=500"
+  },
+  {
+    "id": 4,
+    "brand_name": "Dear.A",
+    "product_name": "Fluffy Blush",
+    "category": "Face",
+    "product_details": "파우더형, 연보라색, 모공커버",
+    "user_memo": "쿨톤 필수템",
+    "image_url": "https://images.unsplash.com/photo-1522335715161-a11558232616?q=80&w=500"
+  },
+  {
+    "id": 5,
+    "brand_name": "Hince",
+    "product_name": "New Depth Eyeshadow",
+    "category": "Eyes",
+    "product_details": "싱글 섀도우, 음영, 실키함",
+    "user_memo": "데일리로 쓰기 딱이야",
+    "image_url": "https://images.unsplash.com/photo-1512496011212-32c2049626ff?q=80&w=500"
+  }
+]

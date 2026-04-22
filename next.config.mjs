@@ -10,50 +10,58 @@ const nextConfig = {
       config.resolve.alias = {
         ...config.resolve.alias,
         sharp$: false,
-        "onnxruntime-node$": false,
-      };
+        'onnxruntime-node$': false,
+      }
     }
-    return config;
+    return config
   },
 
   // 2) Security headers for SharedArrayBuffer-enabled workloads.
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: '/(.*)',
         headers: [
           {
-            key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin',
           },
           {
-            key: "Cross-Origin-Embedder-Policy",
-            value: "require-corp",
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'require-corp',
           },
         ],
       },
-    ];
+    ]
   },
 
   // 3) Remote image allowlist for Naver hosts.
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "shopping-phinf.pstatic.net",
+        protocol: 'https',
+        hostname: 'shopping-phinf.pstatic.net',
       },
       {
-        protocol: "https",
-        hostname: "search.pstatic.net",
+        protocol: 'https',
+        hostname: 'search.pstatic.net',
       },
       {
-        protocol: "https",
-        hostname: "**.pstatic.net",
+        protocol: 'https',
+        hostname: '**.pstatic.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com', // Unsplash 호스트 허용(mock 데이터)
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com', // 유튜브 썸네일 도메인
       },
     ],
   },
 
   reactStrictMode: true,
-};
+}
 
-export default nextConfig;
+export default nextConfig
