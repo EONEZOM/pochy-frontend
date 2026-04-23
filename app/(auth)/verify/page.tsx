@@ -1,8 +1,43 @@
 'use client';
 
 import { verifyMagicLink } from '@/api/generated/login-controller/login-controller';
+import Image from 'next/image';
+import Link from 'next/link';
+import mainLogo from '@/public/icons/main-logo.png';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
+
+function VerifyStatusView({
+  title,
+  description,
+  isError = false,
+}: {
+  title: string;
+  description: string;
+  isError?: boolean;
+}) {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center bg-white px-6 text-center">
+      <h1 className="text-2xl font-bold text-zinc-900">{title}</h1>
+      <p className="mt-3 text-sm text-zinc-600">{description}</p>
+      <Image
+        src={mainLogo}
+        alt="main-logo"
+        width={200}
+        height={200}
+        className="mx-auto mt-10 mb-10"
+      />
+      {isError ? (
+        <Link
+          href="/"
+          className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-900 px-5 text-sm font-semibold text-white"
+        >
+          메인으로 이동
+        </Link>
+      ) : null}
+    </main>
+  );
+}
 
 function VerifyContent() {
   const router = useRouter();
@@ -31,7 +66,6 @@ function VerifyContent() {
     }
 
     if (!token) {
-      setErrorMessage('토큰이 없어 인증을 진행할 수 없습니다.');
       return;
     }
 
@@ -52,26 +86,26 @@ function VerifyContent() {
     };
   }, [router, serverErrorText, token]);
 
-  const failedMessage = serverErrorText ?? errorMessage;
+  const missingTokenErrorText = !token
+    ? '토큰이 없어 인증을 진행할 수 없습니다.'
+    : null;
+  const failedMessage = serverErrorText ?? missingTokenErrorText ?? errorMessage;
 
   if (failedMessage) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-white px-6">
-        <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
-          <h1 className="text-xl font-bold text-zinc-900">로그인 인증 실패</h1>
-          <p className="mt-3 text-sm text-zinc-600">{failedMessage}</p>
-        </div>
-      </main>
+      <VerifyStatusView
+        title="로그인 인증 실패"
+        description={failedMessage}
+        isError
+      />
     );
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6">
-      <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
-        <h1 className="text-xl font-bold text-zinc-900">로그인 인증 중</h1>
-        <p className="mt-3 text-sm text-zinc-600">잠시만 기다려주세요...</p>
-      </div>
-    </main>
+    <VerifyStatusView
+      title="로그인 인증 중"
+      description="잠시만 기다려주세요..."
+    />
   );
 }
 
@@ -79,12 +113,10 @@ export default function VerifyMagicLinkPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-white px-6">
-          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 text-center shadow-sm">
-            <h1 className="text-xl font-bold text-zinc-900">로그인 인증 중</h1>
-            <p className="mt-3 text-sm text-zinc-600">잠시만 기다려주세요...</p>
-          </div>
-        </main>
+        <VerifyStatusView
+          title="로그인 인증 중"
+          description="잠시만 기다려주세요..."
+        />
       }
     >
       <VerifyContent />
