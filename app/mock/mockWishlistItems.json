@@ -6,7 +6,7 @@
     "category": "SkinCare",
     "product_details": "젤 제형, 수분 공급, 저자극",
     "user_memo": "여름에 쓰기 좋을 것 같음",
-    "image_url": "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=500"
+    "image_url": "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=500"
   },
   {
     "id": 2,
@@ -15,7 +15,7 @@
     "category": "Lip",
     "product_details": "매트, 장미색, 플러핑 효과",
     "user_memo": "색감이 너무 예쁨",
-    "image_url": "https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?q=80&w=500"
+    "image_url": "https://images.unsplash.com/photo-1527203561188-dae1bc1a417f?q=80&w=500"
   },
   {
     "id": 3,
@@ -24,7 +24,7 @@
     "category": "Lip",
     "product_details": "글로시, 과일향, 고광택",
     "user_memo": "탕후루립 만들기 좋음",
-    "image_url": "https://images.unsplash.com/photo-1599733594230-6b823276abcc?q=80&w=500"
+    "image_url": "https://images.unsplash.com/photo-1625093742435-6fa192b6fb10?q=80&w=500"
   },
   {
     "id": 4,
@@ -33,7 +33,7 @@
     "category": "Face",
     "product_details": "파우더형, 연보라색, 모공커버",
     "user_memo": "쿨톤 필수템",
-    "image_url": "https://images.unsplash.com/photo-1522335715161-a11558232616?q=80&w=500"
+    "image_url": "https://images.unsplash.com/photo-1596704017254-9b121068fb31?q=80&w=500"
   },
   {
     "id": 5,
@@ -42,6 +42,6 @@
     "category": "Eyes",
     "product_details": "싱글 섀도우, 음영, 실키함",
     "user_memo": "데일리로 쓰기 딱이야",
-    "image_url": "https://images.unsplash.com/photo-1512496011212-32c2049626ff?q=80&w=500"
+    "image_url": "https://images.unsplash.com/photo-1503236823255-94609f598e71?q=80&w=500"
   }
 ]

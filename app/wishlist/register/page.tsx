@@ -2,13 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  extractImageFileData,
-  revokeImagePreviewUrls,
-} from '@/utils/image-utils'
+import { extractImageFileData } from '@/utils/image-utils'
 import { useAnalyzeCosmeticCapture } from '@/hooks/mutation/useAnalyzeCosmeticCapture'
 import { useWishlistStore } from '@/store/wishlistStore'
-import { X, Upload, Check } from 'lucide-react'
+import { X, Upload } from 'lucide-react'
 import Image from 'next/image'
 import { ImageFileData } from '@/types/image'
 import RegisterReviewStep from '@/components/wishlist/RegisterReviewStep'
@@ -22,25 +19,25 @@ export default function WishlistRegisterPage() {
   const addItem = useWishlistStore((state) => state.addItem)
   const { mutate: analyze, isPending } = useAnalyzeCosmeticCapture()
 
-  // 1. 이미지 업로드 핸들러
+  // 이미지 업로드 핸들러
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const data = extractImageFileData(e.target.files)
     setImages((prev) => [...prev, ...data])
   }
 
-  // 2. 이미지 개별 삭제
+  // 이미지 개별 삭제
   const removeImage = (index: number) => {
     const target = images[index]
     URL.revokeObjectURL(target.previewUrl)
     setImages(images.filter((_, i) => i !== index))
   }
 
-  // 3. 분석 시작 (GPT 호출)
-  const startAnalysis = () => {
+  // 분석 시작 (GPT 호출)
+  const startAnalysis = async () => {
     if (images.length === 0) return alert('이미지를 선택해주세요.')
 
-    const imageUrls = images.map((img) => img.previewUrl)
-    analyze(imageUrls, {
+    const fileArray = images.map((img) => img.file)
+    analyze(fileArray, {
       onSuccess: (data) => {
         setAnalysisResults(data.results)
         setIsReviewStep(true)
@@ -49,7 +46,7 @@ export default function WishlistRegisterPage() {
     })
   }
 
-  // 4. 최종 저장 (Zustand 스토어에 추가)
+  // 저장 (Zustand 스토어에 추가 + persist)
   const handleSave = () => {
     analysisResults.forEach((item) => {
       addItem({

@@ -1,10 +1,12 @@
 import { useMutation } from '@tanstack/react-query'
-import { convertToBase64 } from '@/utils/image-utils'
+import { convertBlobToBase64 } from '@/utils/image-utils'
 
 export const useAnalyzeCosmeticCapture = () => {
   return useMutation({
-    mutationFn: async (images: string[]) => {
-      const base64Images = await Promise.all(images.map(convertToBase64))
+    mutationFn: async (imageFiles: File[]) => {
+      const base64Images = await Promise.all(
+        imageFiles.map(convertBlobToBase64),
+      )
 
       const res = await fetch('/api/vision/extract', {
         method: 'POST',
@@ -20,11 +22,10 @@ export const useAnalyzeCosmeticCapture = () => {
       const data = await res.json()
 
       const mappedResults = data.results
-        .filter((item: any) => item.is_cosmetic === true) // 화장품인 것만 필터링
+        .filter((item: any) => item.is_cosmetic === true)
         .map((item: any) => ({
           ...item,
-          // GPT가 알려준 인덱스를 사용해 원본 images 배열에서 URL 추출
-          image_url: images[item.image_index],
+          image_url: URL.createObjectURL(imageFiles[item.image_index]),
         }))
 
       return {

@@ -1,21 +1,6 @@
 import { ImageFileData } from '@/types/image'
 
 /**
- * blob URL을 OpenAI가 인식 가능한 Base64로 변환합니다.
- * FileReader API를 사용하여 클라이언트 측에서 처리합니다.
- */
-export const convertToBase64 = async (url: string): Promise<string> => {
-  const response = await fetch(url)
-  const blob = await response.blob()
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onloadend = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(blob)
-  })
-}
-
-/**
  * 이미지를 OpenAI 비전 최적화 규격(최대 768px)으로 리사이징
  * 파일 용량이 작아도 해상도가 높으면 토큰이 많이 소모되기 때문
  */
@@ -85,4 +70,16 @@ export const extractImageFileData = (
  */
 export const revokeImagePreviewUrls = (data: ImageFileData[]): void => {
   data.forEach((item) => URL.revokeObjectURL(item.previewUrl))
+}
+
+/**
+ * Blob 객체를 Base64 문자열로 변환합니다.
+ */
+export const convertBlobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
 }
