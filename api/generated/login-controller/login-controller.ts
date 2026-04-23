@@ -172,3 +172,9 @@ export function useVerifyMagicLink<TData = Awaited<ReturnType<typeof verifyMagic
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+
+
+
+
+
