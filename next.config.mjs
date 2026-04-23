@@ -10,7 +10,7 @@ const nextConfig = {
       config.resolve.alias = {
         ...config.resolve.alias,
         sharp$: false,
-        "onnxruntime-node$": false,
+        'onnxruntime-node$': false,
       };
     }
     return config;
@@ -20,17 +20,36 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/(.*)",
+        source: '/(.*)',
         headers: [
           {
-            key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin',
           },
           {
-            key: "Cross-Origin-Embedder-Policy",
-            value: "require-corp",
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'require-corp',
           },
         ],
+      },
+    ];
+  },
+
+  /** (auth) route group: 실제 URL은 /verify, /success */
+  async redirects() {
+    return [
+      { source: '/auth/verify', destination: '/verify', permanent: false },
+      { source: '/auth/success', destination: '/success', permanent: false },
+    ];
+  },
+
+  async rewrites() {
+    return [
+      {
+        // 프론트엔드에서 /api로 시작하는 모든 요청을
+        source: '/api/:path*',
+        // 실제 백엔드 서버 주소로 매핑
+        destination: 'http://43.201.31.56:8080/api/:path*',
       },
     ];
   },
@@ -39,16 +58,16 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "shopping-phinf.pstatic.net",
+        protocol: 'https',
+        hostname: 'shopping-phinf.pstatic.net',
       },
       {
-        protocol: "https",
-        hostname: "search.pstatic.net",
+        protocol: 'https',
+        hostname: 'search.pstatic.net',
       },
       {
-        protocol: "https",
-        hostname: "**.pstatic.net",
+        protocol: 'https',
+        hostname: '**.pstatic.net',
       },
     ],
   },
