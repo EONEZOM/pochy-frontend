@@ -1,69 +1,125 @@
 'use client'
 
-import { useParams } from 'next/navigation'
-import { useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Share2, Download, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useWishlistStore } from '@/store/wishlistStore'
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview'
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  type CarouselApi,
+} from '@/components/ui/carousel'
 
 export default function WishlistDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const [showCapture, setShowCapture] = useState(false)
+  const [api, setApi] = useState<CarouselApi>()
 
+  // 현재 임시로 Store에서 가져옴
   const wishItems = useWishlistStore((state) => state.items)
 
-  const item = wishItems.find((v) => String(v.id) === String(params.id))
+  // 초기 인덱스 설정 (URL의 id와 일치하는 아이템 찾기)
+  const initialIndex = wishItems.findIndex(
+    (v) => String(v.id) === String(params.id),
+  )
+  const [currentIndex, setCurrentIndex] = useState(
+    initialIndex !== -1 ? initialIndex : 0,
+  )
 
-  const searchQuery = item ? `${item.brand_name} ${item.product_name}` : ''
-  const { data, isLoading } = useYoutubeReview(searchQuery)
+  // 현재 선택된 아이템 정보
+  const currentItem = wishItems[currentIndex]
+  const searchQuery = currentItem
+    ? `${currentItem.brand_name} ${currentItem.product_name}`
+    : ''
+  const { data: youtubeData, isLoading: isYoutubeLoading } =
+    useYoutubeReview(searchQuery)
 
-  if (!item) {
+  // 캐러셀 움직임 감지하여 상태 업데이트
+  useEffect(() => {
+    if (!api) return
+
+    api.on('select', () => {
+      const index = api.selectedScrollSnap()
+      setCurrentIndex(index)
+      router.replace(`/wishlist/${wishItems[index].id}`, { scroll: false })
+    })
+  }, [api, wishItems, router])
+
+  if (!currentItem)
     return (
       <div className="flex h-screen items-center justify-center">
-        아이템을 찾을 수 없습니다.
+        아이템이 없습니다.
       </div>
     )
-  }
 
   return (
     <div className="relative min-h-screen p-5">
       <div className="">
         {/* 제품 정보 헤더 */}
         <div className="text-center">
-          <h2 className="text-xl font-bold">{item.product_name}</h2>
-          <p className="mt-2 text-sm font-medium text-zinc-500">
-            {item.brand_name}
+          <p className="text-sm font-medium text-zinc-500">
+            {currentItem.brand_name}
           </p>
+          <h2 className="text-xl font-bold">{currentItem.product_name}</h2>
         </div>
 
         {/* 상품 이미지 영역 (Carousel UI?) */}
-        <div className="relative mt-4 flex w-full items-center justify-center px-20">
-          <div className="relative aspect-2/3 w-full overflow-hidden rounded-2xl bg-zinc-100 shadow-inner">
-            <Image
-              src={item.official_image}
-              alt={item.product_name}
-              fill
-              className="object-cover"
-            />
-          </div>
-        </div>
-
-        {/* 인디케이터 (캐러셀 적용시 연동) */}
-        <div className="mt-4 flex justify-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-zinc-200" />
-          <div className="h-2 w-2 rounded-full bg-zinc-400" />
-          <div className="h-2 w-2 rounded-full bg-zinc-200" />
+        <div className="relative -mx-5 mt-4 w-screen">
+          <Carousel
+            setApi={setApi}
+            opts={{
+              startIndex: initialIndex,
+              align: 'center', // 센터 정렬
+              loop: true, // 무한 루프
+            }}
+            className="w-full"
+          >
+            <CarouselContent>
+              {wishItems.map((item, index) => (
+                <CarouselItem key={item.id} className="basis-[50%] py-5">
+                  <div
+                    className={`relative aspect-2/3 w-full rounded-3xl bg-white shadow transition-all duration-500 ${
+                      currentIndex === index
+                        ? 'scale-100 opacity-100'
+                        : 'opacity-60'
+                    }`}
+                  >
+                    <div className="absolute inset-0 overflow-hidden rounded-3xl">
+                      <Image
+                        src={item.official_image}
+                        alt={item.product_name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
         </div>
 
         {/* 상세 정보 테이블 */}
-        <div className="mt-8 space-y-4 text-center">
-          <DetailRow label="가격" value="네이버 쇼핑 연동 예정" isPlaceholder />
-          <DetailRow label="특징" value={item.product_details} />
-          <DetailRow label="분류" value={item.category} />
-          <DetailRow label="메모" value={item.user_memo || '-'} />
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentItem.id} // ID가 바뀔 때마다 애니메이션 실행
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className="space-y-4"
+          >
+            <DetailRow label="카테고리" value={currentItem.category} />
+            <DetailRow label="특징" value={currentItem.features} />
+            <DetailRow label="가격" value={currentItem.price} />
+            <DetailRow label="메모" value={currentItem.memo || '-'} />
+          </motion.div>
+        </AnimatePresence>
 
         {/* 캡처 화면 보기 버튼 */}
         <div className="mt-8 flex justify-center">
@@ -74,13 +130,14 @@ export default function WishlistDetailPage() {
             내가 전에 캡처 했던 화면 보기
           </button>
         </div>
+
         {/* 제품 연관 리뷰 영상 불러오는 영역 */}
         <section className="mt-12">
           <h3 className="mb-4 text-lg font-bold text-zinc-900">
             연관 리뷰 영상
           </h3>
 
-          {isLoading ? (
+          {isYoutubeLoading ? (
             <div className="flex gap-4 overflow-x-auto">
               {[1, 2, 3].map((n) => (
                 <div
@@ -91,7 +148,7 @@ export default function WishlistDetailPage() {
             </div>
           ) : (
             <div className="scrollbar-hide flex gap-4 overflow-x-auto pb-4">
-              {data?.items?.map((video: any) => (
+              {youtubeData?.items?.map((video: any) => (
                 <a
                   key={video.id.videoId}
                   href={`https://www.youtube.com/watch?v=${video.id.videoId}`}
@@ -142,7 +199,7 @@ export default function WishlistDetailPage() {
               className="relative aspect-1/2 w-full"
             >
               <Image
-                src={item.image_url} // 실제 구현 시에는 별도의 원본 full-size URL 연결?
+                src={currentItem.image_url} // 실제 구현 시에는 별도의 원본 full-size URL 연결?
                 alt="원본 캡처 화면"
                 fill
                 className="object-contain"
@@ -181,13 +238,9 @@ function DetailRow({
   isPlaceholder?: boolean
 }) {
   return (
-    <div className="flex items-start">
-      <span className="w-16 shrink-0 font-bold">{label}</span>
-      <span
-        className={`flex-1 font-medium ${isPlaceholder ? 'text-zinc-400' : 'text-zinc-700'}`}
-      >
-        {value}
-      </span>
+    <div className="flex flex-col items-center text-center">
+      <span className="font-bold">{label}</span>
+      <span>{value}</span>
     </div>
   )
 }

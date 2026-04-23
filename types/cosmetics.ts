@@ -3,7 +3,7 @@ export interface WishlistItem {
   brand_name: string
   product_name: string
   category: string
-  product_details: string
+  features: string
   user_memo: string
   image_url: string
 }
