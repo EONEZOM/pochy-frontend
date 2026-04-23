@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import MOCK_DATA from '@/app/mock/mockWishlistItems.json'
 
 interface WishlistStore {
   items: any[]
@@ -11,7 +10,7 @@ interface WishlistStore {
 export const useWishlistStore = create<WishlistStore>()(
   persist(
     (set) => ({
-      items: MOCK_DATA, // 초기값 설정
+      items: [],
       addItem: (newItem) =>
         set((state) => ({ items: [newItem, ...state.items] })),
       removeItem: (id) =>

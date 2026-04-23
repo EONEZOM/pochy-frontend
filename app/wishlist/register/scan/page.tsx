@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 import { extractImageFileData } from '@/utils/image-utils'
 import { useAnalyzeCosmeticCapture } from '@/hooks/mutation/useAnalyzeCosmeticCapture'
 import { useWishlistStore } from '@/store/wishlistStore'
-import { X, Upload } from 'lucide-react'
+import { X } from 'lucide-react'
 import Image from 'next/image'
 import { ImageFileData } from '@/types/image'
 import RegisterReviewStep from '@/components/wishlist/RegisterReviewStep'
+import { Button } from '@/components/ui/button'
 
 export default function WishlistRegisterPage() {
   const router = useRouter()
@@ -75,32 +76,23 @@ export default function WishlistRegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white p-5">
-      <header className="flex items-center justify-between py-4">
-        <h1 className="text-xl font-bold">위시템 등록</h1>
-        <button onClick={() => router.back()} className="text-zinc-400">
-          <X />
-        </button>
-      </header>
-
-      {/* 이미지 업로드 영역 */}
-      <div className="mt-6 flex-1">
-        <label className="flex aspect-video w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 hover:bg-zinc-100">
-          <Upload className="text-zinc-400" />
-          <span className="mt-2 text-sm font-medium text-zinc-500">
-            캡처 이미지 추가하기
-          </span>
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-        </label>
-
+    <div className="flex min-h-screen flex-col items-center justify-between p-5">
+      <div className="w-full">
+        {/* 이미지 업로드 영역 */}
+        <div className="flex flex-col items-center justify-center">
+          <label className="flex h-11 w-50 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 hover:bg-zinc-100">
+            <span className="font-bold">캡쳐 사진 등록하기</span>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </label>
+        </div>
         {/* 프리뷰 리스트 */}
-        <div className="mt-6 grid grid-cols-3 gap-3">
+        <div className="mt-6 grid w-full grid-cols-3 gap-3">
           {images.map((img, idx) => (
             <div
               key={idx}
@@ -122,14 +114,13 @@ export default function WishlistRegisterPage() {
           ))}
         </div>
       </div>
-
-      <button
+      <Button
         onClick={startAnalysis}
         disabled={isPending || images.length === 0}
-        className="mt-10 w-full rounded-2xl bg-zinc-900 py-4 font-bold text-white disabled:bg-zinc-200"
+        className="h-11 w-50 font-bold"
       >
         {isPending ? 'AI 분석 중...' : `${images.length}개의 이미지 분석하기`}
-      </button>
+      </Button>
     </div>
   )
 }

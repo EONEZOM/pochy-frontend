@@ -5,7 +5,6 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { Share2, Download, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import MOCK_WISH_ITEMS from '@/app/mock/mockWishlistItems.json'
 import { useWishlistStore } from '@/store/wishlistStore'
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview'
 
@@ -43,7 +42,7 @@ export default function WishlistDetailPage() {
         <div className="relative mt-4 flex w-full items-center justify-center px-20">
           <div className="relative aspect-2/3 w-full overflow-hidden rounded-2xl bg-zinc-100 shadow-inner">
             <Image
-              src={item.image_url}
+              src={item.official_image}
               alt={item.product_name}
               fill
               className="object-cover"
