@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import mainLogo from '@/public/icons/main-logo.png';
+import mainLogo from '@/public/logo/main-logo.png';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useMemo } from 'react';
 

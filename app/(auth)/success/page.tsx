@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import mainLogo from '@/public/icons/main-logo.png';
+import mainLogo from '@/public/logo/main-logo.png';
 
 export default function AuthSuccessPage() {
   return (
