@@ -1,11 +1,10 @@
 'use client';
 
-import { verifyMagicLink } from '@/api/generated/login-controller/login-controller';
 import Image from 'next/image';
 import Link from 'next/link';
 import mainLogo from '@/public/icons/main-logo.png';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useMemo } from 'react';
 
 function VerifyStatusView({
   title,
@@ -40,10 +39,7 @@ function VerifyStatusView({
 }
 
 function VerifyContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
   const token = useMemo(() => searchParams.get('token'), [searchParams]);
   const fromServer = useMemo(() => searchParams.get('error'), [searchParams]);
 
@@ -60,36 +56,10 @@ function VerifyContent() {
     }
   }, [fromServer]);
 
-  useEffect(() => {
-    if (serverErrorText) {
-      return;
-    }
-
-    if (!token) {
-      return;
-    }
-
-    let isMounted = true;
-
-    verifyMagicLink({ token })
-      .then(() => {
-        if (!isMounted) return;
-        router.replace('/success');
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        setErrorMessage('인증에 실패했습니다. 링크가 만료되었거나 유효하지 않습니다.');
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [router, serverErrorText, token]);
-
   const missingTokenErrorText = !token
     ? '토큰이 없어 인증을 진행할 수 없습니다.'
     : null;
-  const failedMessage = serverErrorText ?? missingTokenErrorText ?? errorMessage;
+  const failedMessage = serverErrorText ?? missingTokenErrorText;
 
   if (failedMessage) {
     return (
