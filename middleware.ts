@@ -38,7 +38,13 @@ export async function middleware(request: NextRequest) {
   }
 
   const verifyUrl = `${API_BASE}/api/auth/verify-magic-link?token=${encodeURIComponent(token)}`;
-  const backendRes = await fetch(verifyUrl, { method: 'GET' });
+  let backendRes: Response;
+  try {
+    backendRes = await fetch(verifyUrl, { method: 'GET' });
+  } catch (error) {
+    console.error('Backend verification failed:', error);
+    return NextResponse.redirect(new URL('/verify?error=config', request.url));
+  }
 
   if (!backendRes.ok) {
     return NextResponse.redirect(new URL('/verify?error=invalid', request.url));
