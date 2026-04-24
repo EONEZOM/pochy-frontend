@@ -6,7 +6,7 @@ import { BottomSheet } from '@/components/common/BottomSheet';
 import { Input } from '@/components/ui/input';
 import { useRequestMagicLink } from '@/api/generated/login-controller/login-controller';
 import Image from 'next/image';
-import mainLogo from '@/public/icons/main-logo.png';
+import mainLogo from '@/public/logo/main-logo.png';
 
 export default function Home() {
   const [email, setEmail] = useState('');
