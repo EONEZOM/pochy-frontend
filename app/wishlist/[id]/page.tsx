@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { Share2, Download, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -13,6 +13,7 @@ import {
   CarouselItem,
   type CarouselApi,
 } from '@/components/ui/carousel'
+import { getCategoryLabels } from '@/utils/category'
 
 export default function WishlistDetailPage() {
   const params = useParams()
@@ -33,6 +34,11 @@ export default function WishlistDetailPage() {
 
   // 현재 선택된 아이템 정보
   const currentItem = wishItems[currentIndex]
+  const categoryLabels = useMemo(
+    () =>
+      getCategoryLabels(currentItem?.main_category, currentItem?.sub_category),
+    [currentItem],
+  )
   const searchQuery = currentItem
     ? `${currentItem.brand_name} ${currentItem.product_name}`
     : ''
@@ -58,7 +64,7 @@ export default function WishlistDetailPage() {
     )
 
   return (
-    <div className="relative min-h-screen p-5">
+    <div className="relative min-h-screen max-w-120 py-5">
       <div className="">
         {/* 제품 정보 헤더 */}
         <div className="text-center">
@@ -69,7 +75,7 @@ export default function WishlistDetailPage() {
         </div>
 
         {/* 상품 이미지 영역 (Carousel UI?) */}
-        <div className="relative -mx-5 mt-4 w-screen">
+        <div className="relative mt-4">
           <Carousel
             setApi={setApi}
             opts={{
@@ -114,7 +120,8 @@ export default function WishlistDetailPage() {
             transition={{ duration: 0.2 }}
             className="space-y-4"
           >
-            <DetailRow label="카테고리" value={currentItem.category} />
+            <DetailRow label="대분류" value={categoryLabels.main} />
+            <DetailRow label="소분류" value={categoryLabels.sub} />
             <DetailRow label="특징" value={currentItem.features} />
             <DetailRow label="가격" value={currentItem.price} />
             <DetailRow label="메모" value={currentItem.memo || '-'} />
@@ -228,15 +235,7 @@ export default function WishlistDetailPage() {
 }
 
 // 상세 정보 행 컴포넌트
-function DetailRow({
-  label,
-  value,
-  isPlaceholder = false,
-}: {
-  label: string
-  value: string
-  isPlaceholder?: boolean
-}) {
+function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col items-center text-center">
       <span className="font-bold">{label}</span>

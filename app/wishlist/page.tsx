@@ -12,7 +12,11 @@ import {
 } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { FILTER_CATEGORIES, FilterCategory } from '@/constants/category'
+import {
+  FILTER_CATEGORIES,
+  FilterMainCategory,
+  FilterSubCategory,
+} from '@/constants/category'
 import { cn } from '@/lib/utils'
 
 export default function WishlistPage() {
@@ -31,16 +35,27 @@ export default function WishlistPage() {
 
   const searchQuery = searchParams.get('q') || ''
   const currentCategory =
-    (searchParams.get('category') as FilterCategory) || 'All'
+    (searchParams.get('category') as FilterMainCategory) || 'All'
+  const currentSub = (searchParams.get('sub') as FilterSubCategory) || 'All'
 
   // 백엔드 완성 시 이 부분은 API 호출 결과로 대체
   const filteredItems = wishItems.filter((item) => {
-    const matchesCategory =
-      currentCategory === 'All' || item.category === currentCategory
+    // 검색어 매칭
     const matchesSearch =
+      searchQuery === '' ||
       item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.brand_name.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesCategory && matchesSearch
+
+    // 대분류 매칭
+    // currentCategory가 'All'이거나, 아이템의 main_category와 일치해야 함
+    const matchesMain =
+      currentCategory === 'All' || item.main_category === currentCategory
+
+    // 소분류 매칭
+    // currentSub가 'All'이거나, 아이템의 sub_category와 일치해야 함
+    const matchesSub = currentSub === 'All' || item.sub_category === currentSub
+
+    return matchesSearch && matchesMain && matchesSub
   })
 
   const executeSearch = (e?: React.FormEvent, overrideTerm?: string) => {
@@ -61,12 +76,23 @@ export default function WishlistPage() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
-  const handleCategoryChange = (category: FilterCategory) => {
+  const handleMainChange = (category: FilterMainCategory) => {
     const params = new URLSearchParams(searchParams)
     if (category === 'All') {
       params.delete('category')
     } else {
       params.set('category', category)
+    }
+    params.delete('sub') // 대분류가 바뀌면 소분류 필터는 제거
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
+
+  const handleSubChange = (sub: FilterSubCategory) => {
+    const params = new URLSearchParams(searchParams)
+    if (sub === 'All') {
+      params.delete('sub')
+    } else {
+      params.set('sub', sub)
     }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
@@ -76,6 +102,10 @@ export default function WishlistPage() {
   }, [])
 
   if (!isHydrated) return null
+
+  const activeMainGroup = FILTER_CATEGORIES.find(
+    (c) => c.value === currentCategory,
+  )
 
   return (
     <div className="relative min-h-screen">
@@ -116,22 +146,45 @@ export default function WishlistPage() {
       </form>
 
       {/* 카테고리 필터링 영역 */}
-      <div className="scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-4">
-        {FILTER_CATEGORIES.map((cat) => (
+      {/* 1단 필터: 대분류 */}
+      <div className="scrollbar-hide flex gap-6 overflow-x-auto border-b border-zinc-100 px-5">
+        {FILTER_CATEGORIES.map((main) => (
           <button
-            key={cat.value}
-            onClick={() => handleCategoryChange(cat.value as FilterCategory)}
+            key={main.value}
+            onClick={() => handleMainChange(main.value as FilterMainCategory)}
             className={cn(
-              'shrink-0 rounded-full px-5 py-2 text-sm font-bold transition-all',
-              currentCategory === cat.value
-                ? 'bg-zinc-900 text-white'
-                : 'bg-zinc-100 text-zinc-500',
+              'shrink-0 border-b-2 pb-3 text-sm font-bold transition-all',
+              currentCategory === main.value
+                ? 'border-zinc-900 text-zinc-900'
+                : 'border-transparent text-zinc-400',
             )}
           >
-            {cat.label}
+            {main.label}
           </button>
         ))}
       </div>
+
+      {/* 2단 필터: 소분류 (대분류가 All이 아닐 때만 노출) */}
+      {currentCategory !== 'All' &&
+        activeMainGroup &&
+        currentCategory !== 'Etc' && (
+          <div className="scrollbar-hide flex gap-2 overflow-x-auto bg-zinc-50/50 px-5 py-3">
+            {activeMainGroup.subCategories.map((sub) => (
+              <button
+                key={sub.value}
+                onClick={() => handleSubChange(sub.value as FilterSubCategory)}
+                className={cn(
+                  'shrink-0 rounded-full px-4 py-1.5 text-xs font-bold transition-all',
+                  currentSub === sub.value
+                    ? 'bg-zinc-800 text-white'
+                    : 'border border-zinc-200 bg-white text-zinc-500',
+                )}
+              >
+                {sub.label}
+              </button>
+            ))}
+          </div>
+        )}
       <main className="p-5">
         {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center">

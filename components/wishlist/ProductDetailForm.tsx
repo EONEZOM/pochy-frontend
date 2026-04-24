@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Plus, AlertCircle, Search, Loader2 } from 'lucide-react' // 아이콘 추가
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { Plus, AlertCircle, Search, Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { COSMETIC_CATEGORIES } from '@/constants/category'
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 
 interface ProductDetailFormProps {
   initialData: any
@@ -29,8 +30,24 @@ export default function ProductDetailForm({
   showScanWarning = false,
 }: ProductDetailFormProps) {
   const [formData, setFormData] = useState(initialData)
-  const [isSearching, setIsSearching] = useState(false) // 검색 로딩 상태
+  const [isSearching, setIsSearching] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 선택된 대분류 객체 찾기
+  const selectedMainCategory = useMemo(() => {
+    return COSMETIC_CATEGORIES.find((c) => c.value === formData.main_category)
+  }, [formData.main_category])
+
+  // 대분류 변경 핸들러
+  const handleMainChange = (value: string) => {
+    // Etc(기타) 선택 시 소분류를 자동으로 Other(기타)로 설정
+    const isEtc = value === 'Etc'
+    setFormData({
+      ...formData,
+      main_category: value,
+      sub_category: isEtc ? 'Other' : '', // 대분류 변경 시 소분류 초기화 (Etc 예외처리)
+    })
+  }
 
   useEffect(() => {
     return () => {
@@ -40,19 +57,17 @@ export default function ProductDetailForm({
     }
   }, [formData.image_url])
 
-  const formFields = [
-    { label: '제품명', field: 'product_name', type: 'text' },
-    { label: '브랜드명', field: 'brand_name', type: 'text' },
-    { label: '카테고리', field: 'category', type: 'select' },
-    { label: '특징', field: 'features', type: 'text' },
-    { label: '가격', field: 'price', type: 'text' },
-    { label: '메모', field: 'memo', type: 'text' },
+  // 일반 텍스트 필드 정의 (카테고리 제외)
+  const textFields = [
+    { label: '제품명', field: 'product_name' },
+    { label: '브랜드명', field: 'brand_name' },
+    { label: '특징', field: 'features' },
+    { label: '가격', field: 'price' },
+    { label: '메모', field: 'memo' },
   ]
 
-  // 네이버 쇼핑 재검색 로직
   const handleReSearch = async () => {
     const { brand_name, product_name } = formData
-
     if (!brand_name || !product_name) {
       return alert('브랜드명과 제품명을 모두 입력해야 검색이 가능합니다.')
     }
@@ -64,28 +79,21 @@ export default function ProductDetailForm({
       const res = await fetch(
         `/api/naver/search?query=${encodeURIComponent(query)}`,
       )
-
       if (!res.ok) throw new Error('검색 실패')
-
       const data = await res.json()
 
       if (data.official_image) {
         setFormData((prev: any) => {
-          // 특징(features) 필드가 비어있는지 확인
           const isFeaturesEmpty =
             !prev.features || String(prev.features).trim() === ''
-
-          // category_list 배열을 ", " 구분자로 합침 (예: 화장품, 색조메이크업, 립스틱)
           const categoryString = data.category_list
             ? data.category_list.join(', ')
             : ''
-
           return {
             ...prev,
             official_image: data.official_image,
             price: data.lowest_price,
             mall_url: data.mall_url,
-            // features가 비어있을 때만 카테고리 정보 삽입, 아니면 기존 값 유지
             features: isFeaturesEmpty ? categoryString : prev.features,
           }
         })
@@ -118,7 +126,7 @@ export default function ProductDetailForm({
       const previewUrl = URL.createObjectURL(file)
       setFormData((prev: any) => ({
         ...prev,
-        official_image: null, // 직접 올릴 때는 네이버 이미지 초기화
+        official_image: null,
         image_url: previewUrl,
         imageFile: file,
       }))
@@ -157,9 +165,7 @@ export default function ProductDetailForm({
           />
         </div>
 
-        {/* 입력 필드 섹션 */}
         <div className="space-y-5">
-          {/* 상단 라벨 및 재검색 버튼 */}
           <div className="flex items-center justify-between px-1">
             <span className="text-[11px] font-bold tracking-wider text-zinc-400 uppercase">
               Product Information
@@ -178,43 +184,87 @@ export default function ProductDetailForm({
             </button>
           </div>
 
-          {formFields.map((input) => (
+          {/* 1. 대분류 선택 */}
+          <div className="flex flex-col gap-1.5">
+            <label className="pl-1 text-xs font-bold text-zinc-700">
+              대분류
+            </label>
+            <Select
+              value={formData.main_category}
+              onValueChange={handleMainChange}
+            >
+              <SelectTrigger className="h-12 w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 transition-all focus:border-zinc-900 focus:ring-0">
+                <SelectValue placeholder="대분류를 선택해주세요" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-zinc-100 shadow-xl">
+                {COSMETIC_CATEGORIES.map((cat) => (
+                  <SelectItem
+                    key={cat.value}
+                    value={cat.value}
+                    className="py-3"
+                  >
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 2. 소분류 선택 (대분류 선택 시에만 활성화) */}
+          <div className="flex flex-col gap-1.5">
+            <label className="pl-1 text-xs font-bold text-zinc-700">
+              소분류
+            </label>
+            <Select
+              value={formData.sub_category}
+              onValueChange={(value) => handleChange('sub_category', value)}
+              disabled={
+                !formData.main_category || formData.main_category === 'Etc'
+              }
+            >
+              <SelectTrigger
+                className={cn(
+                  'h-12 w-full rounded-xl border-zinc-200 px-4 transition-all focus:border-zinc-900 focus:ring-0',
+                  !formData.main_category
+                    ? 'bg-zinc-100 opacity-60'
+                    : 'bg-zinc-50',
+                )}
+              >
+                <SelectValue
+                  placeholder={
+                    formData.main_category
+                      ? '소분류를 선택해주세요'
+                      : '대분류를 먼저 선택해주세요'
+                  }
+                />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-zinc-100 shadow-xl">
+                {selectedMainCategory?.subCategories.map((sub) => (
+                  <SelectItem
+                    key={sub.value}
+                    value={sub.value}
+                    className="py-3"
+                  >
+                    {sub.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 3. 나머지 텍스트 필드들 */}
+          {textFields.map((input) => (
             <div key={input.field} className="flex flex-col gap-1.5">
               <label className="pl-1 text-xs font-bold text-zinc-700">
                 {input.label}
               </label>
-
-              {input.type === 'select' ? (
-                /* 카테고리 전용 드롭다운 */
-                <Select
-                  value={formData[input.field]}
-                  onValueChange={(value) => handleChange(input.field, value)}
-                >
-                  <SelectTrigger className="h-12 w-full rounded-xl border-zinc-200 bg-zinc-50 px-4 transition-all focus:border-zinc-900 focus:ring-0 focus:ring-offset-0">
-                    <SelectValue placeholder="카테고리를 선택해주세요" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border-zinc-100 shadow-xl">
-                    {COSMETIC_CATEGORIES.map((cat) => (
-                      <SelectItem
-                        key={cat.value}
-                        value={cat.value}
-                        className="py-3 focus:bg-zinc-50"
-                      >
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                /* 일반 텍스트 입력 */
-                <input
-                  type="text"
-                  value={formData[input.field] || ''}
-                  onChange={(e) => handleChange(input.field, e.target.value)}
-                  placeholder={`${input.label}을 입력해주세요`}
-                  className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm transition-all focus:border-zinc-900 focus:bg-white focus:outline-none"
-                />
-              )}
+              <input
+                type="text"
+                value={formData[input.field] || ''}
+                onChange={(e) => handleChange(input.field, e.target.value)}
+                placeholder={`${input.label}을 입력해주세요`}
+                className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm transition-all focus:border-zinc-900 focus:bg-white focus:outline-none"
+              />
             </div>
           ))}
         </div>
