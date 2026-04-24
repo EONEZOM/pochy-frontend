@@ -1,19 +1,158 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@font-face {
+  font-family: 'NanumSquare';
+  src: url('/fonts/NanumSquare_acL.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@font-face {
+  font-family: 'NanumSquare';
+  src: url('/fonts/NanumSquare_acR.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NanumSquare';
+  src: url('/fonts/NanumSquare_acB.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NanumSquare';
+  src: url('/fonts/NanumSquare_acEB.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* 배경 및 기본 폰트 색상 */
+  --background: #ffffff;
+  --foreground: #161618;
+
+  /* Color Palette */
+  --brand-pink: #ff60ca;
+  --brand-lavender: #ff93db;
+  --brand-classic: #ffc6ec;
+  --brand-purple: #7d0053;
+
+  --mono-jet: #161618;
+  --mono-dark-gray: #b7b7b7;
+  --mono-gray: #dcdcdc;
+  --mono-bright-gray: #e8e8e8;
+  --mono-white: #ffffff;
+
+  /* Typography - Font Sizes */
+  --font-size-h1: 24px;
+  --font-size-h2: 18px;
+  --font-size-h3: 16px;
+  --font-size-p: 16px;
+  --font-size-small: 14px;
+
+  /* Typography - Line Heights */
+  --leading-h1: 32px;
+  --leading-h2: 24px;
+  --leading-h3: 20px;
+  --leading-p: 20px;
+  --leading-small: 16px;
+
+  /* Typography - Font Weights */
+  --weight-bold: 700;
+  --weight-regular: 400;
+
+  /* 모바일 안전 영역 대응 */
+  --safe-area-top: env(safe-area-inset-top);
+  --safe-area-bottom: env(safe-area-inset-bottom);
 }
 
 body {
-  background-color: #ffffff;
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--mono-jet);
+  background-color: var(--background);
+  font-family:
+    'NanumSquare',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  line-height: var(--leading-h1);
+  font-weight: var(--weight-bold);
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  line-height: var(--leading-h2);
+  font-weight: var(--weight-bold);
+}
+
+h3 {
+  font-size: var(--font-size-h3);
+  line-height: var(--leading-h3);
+  font-weight: var(--weight-regular);
+}
+
+p {
+  font-size: var(--font-size-p);
+  line-height: var(--leading-p);
+  font-weight: var(--weight-regular);
+}
+
+small {
+  font-size: var(--font-size-small);
+  line-height: var(--leading-small);
+  font-weight: var(--weight-regular);
+}
+
+@layer base {
+  * {
+    /* 모바일에서 클릭 시 하이라이트 제거 */
+    -webkit-tap-highlight-color: transparent;
+    /* 박스 사이즈 계산을 예측 가능하게 */
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    /* 고정된 화면 높이 (PWA 레이아웃 최적화) */
+    height: 100%;
+    /* 탄력적 스크롤 방지 (선택 사항) */
+    overflow-x: hidden;
+  }
+
+  /* 입력창 초기화 (아이폰 기본 스타일 제거) */
+  input,
+  textarea {
+    appearance: none;
+    -webkit-appearance: none;
+    border-radius: 0;
+    font-family: inherit;
+  }
+}
+
+@theme {
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-lavender: var(--brand-lavender);
+  --color-brand-classic: var(--brand-classic);
+  --color-brand-purple: var(--brand-purple);
+
+  --color-mono-jet: var(--mono-jet);
+  --color-mono-dark-gray: var(--mono-dark-gray);
+  --color-mono-gray: var(--mono-gray);
+  --color-mono-bright-gray: var(--mono-bright-gray);
+
+  --font-weight-bold: var(--weight-bold);
+  --font-weight-regular: var(--weight-regular);
 }
