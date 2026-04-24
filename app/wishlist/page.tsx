@@ -11,12 +11,38 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { COSMETIC_CATEGORIES, FilterCategory } from '@/constants/category'
+import { cn } from '@/lib/utils'
 
 export default function WishlistPage() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
   // TODO: 백엔드 API 연동 필요
   const [isOpen, setIsOpen] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
+
   const wishItems = useWishlistStore((state) => state.items)
+
+  const currentCategory =
+    (searchParams.get('category') as FilterCategory) || 'all'
+
+  const filteredItems =
+    currentCategory === 'all'
+      ? wishItems
+      : wishItems.filter((item) => item.category === currentCategory)
+
+  const handleCategoryChange = (category: FilterCategory) => {
+    const params = new URLSearchParams(searchParams)
+    if (category === 'all') {
+      params.delete('category')
+    } else {
+      params.set('category', category)
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
 
   useEffect(() => {
     setIsHydrated(true)
@@ -26,30 +52,64 @@ export default function WishlistPage() {
 
   return (
     <div className="relative min-h-screen">
+      <div className="scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-4">
+        {/* '전체' 버튼은 상수 외에 별도로 렌더링 */}
+        <button
+          onClick={() => handleCategoryChange('all')}
+          className={cn(
+            'shrink-0 rounded-full px-5 py-2 text-sm font-bold transition-all',
+            currentCategory === 'all'
+              ? 'bg-zinc-900 text-white'
+              : 'bg-zinc-100 text-zinc-500',
+          )}
+        >
+          전체
+        </button>
+
+        {/* 2. 상수를 활용한 카테고리 버튼 렌더링 */}
+        {COSMETIC_CATEGORIES.map((cat) => (
+          <button
+            key={cat.value}
+            onClick={() => handleCategoryChange(cat.value)}
+            className={cn(
+              'shrink-0 rounded-full px-5 py-2 text-sm font-bold transition-all',
+              currentCategory === cat.value
+                ? 'bg-zinc-900 text-white'
+                : 'bg-zinc-100 text-zinc-500',
+            )}
+          >
+            {cat.label} {/* 한국어 레이블 표시 */}
+          </button>
+        ))}
+      </div>
       <main className="p-5">
-        {wishItems.length === 0 ? (
+        {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center">
             <p>등록된 제품이 없습니다</p>
           </div>
         ) : (
           <div className="columns-2 gap-4 space-y-4">
             {/* Masonry 스타일 레이아웃 */}
-            {wishItems.map((item: any) => (
+            {filteredItems.map((item: any) => (
               <Link
                 key={item.id}
                 href={`/wishlist/${item.id}`}
-                className="block overflow-hidden rounded-2xl bg-white shadow-sm"
+                className="block flex flex-col gap-4 overflow-hidden rounded-2xl p-4 shadow-lg"
               >
-                <Image
-                  src={item.official_image}
-                  alt={item.product_name}
-                  width={500}
-                  height={700}
-                  className="w-full object-cover"
-                />
-                <div className="p-4">
-                  <div className="text-xs">{item.brand_name}</div>
-                  <div className="truncate text-sm">{item.product_name}</div>
+                <div className="overflow-hidden rounded-2xl border-2">
+                  <Image
+                    src={item.official_image}
+                    alt={item.product_name}
+                    width={500}
+                    height={700}
+                    className="w-full object-cover"
+                  />
+                </div>
+                <div className="flex w-full flex-col items-center justify-center">
+                  <div className="">{item.brand_name}</div>
+                  <div className="w-full truncate text-center">
+                    {item.product_name}
+                  </div>
                 </div>
               </Link>
             ))}

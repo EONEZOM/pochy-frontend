@@ -131,7 +131,7 @@ export default function ProductDetailForm({
         {/* 제품 이미지 섹션 */}
         <div
           onClick={handleImageClick}
-          className="group relative mx-auto aspect-square w-64 cursor-pointer overflow-hidden rounded-3xl bg-zinc-100 shadow-inner"
+          className="group relative mx-auto aspect-square w-48 cursor-pointer overflow-hidden rounded-3xl bg-zinc-100 shadow-inner"
         >
           <Image
             src={
