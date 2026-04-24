@@ -1,9 +1,3 @@
-"use client";
-
-export default function Home() {
-  return (
-  <div>
-    <h1>하이욤</h1>
-  </div>
-  );
+export default function MainPage() {
+  return <div>MainPage</div>;
 }
