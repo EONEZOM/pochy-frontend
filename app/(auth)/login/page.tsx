@@ -85,7 +85,7 @@ export default function Home() {
         {/* 소셜 로그인 버튼 */}
         <Button
           variant="outline"
-          className="hover:bg-zinc-5x h-14 cursor-pointer rounded-2xl border-zinc-200 font-bold"
+          className="h-14 cursor-pointer rounded-2xl border-zinc-200 font-bold hover:bg-zinc-50"
           onClick={() => {
             console.log('네이버로 로그인');
           }}
