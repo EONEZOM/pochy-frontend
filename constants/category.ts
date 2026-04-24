@@ -6,6 +6,11 @@ export const COSMETIC_CATEGORIES = [
   { label: 'Etc', value: 'Etc' },
 ] as const
 
+export const FILTER_CATEGORIES = [
+  { label: 'All', value: 'All' },
+  ...COSMETIC_CATEGORIES,
+] as const
+
 export type CosmeticCategory = (typeof COSMETIC_CATEGORIES)[number]['value']
 
 export type FilterCategory = CosmeticCategory | 'All'

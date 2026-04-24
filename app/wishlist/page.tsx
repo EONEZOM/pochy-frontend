@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Plus, X } from 'lucide-react'
+import { Plus, SearchIcon, X } from 'lucide-react'
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useWishlistStore } from '@/store/wishlistStore'
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import { COSMETIC_CATEGORIES, FilterCategory } from '@/constants/category'
+import { FILTER_CATEGORIES, FilterCategory } from '@/constants/category'
 import { cn } from '@/lib/utils'
 
 export default function WishlistPage() {
@@ -23,16 +23,43 @@ export default function WishlistPage() {
   // TODO: 백엔드 API 연동 필요
   const [isOpen, setIsOpen] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
+  const [localSearchQuery, setLocalSearchQuery] = useState(
+    searchParams.get('q') || '',
+  )
 
   const wishItems = useWishlistStore((state) => state.items)
 
+  const searchQuery = searchParams.get('q') || ''
   const currentCategory =
     (searchParams.get('category') as FilterCategory) || 'All'
 
-  const filteredItems =
-    currentCategory === 'All'
-      ? wishItems
-      : wishItems.filter((item) => item.category === currentCategory)
+  // 백엔드 완성 시 이 부분은 API 호출 결과로 대체
+  const filteredItems = wishItems.filter((item) => {
+    const matchesCategory =
+      currentCategory === 'All' || item.category === currentCategory
+    const matchesSearch =
+      item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.brand_name.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesCategory && matchesSearch
+  })
+
+  const executeSearch = (e?: React.FormEvent, overrideTerm?: string) => {
+    e?.preventDefault()
+
+    // overrideTerm이 있으면 그 값을 쓰고, 없으면 로컬 상태값을 사용
+    const searchTerm =
+      overrideTerm !== undefined ? overrideTerm : localSearchQuery
+
+    const params = new URLSearchParams(searchParams)
+
+    if (searchTerm.trim()) {
+      params.set('q', searchTerm.trim())
+    } else {
+      params.delete('q') // 검색어가 없으면 쿼리 파라미터 삭제
+    }
+
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+  }
 
   const handleCategoryChange = (category: FilterCategory) => {
     const params = new URLSearchParams(searchParams)
@@ -52,24 +79,58 @@ export default function WishlistPage() {
 
   return (
     <div className="relative min-h-screen">
+      {/* 검색바 */}
+      <form onSubmit={executeSearch} className="relative mb-4 flex gap-2">
+        <div className="relative flex-1">
+          <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
+            <SearchIcon size={18} className="text-zinc-400" />
+          </div>
+          <input
+            type="text"
+            value={localSearchQuery}
+            onChange={(e) => setLocalSearchQuery(e.target.value)}
+            placeholder="제품명 또는 브랜드 검색"
+            className="w-full rounded-2xl bg-zinc-100 py-3 pr-10 pl-11 text-sm transition-all outline-none focus:bg-zinc-200"
+          />
+          {localSearchQuery && (
+            <button
+              type="button"
+              onClick={() => {
+                setLocalSearchQuery('')
+                executeSearch(undefined, '')
+              }}
+              className="absolute inset-y-0 right-3 flex items-center text-zinc-400"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        {/* 검색 버튼 추가 */}
+        <button
+          type="submit"
+          className="shrink-0 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition-transform active:scale-95"
+        >
+          검색
+        </button>
+      </form>
+
       {/* 카테고리 필터링 영역 */}
       <div className="scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-4">
-        {[{ label: 'All', value: 'All' as const }, ...COSMETIC_CATEGORIES].map(
-          (cat) => (
-            <button
-              key={cat.value}
-              onClick={() => handleCategoryChange(cat.value as FilterCategory)}
-              className={cn(
-                'shrink-0 rounded-full px-5 py-2 text-sm font-bold transition-all',
-                currentCategory === cat.value
-                  ? 'bg-zinc-900 text-white'
-                  : 'bg-zinc-100 text-zinc-500',
-              )}
-            >
-              {cat.label}
-            </button>
-          ),
-        )}
+        {FILTER_CATEGORIES.map((cat) => (
+          <button
+            key={cat.value}
+            onClick={() => handleCategoryChange(cat.value as FilterCategory)}
+            className={cn(
+              'shrink-0 rounded-full px-5 py-2 text-sm font-bold transition-all',
+              currentCategory === cat.value
+                ? 'bg-zinc-900 text-white'
+                : 'bg-zinc-100 text-zinc-500',
+            )}
+          >
+            {cat.label}
+          </button>
+        ))}
       </div>
       <main className="p-5">
         {filteredItems.length === 0 ? (
