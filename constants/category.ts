@@ -8,4 +8,4 @@ export const COSMETIC_CATEGORIES = [
 
 export type CosmeticCategory = (typeof COSMETIC_CATEGORIES)[number]['value']
 
-export type FilterCategory = CosmeticCategory | 'all'
+export type FilterCategory = CosmeticCategory | 'All'

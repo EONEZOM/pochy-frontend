@@ -27,16 +27,16 @@ export default function WishlistPage() {
   const wishItems = useWishlistStore((state) => state.items)
 
   const currentCategory =
-    (searchParams.get('category') as FilterCategory) || 'all'
+    (searchParams.get('category') as FilterCategory) || 'All'
 
   const filteredItems =
-    currentCategory === 'all'
+    currentCategory === 'All'
       ? wishItems
       : wishItems.filter((item) => item.category === currentCategory)
 
   const handleCategoryChange = (category: FilterCategory) => {
     const params = new URLSearchParams(searchParams)
-    if (category === 'all') {
+    if (category === 'All') {
       params.delete('category')
     } else {
       params.set('category', category)
@@ -52,35 +52,24 @@ export default function WishlistPage() {
 
   return (
     <div className="relative min-h-screen">
+      {/* 카테고리 필터링 영역 */}
       <div className="scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-4">
-        {/* '전체' 버튼은 상수 외에 별도로 렌더링 */}
-        <button
-          onClick={() => handleCategoryChange('all')}
-          className={cn(
-            'shrink-0 rounded-full px-5 py-2 text-sm font-bold transition-all',
-            currentCategory === 'all'
-              ? 'bg-zinc-900 text-white'
-              : 'bg-zinc-100 text-zinc-500',
-          )}
-        >
-          전체
-        </button>
-
-        {/* 2. 상수를 활용한 카테고리 버튼 렌더링 */}
-        {COSMETIC_CATEGORIES.map((cat) => (
-          <button
-            key={cat.value}
-            onClick={() => handleCategoryChange(cat.value)}
-            className={cn(
-              'shrink-0 rounded-full px-5 py-2 text-sm font-bold transition-all',
-              currentCategory === cat.value
-                ? 'bg-zinc-900 text-white'
-                : 'bg-zinc-100 text-zinc-500',
-            )}
-          >
-            {cat.label} {/* 한국어 레이블 표시 */}
-          </button>
-        ))}
+        {[{ label: 'All', value: 'All' as const }, ...COSMETIC_CATEGORIES].map(
+          (cat) => (
+            <button
+              key={cat.value}
+              onClick={() => handleCategoryChange(cat.value as FilterCategory)}
+              className={cn(
+                'shrink-0 rounded-full px-5 py-2 text-sm font-bold transition-all',
+                currentCategory === cat.value
+                  ? 'bg-zinc-900 text-white'
+                  : 'bg-zinc-100 text-zinc-500',
+              )}
+            >
+              {cat.label}
+            </button>
+          ),
+        )}
       </div>
       <main className="p-5">
         {filteredItems.length === 0 ? (
@@ -94,7 +83,7 @@ export default function WishlistPage() {
               <Link
                 key={item.id}
                 href={`/wishlist/${item.id}`}
-                className="block flex flex-col gap-4 overflow-hidden rounded-2xl p-4 shadow-lg"
+                className="flex flex-col gap-4 overflow-hidden rounded-2xl p-4 shadow-lg"
               >
                 <div className="overflow-hidden rounded-2xl border-2">
                   <Image
