@@ -4,10 +4,13 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
-import backIcon from '@/public/icons/back.svg';
-import searchIcon from '@/public/icons/serch.png';
-import filterIcon from '@/public/icons/filter.svg';
 import { Star, Share2 } from 'lucide-react';
+
+const HEADER_ICON = {
+  back: '/icons/back.svg',
+  search: '/icons/serch.svg',
+  filter: '/icons/filter.svg',
+} as const;
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,13 +20,25 @@ const ICON_CONFIG = {
   search: {
     label: '검색',
     element: (
-      <Image src={searchIcon} alt="search-icon" width={24} height={24} />
+      <Image
+        src={HEADER_ICON.search}
+        alt=""
+        width={24}
+        height={24}
+        unoptimized
+      />
     ),
   },
   filter: {
     label: '필터',
     element: (
-      <Image src={filterIcon} alt="filter-icon" width={24} height={24} />
+      <Image
+        src={HEADER_ICON.filter}
+        alt=""
+        width={24}
+        height={24}
+        unoptimized
+      />
     ),
   },
   register: {
@@ -122,7 +137,13 @@ export function Header({
             aria-label={backAriaLabel}
             onClick={handleBack}
           >
-            <Image src={backIcon} alt="back-icon" width={24} height={24} />
+            <Image
+              src={HEADER_ICON.back}
+              alt=""
+              width={24}
+              height={24}
+              unoptimized
+            />
           </Button>
         )}
       </div>
