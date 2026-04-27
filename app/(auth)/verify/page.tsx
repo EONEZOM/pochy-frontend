@@ -28,10 +28,10 @@ function VerifyStatusView({
       />
       {isError ? (
         <Link
-          href="/"
+          href="/login"
           className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-900 px-5 text-sm font-semibold text-white"
         >
-          메인으로 이동
+          로그인으로 이동
         </Link>
       ) : null}
     </main>

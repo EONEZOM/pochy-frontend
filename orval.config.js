@@ -8,7 +8,9 @@ if (!OPENAPI_BASE_URL) {
 
 module.exports = {
   pouchy: {
-    input: `${OPENAPI_BASE_URL.replace(/\/$/, '')}/v3/api-docs`,
+    input: {
+      target: `${OPENAPI_BASE_URL.replace(/\/$/, '')}/v3/api-docs`,
+    },
     output: {
       mode: 'tags-split',
       target: './api/generated/pouchy.ts',

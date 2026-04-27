@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/common/BottomSheet';
 import { Input } from '@/components/ui/input';
@@ -9,17 +10,14 @@ import Image from 'next/image';
 import mainLogo from '@/public/logo/main-logo.png';
 
 export default function Home() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
 
   const { mutate: requestMagicLink, isPending } = useRequestMagicLink({
     mutation: {
       onSuccess: () => {
-        alert(
-          '메일을 보냈어요!\n\n' +
-            '1. 입력하신 이메일함으로 이동해 주세요.\n' +
-            '2. 포치가 보낸 [로그인하기] 버튼을 눌러주세요.\n' +
-            '3. 다시 이메일에서 앱으로 돌아오면 가입 완료!\n\n' +
-            '메일이 오지 않았다면 스팸 메일함을 확인하거나\n[다시 보내기]를 눌러주세요',
+        router.push(
+          `/login/sent?email=${encodeURIComponent(email.trim())}`,
         );
       },
       onError: (error) => {
