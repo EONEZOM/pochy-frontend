@@ -5,6 +5,7 @@ const openApiBase = process.env.OPENAPI_BASE_URL?.replace(/\/$/, '');
 const normalizedOpenApiBase = openApiBase?.replace(/\/v3\/api-docs$/, '');
 
 const API_BASE = runtimeApiBase || normalizedOpenApiBase || '';
+const AUTH_COOKIE_KEYS = ['ACCESS_TOKEN', 'REFRESH_TOKEN'];
 
 /**
  * 메일의 매직 링크가 /api/auth/verify-magic-link?token=... 형태이면
@@ -15,7 +16,9 @@ const API_BASE = runtimeApiBase || normalizedOpenApiBase || '';
 
 export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === '/') {
-    const hasSessionCookie = request.cookies.getAll().length > 0;
+    const hasSessionCookie = AUTH_COOKIE_KEYS.some(
+      (key) => Boolean(request.cookies.get(key)?.value),
+    );
     if (!hasSessionCookie) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
@@ -40,15 +43,28 @@ export async function middleware(request: NextRequest) {
 
   const verifyUrl = `${API_BASE}/api/auth/verify-magic-link?token=${encodeURIComponent(token)}`;
   let backendRes: Response;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
-    backendRes = await fetch(verifyUrl, { method: 'GET' });
+    backendRes = await fetch(verifyUrl, { method: 'GET', signal: controller.signal });
   } catch (error) {
     console.error('Backend verification failed:', error);
-    return NextResponse.redirect(new URL('/verify?error=config', request.url));
+    const isTimeout =
+      typeof error === 'object' &&
+      error !== null &&
+      'name' in error &&
+      (error as { name?: string }).name === 'AbortError';
+    return NextResponse.redirect(
+      new URL(`/verify?error=${isTimeout ? 'timeout' : 'config'}`, request.url),
+    );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!backendRes.ok) {
-    return NextResponse.redirect(new URL('/verify?error=invalid', request.url));
+    return NextResponse.redirect(
+      new URL(`/verify?error=invalid&status=${backendRes.status}`, request.url),
+    );
   }
 
   const redirect = NextResponse.redirect(new URL('/success', request.url));
@@ -60,11 +76,23 @@ export async function middleware(request: NextRequest) {
   for (const c of cookies) {
     redirect.headers.append('Set-Cookie', c);
   }
+  let appendedCookieCount = cookies.length;
   if (cookies.length === 0) {
     const one = backendRes.headers.get('set-cookie');
     if (one) {
       redirect.headers.append('Set-Cookie', one);
+      appendedCookieCount = 1;
     }
+  }
+
+  // 개발용 진단: verify 성공(200)이어도 세션 쿠키가 없으면 로그인 상태를 만들 수 없음
+  if (appendedCookieCount === 0) {
+    return NextResponse.redirect(
+      new URL(
+        `/verify?error=cookie_missing&status=${backendRes.status}`,
+        request.url,
+      ),
+    );
   }
 
   return redirect;
