@@ -34,7 +34,7 @@ export default function RootLayout({
       <body className="flex h-full justify-center overflow-x-hidden bg-zinc-50">
         <RegisterPWA />
         <QueryProvider>
-          <div className="relative flex min-h-full w-full max-w-[480px] min-w-[360px] flex-col bg-white shadow-xl">
+          <div className="relative flex min-h-full w-full max-w-120 min-w-90 flex-col bg-white shadow-xl">
             <main
               vaul-drawer-wrapper=""
               className="flex flex-1 flex-col bg-white"
