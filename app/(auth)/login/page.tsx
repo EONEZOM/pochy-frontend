@@ -21,14 +21,20 @@ export default function Home() {
         );
       },
       onError: (error) => {
-        alert('발송 실패: ' + error);
+        const message =
+          error instanceof Error && error.message.includes('timeout')
+            ? '메일 발송이 지연되고 있어요. 잠시 후 다시 시도해 주세요.'
+            : '발송에 실패했어요. 잠시 후 다시 시도해 주세요.';
+        alert(message);
       },
     },
   });
 
   const handleLogin = () => {
     if (!email) return;
-    requestMagicLink({ params: { email } });
+    requestMagicLink({
+      params: { email },
+    });
   };
 
   return (
