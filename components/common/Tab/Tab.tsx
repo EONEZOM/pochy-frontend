@@ -94,6 +94,7 @@ export const Tab = memo(
           return (
             <button
               key={item.value}
+              type="button"
               onClick={() => handleClick(item.value)}
               className={cn(
                 'shrink-0 cursor-pointer border-b-2 pb-3 text-sm font-bold transition-all',
