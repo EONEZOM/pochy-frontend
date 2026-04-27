@@ -5,9 +5,10 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
+import type { SliceReadListDto } from './sliceReadListDto';
 
-export interface ApiResponseDTOObject {
+export interface ApiResponseDTOSliceReadListDto {
   code?: string;
   message?: string;
-  result?: unknown;
+  result?: SliceReadListDto;
 }

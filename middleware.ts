@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_BASE =
-  process.env.OPENAPI_BASE_URL?.replace(/\/$/, '') ||
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ||
-  '';
+const runtimeApiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
+const openApiBase = process.env.OPENAPI_BASE_URL?.replace(/\/$/, '');
+const normalizedOpenApiBase = openApiBase?.replace(/\/v3\/api-docs$/, '');
+
+const API_BASE = runtimeApiBase || normalizedOpenApiBase || '';
 
 /**
  * 메일의 매직 링크가 /api/auth/verify-magic-link?token=... 형태이면
