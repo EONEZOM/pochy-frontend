@@ -35,9 +35,29 @@ const nextConfig = {
     ]
   },
 
+  /** (auth) route group: 실제 URL은 /verify, /success */
+  async redirects() {
+    return [
+      { source: '/auth/verify', destination: '/verify', permanent: false },
+      { source: '/auth/success', destination: '/success', permanent: false },
+    ]
+  },
+
+  async rewrites() {
+    return [
+      {
+        // 프론트엔드에서 /api로 시작하는 모든 요청을
+        source: '/api/:path*',
+        // 실제 백엔드 서버 주소로 매핑
+        destination: 'http://43.201.31.56:8080/api/:path*',
+      },
+    ]
+  },
+
   // 3) Remote image allowlist for Naver hosts.
   images: {
     remotePatterns: [
+      // 네이버 검색 API 쇼핑 이미지 도메인
       {
         protocol: 'https',
         hostname: 'shopping-phinf.pstatic.net',
@@ -49,10 +69,6 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '**.pstatic.net',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com', // Unsplash 호스트 허용(mock 데이터)
       },
       {
         protocol: 'https',

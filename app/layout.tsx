@@ -16,25 +16,32 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'PouChy | 나만의 화장대',
-  description: '나만의 화장대를 만들어보세요',
+  title: 'POCHY | 나만의 화장대',
+  description: '나만의 화장대를 만들고 공유해보세요!',
   manifest: '/manifest.json',
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
     <html
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col items-center">
+      <body className="flex h-full justify-center overflow-x-hidden bg-zinc-50">
         <RegisterPWA />
         <QueryProvider>
-          <div className="w-full max-w-120 bg-white">{children}</div>
+          <div className="relative flex min-h-full w-full max-w-[480px] min-w-[360px] flex-col bg-white shadow-xl">
+            <main
+              vaul-drawer-wrapper=""
+              className="flex flex-1 flex-col bg-white"
+            >
+              {children}
+            </main>
+          </div>
         </QueryProvider>
       </body>
     </html>
