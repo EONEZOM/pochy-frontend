@@ -22,7 +22,7 @@ export default function Input({
       <BaseInput
         id={inputId}
         className={cn(
-          'border-mono-gray h-12 rounded-[4px] border px-4 py-4 text-sm',
+          'border-mono-gray h-12 rounded-sm border px-4 py-4 text-sm',
           'placeholder:text-mono-dark-gray',
           'focus-visible:border-brand-pink focus-visible:ring-0',
           rightElement && 'pr-12',
