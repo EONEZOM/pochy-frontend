@@ -94,7 +94,6 @@ export function Modal({
       onClick={() => {
         if (closeOnOverlayClick) onOpenChange(false);
       }}
-      aria-hidden
     >
       {/* 모달 컨테이너 */}
       <section
