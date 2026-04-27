@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Plus, SearchIcon, X } from 'lucide-react'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useWishlistStore } from '@/store/wishlistStore'
 import {
   Popover,
@@ -17,7 +17,7 @@ import {
   FilterMainCategory,
   FilterSubCategory,
 } from '@/constants/category'
-import { cn } from '@/lib/utils'
+import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea'
 
 export default function WishlistPage() {
   const router = useRouter()
@@ -39,40 +39,39 @@ export default function WishlistPage() {
   const currentSub = (searchParams.get('sub') as FilterSubCategory) || 'All'
 
   // 백엔드 완성 시 이 부분은 API 호출 결과로 대체
-  const filteredItems = wishItems.filter((item) => {
-    // 검색어 매칭
-    const matchesSearch =
-      searchQuery === '' ||
-      item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.brand_name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredItems = useMemo(() => {
+    return wishItems.filter((item) => {
+      const matchesSearch =
+        searchQuery === '' ||
+        item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.brand_name.toLowerCase().includes(searchQuery.toLowerCase())
 
-    // 대분류 매칭
-    // currentCategory가 'All'이거나, 아이템의 main_category와 일치해야 함
-    const matchesMain =
-      currentCategory === 'All' || item.main_category === currentCategory
+      const matchesMain =
+        currentCategory === 'All' || item.main_category === currentCategory
 
-    // 소분류 매칭
-    // currentSub가 'All'이거나, 아이템의 sub_category와 일치해야 함
-    const matchesSub = currentSub === 'All' || item.sub_category === currentSub
+      const matchesSub =
+        currentSub === 'All' || item.sub_category === currentSub
 
-    return matchesSearch && matchesMain && matchesSub
-  })
+      return matchesSearch && matchesMain && matchesSub
+    })
+  }, [wishItems, searchQuery, currentCategory, currentSub])
 
   const executeSearch = (e?: React.FormEvent, overrideTerm?: string) => {
     e?.preventDefault()
 
-    // overrideTerm이 있으면 그 값을 쓰고, 없으면 로컬 상태값을 사용
-    const searchTerm =
+    // trim()을 호출하기 전에 값이 있는지 확인
+    const searchTerm = (
       overrideTerm !== undefined ? overrideTerm : localSearchQuery
+    ).trim()
+    const params = new URLSearchParams(searchParams.toString())
 
-    const params = new URLSearchParams(searchParams)
-
-    if (searchTerm.trim()) {
-      params.set('q', searchTerm.trim())
+    if (searchTerm) {
+      params.set('q', searchTerm)
     } else {
-      params.delete('q') // 검색어가 없으면 쿼리 파라미터 삭제
+      params.delete('q')
     }
 
+    // 검색어가 바뀌면 페이지나 필터 조건이 초기화되어야 할 경우를 대비해 sub도 삭제 고려 가능
     router.replace(`${pathname}?${params.toString()}`, { scroll: false })
   }
 
@@ -101,11 +100,18 @@ export default function WishlistPage() {
     setIsHydrated(true)
   }, [])
 
-  if (!isHydrated) return null
+  useEffect(() => {
+    setLocalSearchQuery(searchParams.get('q') || '')
+  }, [searchParams])
 
-  const activeMainGroup = FILTER_CATEGORIES.find(
-    (c) => c.value === currentCategory,
+  const activeSubCategories = useMemo(
+    () =>
+      FILTER_CATEGORIES.find((c) => c.value === currentCategory)
+        ?.subCategories || [],
+    [currentCategory],
   )
+
+  if (!isHydrated) return null
 
   return (
     <div className="relative min-h-screen">
@@ -146,45 +152,15 @@ export default function WishlistPage() {
       </form>
 
       {/* 카테고리 필터링 영역 */}
-      {/* 1단 필터: 대분류 */}
-      <div className="scrollbar-hide flex gap-6 overflow-x-auto border-b border-zinc-100 px-5">
-        {FILTER_CATEGORIES.map((main) => (
-          <button
-            key={main.value}
-            onClick={() => handleMainChange(main.value as FilterMainCategory)}
-            className={cn(
-              'shrink-0 border-b-2 pb-3 text-sm font-bold transition-all',
-              currentCategory === main.value
-                ? 'border-zinc-900 text-zinc-900'
-                : 'border-transparent text-zinc-400',
-            )}
-          >
-            {main.label}
-          </button>
-        ))}
-      </div>
+      <CategoryFilterArea
+        mainCategories={FILTER_CATEGORIES}
+        activeSubCategories={activeSubCategories}
+        currentCategory={currentCategory}
+        currentSub={currentSub}
+        onMainChange={handleMainChange}
+        onSubChange={handleSubChange}
+      />
 
-      {/* 2단 필터: 소분류 (대분류가 All이 아닐 때만 노출) */}
-      {currentCategory !== 'All' &&
-        activeMainGroup &&
-        currentCategory !== 'Etc' && (
-          <div className="scrollbar-hide flex gap-2 overflow-x-auto bg-zinc-50/50 px-5 py-3">
-            {activeMainGroup.subCategories.map((sub) => (
-              <button
-                key={sub.value}
-                onClick={() => handleSubChange(sub.value as FilterSubCategory)}
-                className={cn(
-                  'shrink-0 rounded-full px-4 py-1.5 text-xs font-bold transition-all',
-                  currentSub === sub.value
-                    ? 'bg-zinc-800 text-white'
-                    : 'border border-zinc-200 bg-white text-zinc-500',
-                )}
-              >
-                {sub.label}
-              </button>
-            ))}
-          </div>
-        )}
       <main className="p-5">
         {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center">
