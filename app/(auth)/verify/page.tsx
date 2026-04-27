@@ -31,7 +31,7 @@ function VerifyStatusView({
           href="/login"
           className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-900 px-5 text-sm font-semibold text-white"
         >
-          로그인으로 이동
+          로그인으로 돌아가기
         </Link>
       ) : null}
     </main>
@@ -51,6 +51,10 @@ function VerifyContent() {
         return '인증에 실패했습니다. 링크가 만료되었거나 유효하지 않습니다.';
       case 'config':
         return '서버 설정 오류로 인증을 완료할 수 없습니다.';
+      case 'timeout':
+        return '인증 서버 응답이 지연되고 있어요. 잠시 후 다시 시도해 주세요.';
+      case 'cookie_missing':
+        return '인증은 되었지만 세션 쿠키를 받지 못했어요. 서버 쿠키 설정을 확인해 주세요.';
       default:
         return null;
     }
@@ -64,7 +68,7 @@ function VerifyContent() {
   if (failedMessage) {
     return (
       <VerifyStatusView
-        title="로그인 인증 실패"
+        title="로그인을 완료할 수 없어요."
         description={failedMessage}
         isError
       />

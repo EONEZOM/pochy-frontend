@@ -1,5 +1,7 @@
-import Link from 'next/link';
+'use client';
+
 import Image from 'next/image';
+import Link from 'next/link';
 import mainLogo from '@/public/logo/main-logo.png';
 
 export default function AuthSuccessPage() {
@@ -17,7 +19,7 @@ export default function AuthSuccessPage() {
         className="mx-auto mt-10 mb-10"
       />
       <Link
-        href="/"
+        href="/?setupNickname=1"
         className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-900 px-5 text-sm font-semibold text-white"
       >
         메인으로 이동
