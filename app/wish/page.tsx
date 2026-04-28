@@ -1,16 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, X } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { useWishlistStore } from '@/store/wishlistStore';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   FILTER_CATEGORIES,
@@ -18,6 +11,8 @@ import {
   FilterSubCategory,
 } from '@/constants/category';
 import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea';
+import { ExtraNav } from '@/components/common/ExtraNav';
+import { Modal } from '@/components/common/Modal';
 
 export default function WishlistPage() {
   const router = useRouter();
@@ -25,7 +20,7 @@ export default function WishlistPage() {
   const searchParams = useSearchParams();
 
   // TODO: 백엔드 API 연동 필요
-  const [isOpen, setIsOpen] = useState(false);
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
   const wishItems = useWishlistStore((state) => state.items);
@@ -137,46 +132,35 @@ export default function WishlistPage() {
       {/* 등록 페이지 이동 Popover */}
       <div className="pointer-events-none fixed bottom-0 left-1/2 z-50 w-full max-w-120 -translate-x-1/2">
         <div className="relative h-24">
-          <Popover open={isOpen} onOpenChange={setIsOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                size="icon"
-                className="pointer-events-auto absolute right-5 bottom-5 flex size-16 items-center justify-center rounded-full bg-gray-500 text-white shadow-lg transition-all duration-200 active:scale-95"
-              >
-                {isOpen ? <X size={36} /> : <Plus size={36} />}
-              </Button>
-            </PopoverTrigger>
-
-            <PopoverContent
-              side="top"
-              align="end"
-              sideOffset={16} // 버튼과의 간격
-              className="w-56 rounded-3xl border border-gray-100 bg-white p-1 shadow-xl"
-            >
-              <div className="flex flex-col">
-                <Link
-                  href="/wish/register/scan"
-                  onClick={() => setIsOpen(false)}
-                  className="flex w-full items-center justify-center rounded-t-[20px] py-4 text-[15px] font-medium transition-colors hover:bg-gray-100"
-                >
-                  스캔해서 등록하기
-                </Link>
-
-                {/* 구분선 */}
-                <div className="h-px w-full bg-gray-100" />
-
-                <Link
-                  href="/wish/register/direct"
-                  onClick={() => setIsOpen(false)}
-                  className="flex w-full items-center justify-center rounded-b-[20px] py-4 text-[15px] font-medium transition-colors hover:bg-gray-100"
-                >
-                  직접 등록하기
-                </Link>
-              </div>
-            </PopoverContent>
-          </Popover>
+          <div className="absolute right-5 bottom-5">
+            <ExtraNav
+              items={[
+                {
+                  label: '스캔해서 등록하기',
+                  onClick: () => setIsScanModalOpen(true),
+                  icon: '/icons/imgplus.svg',
+                },
+                {
+                  label: '직접 등록하기',
+                  href: '/wish/register/direct',
+                  icon: '/icons/write.svg',
+                },
+              ]}
+            />
+          </div>
         </div>
       </div>
+
+      {/* 스캔 모달 */}
+      <Modal
+        open={isScanModalOpen}
+        onOpenChange={setIsScanModalOpen}
+        variant="warning"
+        title="주의"
+        description={`등록할 상품이 잘 나온 사진을\n준비해주세요!\n\n여러개의 제품의 경우\n정확도가 떨어질 수 있습니다.`}
+        confirmText="확인"
+        onConfirm={() => router.push('/wish/register/scan')}
+      />
     </div>
   );
 }
