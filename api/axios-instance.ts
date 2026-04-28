@@ -90,6 +90,14 @@ const requestReissue = async () => {
 
 axiosInstance.interceptors.request.use((config) => {
   const token = getAccessToken();
+  const isFormData =
+    typeof FormData !== 'undefined' && config.data instanceof FormData;
+
+  if (isFormData && config.headers) {
+    // FormData는 브라우저가 boundary 포함 Content-Type을 자동으로 설정해야 한다.
+    delete config.headers['Content-Type'];
+  }
+
   if (token) {
     config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;

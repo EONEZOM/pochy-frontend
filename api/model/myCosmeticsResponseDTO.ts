@@ -6,13 +6,15 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface CreateDetailDto {
+export interface MyCosmeticsResponseDTO {
+  id?: number;
   name?: string;
   brand?: string;
   category?: string;
   subCategory?: string;
-  price?: number;
   feature?: string;
   memo?: string;
-  productImageUrl?: string;
+  imgUrl?: string;
+  captureUrl?: string;
+  createdAt?: string;
 }

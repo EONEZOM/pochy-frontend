@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
-import { useWishlistStore } from '@/store/wishlistStore';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   FILTER_CATEGORIES,
@@ -14,17 +13,34 @@ import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea';
 import { ExtraNav } from '@/components/common/ExtraNav';
 import { Modal } from '@/components/common/Modal';
 import { WishlistHeader } from '@/components/wishlist/WishlistHeader';
+import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
+import type { ReadListDto } from '@/api/model';
+
+type WishListItem = {
+  id: number;
+  brand_name: string;
+  product_name: string;
+  main_category: string;
+  sub_category: string;
+  official_image: string;
+};
+
+const toWishListItem = (item: ReadListDto): WishListItem => ({
+  id: item.wishCosmeticsId ?? 0,
+  brand_name: item.brand ?? '',
+  product_name: item.productName ?? '',
+  main_category: item.category ?? '',
+  sub_category: item.subCategory ?? '',
+  official_image: item.productImageUrl ?? '',
+});
 
 export default function WishlistPage() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // TODO: 백엔드 API 연동 필요
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
-
-  const wishItems = useWishlistStore((state) => state.items);
 
   const searchQuery = searchParams.get('q') || '';
   const currentCategory =
@@ -32,29 +48,24 @@ export default function WishlistPage() {
   const currentSub = (searchParams.get('sub') as FilterSubCategory) || 'All';
   const sortOrder = searchParams.get('sort') || 'latest';
 
-  // 백엔드 완성 시 이 부분은 API 호출 결과로 대체
+  const { data, isLoading, isError } = useReadWishCosmeticsList({
+    keyword: searchQuery || undefined,
+    category: currentCategory !== 'All' ? currentCategory : undefined,
+    subCategory: currentSub !== 'All' ? currentSub : undefined,
+    // 서버 정렬은 desc/asc를 지원하므로, price 정렬은 클라이언트 fallback으로 유지
+    sort: sortOrder === 'oldest' ? 'asc' : 'desc',
+    size: 100,
+  });
+
   const filteredItems = useMemo(() => {
-    return wishItems
-      .filter((item) => {
-        const matchesSearch =
-          searchQuery === '' ||
-          item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.brand_name.toLowerCase().includes(searchQuery.toLowerCase());
+    const items = (data?.result?.content ?? []).map(toWishListItem);
 
-        const matchesMain =
-          currentCategory === 'All' || item.main_category === currentCategory;
+    if (sortOrder === 'price') {
+      return items;
+    }
 
-        const matchesSub =
-          currentSub === 'All' || item.sub_category === currentSub;
-
-        return matchesSearch && matchesMain && matchesSub;
-      })
-      .sort((a, b) => {
-        if (sortOrder === 'oldest') return a.id - b.id;
-        if (sortOrder === 'price') return (a.price ?? 0) - (b.price ?? 0);
-        return b.id - a.id; // latest 기본
-      });
-  }, [wishItems, searchQuery, currentCategory, currentSub, sortOrder]);
+    return items;
+  }, [data?.result?.content, sortOrder]);
 
   const handleMainChange = (category: FilterMainCategory) => {
     const params = new URLSearchParams(searchParams);
@@ -105,7 +116,15 @@ export default function WishlistPage() {
       />
 
       <main className="p-4">
-        {filteredItems.length === 0 ? (
+        {isLoading ? (
+          <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-500">
+            위시리스트를 불러오는 중...
+          </div>
+        ) : isError ? (
+          <div className="flex min-h-[60vh] items-center justify-center text-sm text-red-500">
+            위시리스트를 불러오지 못했습니다.
+          </div>
+        ) : filteredItems.length === 0 ? (
           <div className="flex min-h-[60vh] flex-col items-center justify-center">
             <div className="font-bold">첫 번째 위시템을 기다리고 있어요.</div>
             <div className="text-mono-dark-gray">
@@ -114,7 +133,7 @@ export default function WishlistPage() {
           </div>
         ) : (
           <div className="columns-2 gap-3 space-y-3 pb-4">
-            {filteredItems.map((item: any) => (
+            {filteredItems.map((item) => (
               <Link
                 key={item.id}
                 href={`/wish/${item.id}`}

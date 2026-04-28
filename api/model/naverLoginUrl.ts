@@ -5,10 +5,7 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
-import type { TokenDto } from './tokenDto';
 
-export interface ApiResponseDTOTokenDto {
-  code?: string;
-  message?: string;
-  result?: TokenDto;
+export interface NaverLoginUrl {
+  url?: string;
 }

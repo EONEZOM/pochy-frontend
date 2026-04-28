@@ -5,10 +5,9 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
-import type { TokenDto } from './tokenDto';
 
-export interface ApiResponseDTOTokenDto {
+export interface ApiResponseDTOListLong {
   code?: string;
   message?: string;
-  result?: TokenDto;
+  result?: number[];
 }

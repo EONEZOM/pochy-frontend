@@ -5,14 +5,14 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
+import type { MyCosmeticsResponseDTO } from './myCosmeticsResponseDTO';
 import type { PageableObject } from './pageableObject';
-import type { ReadListDto } from './readListDto';
 import type { SortObject } from './sortObject';
 
-export interface SliceReadListDto {
+export interface SliceMyCosmeticsResponseDTO {
   pageable?: PageableObject;
   size?: number;
-  content?: ReadListDto[];
+  content?: MyCosmeticsResponseDTO[];
   number?: number;
   sort?: SortObject;
   numberOfElements?: number;

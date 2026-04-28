@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { extractImageFileData } from '@/utils/image-utils';
 import { useAnalyzeCosmeticCapture } from '@/hooks/mutation/useAnalyzeCosmeticCapture';
-import { useWishlistStore } from '@/store/wishlistStore';
 import { X } from 'lucide-react';
 import Image from 'next/image';
 import { ImageFileData } from '@/types/image';
@@ -12,8 +11,21 @@ import RegisterReviewStep from '@/components/wishlist/RegisterReviewStep';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/common/Modal';
 import Header from '@/components/layout/Header/Header';
+import type { CreateDetailDto } from '@/api/model';
+import { createWishCosmeticsMultipart } from '@/api/wish-cosmetics';
 
 type AnalysisResult = Record<string, unknown>;
+
+const normalizePrice = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeImageUrl = (value: unknown): string | undefined => {
+  const url = String(value ?? '').trim();
+  if (!url || url.startsWith('blob:')) return undefined;
+  return url;
+};
 
 export default function WishlistRegisterPage() {
   const router = useRouter();
@@ -21,8 +33,8 @@ export default function WishlistRegisterPage() {
   const [images, setImages] = useState<ImageFileData[]>([]);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
   const [isReviewStep, setIsReviewStep] = useState(false);
+  const [isCreatePending, setIsCreatePending] = useState(false);
 
-  const addItem = useWishlistStore((state) => state.addItem);
   const { mutate: analyze, isPending } = useAnalyzeCosmeticCapture();
 
   // 이미지 업로드 핸들러
@@ -52,17 +64,38 @@ export default function WishlistRegisterPage() {
     });
   };
 
-  // 저장 (Zustand 스토어에 추가 + persist)
-  const handleSave = () => {
-    analysisResults.forEach((item) => {
-      addItem({
-        ...item,
-        id: Date.now() + Math.random(),
-        user_memo: '',
+  // 저장 (백엔드 API 저장)
+  const handleSave = async () => {
+    if (isCreatePending) return;
+    if (analysisResults.length === 0) {
+      alert('등록할 항목이 없습니다.');
+      return;
+    }
+
+    const request: CreateDetailDto[] = analysisResults.map((item) => ({
+      name: String(item.product_name ?? ''),
+      brand: String(item.brand_name ?? ''),
+      category: String(item.main_category ?? ''),
+      subCategory: String(item.sub_category ?? ''),
+      feature: String(item.features ?? ''),
+      memo: String(item.memo ?? ''),
+      price: normalizePrice(item.price),
+      productImageUrl: normalizeImageUrl(item.official_image ?? item.image_url),
+    }));
+
+    setIsCreatePending(true);
+    try {
+      await createWishCosmeticsMultipart({
+        request,
+        captureImages: images.map((img) => img.file),
       });
-    });
-    alert('위시리스트에 등록되었습니다.');
-    router.push('/wish');
+      alert('위시리스트에 등록되었습니다.');
+      router.push('/wish');
+    } catch {
+      alert('위시리스트 등록 중 오류가 발생했습니다.');
+    } finally {
+      setIsCreatePending(false);
+    }
   };
 
   if (isReviewStep) {
@@ -158,7 +191,9 @@ export default function WishlistRegisterPage() {
           disabled={isPending || images.length === 0}
           className="bg-mono-jet text-mono-white h-11 rounded-full px-5 py-3 text-sm font-bold transition-opacity disabled:opacity-30"
         >
-          {isPending ? 'AI 분석 중...' : `${images.length}개의 이미지 스캔하기`}
+          {isPending || isCreatePending
+            ? 'AI 분석 중...'
+            : `${images.length}개의 이미지 스캔하기`}
         </Button>
 
         {/* 팁 모달 */}
