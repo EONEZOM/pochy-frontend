@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Header from '@/components/layout/Header/Header';
+import { ExtraNav } from '@/components/common/ExtraNav';
 
 export function WishlistHeader() {
   const router = useRouter();
@@ -29,6 +30,18 @@ export function WishlistHeader() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  const handleSort = (sort: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('sort', sort);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const filterTrigger = (
+    <button type="button">
+      <img src="/icons/filter.svg" alt="필터" width={24} height={24} />
+    </button>
+  );
+
   const handleClose = () => {
     setIsSearchOpen(false);
     executeSearch('');
@@ -51,7 +64,18 @@ export function WishlistHeader() {
             if (e.key === 'Escape') handleClose();
           },
         }}
-        rightIcons={[{ kind: 'filter', onClick: () => {} }]}
+        right={
+          <ExtraNav
+            side="bottom"
+            align="end"
+            trigger={filterTrigger}
+            items={[
+              { label: '최신순', onClick: () => handleSort('latest') },
+              { label: '오래된순', onClick: () => handleSort('oldest') },
+              { label: '가격순', onClick: () => handleSort('price') },
+            ]}
+          />
+        }
       />
     );
   }
@@ -60,10 +84,19 @@ export function WishlistHeader() {
     <Header
       title="위시리스트"
       sticky
-      rightIcons={[
-        { kind: 'search', onClick: () => setIsSearchOpen(true) },
-        { kind: 'filter', onClick: () => {} },
-      ]}
+      rightIcons={[{ kind: 'search', onClick: () => setIsSearchOpen(true) }]}
+      right={
+        <ExtraNav
+          side="bottom"
+          align="end"
+          trigger={filterTrigger}
+          items={[
+            { label: '최신순', onClick: () => handleSort('latest') },
+            { label: '오래된순', onClick: () => handleSort('oldest') },
+            { label: '가격순', onClick: () => handleSort('price') },
+          ]}
+        />
+      }
     />
   );
 }
