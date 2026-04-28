@@ -36,7 +36,7 @@ export default function DirectRegisterPage() {
 
     const imageFile = data.imageFile;
     const captureImages =
-      imageFile instanceof Blob ? [imageFile] : ([] as Blob[]);
+      imageFile instanceof File ? [imageFile] : ([] as File[]);
 
     setIsPending(true);
     try {

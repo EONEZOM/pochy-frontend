@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   FILTER_CATEGORIES,
@@ -34,7 +34,7 @@ const toWishListItem = (item: ReadListDto): WishListItem => ({
   official_image: item.productImageUrl ?? '',
 });
 
-export default function WishlistPage() {
+function WishlistPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -212,5 +212,19 @@ export default function WishlistPage() {
         onConfirm={() => router.push('/wish/register/scan')}
       />
     </div>
+  );
+}
+
+export default function WishlistPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-500">
+          위시리스트를 불러오는 중...
+        </div>
+      }
+    >
+      <WishlistPageContent />
+    </Suspense>
   );
 }
