@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Suspense } from 'react';
 import { AxiosError } from 'axios';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -19,15 +20,6 @@ import type { Detail } from '@/api/model';
 import mainLogo from '@/public/logo/main-logo.png';
 
 const NICKNAME_SETUP_DONE_KEY = 'nickname_setup_done_v1';
-
-/** `.env.local`에 `NEXT_PUBLIC_HOME_MOCK=1` 넣으면 위시/마이/피드에 임시 10개씩 표시 */
-const HOME_MOCK_ENABLED = process.env.NEXT_PUBLIC_HOME_MOCK === '1';
-
-const makeMockDetails = (prefix: string): Detail[] =>
-  Array.from({ length: 10 }, (_, i) => ({
-    id: i + 1,
-    imageUrl: `https://picsum.photos/seed/${prefix}-${i + 1}/240/240`,
-  }));
 
 function resolveNicknameFromResponse(data: ApiResponseDTO): string | null {
   return typeof data?.result === 'string' && data.result.trim().length > 0
@@ -48,7 +40,7 @@ function getNicknameErrorMessage(error: unknown): string {
   return '알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해 주세요.';
 }
 
-export default function MainPage() {
+function MainPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const shouldOpenSetupNickname = searchParams.get('setupNickname') === '1';
@@ -73,19 +65,13 @@ export default function MainPage() {
   } = useGetHomeData();
   const homeData = homeResponse?.result;
 
-  const sections: Array<{ title: string; items: Detail[] }> = HOME_MOCK_ENABLED
-    ? [
-        { title: '위시', items: makeMockDetails('wish') },
-        { title: '마이', items: makeMockDetails('my') },
-        { title: '피드', items: makeMockDetails('feed') },
-      ]
-    : [
-        { title: '위시', items: homeData?.wishList ?? [] },
-        { title: '마이', items: homeData?.myList ?? [] },
-        { title: '피드', items: homeData?.feed ?? [] },
-      ];
+  const sections: Array<{ title: string; items: Detail[] }> = [
+    { title: '위시', items: homeData?.wishList ?? [] },
+    { title: '마이', items: homeData?.myList ?? [] },
+    { title: '피드', items: homeData?.feed ?? [] },
+  ];
 
-  const showHomeSkeleton = isHomeLoading && !HOME_MOCK_ENABLED;
+  const showHomeSkeleton = isHomeLoading;
 
   React.useEffect(() => {
     if (!shouldOpenSetupNickname) return;
@@ -272,5 +258,19 @@ export default function MainPage() {
 
       <BottomNav />
     </>
+  );
+}
+
+export default function MainPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="bg-mono-white min-h-screen px-4 pt-4 pb-6">
+          <p className="text-mono-dark-gray text-sm">불러오는 중...</p>
+        </main>
+      }
+    >
+      <MainPageContent />
+    </Suspense>
   );
 }

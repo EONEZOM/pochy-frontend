@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/common/BottomSheet';
@@ -12,7 +12,7 @@ import {
 import Image from 'next/image';
 import mainLogo from '@/public/logo/main-logo.png';
 
-export default function Home() {
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isFromLogout = searchParams.get('fromLogout') === '1';
@@ -138,5 +138,19 @@ export default function Home() {
         </Button>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col items-center justify-center bg-white">
+          <p className="text-sm text-zinc-500">세션 확인 중...</p>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
