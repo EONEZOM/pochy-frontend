@@ -1,67 +1,67 @@
-'use client'
+'use client';
 
-import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
-import { Share2, Download, X } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useWishlistStore } from '@/store/wishlistStore'
-import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview'
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
+import { Share2, Download, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useWishlistStore } from '@/store/wishlistStore';
+import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview';
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
   type CarouselApi,
-} from '@/components/ui/carousel'
-import { getCategoryLabels } from '@/utils/category'
+} from '@/components/ui/carousel';
+import { getCategoryLabels } from '@/utils/category';
 
 export default function WishlistDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const [showCapture, setShowCapture] = useState(false)
-  const [api, setApi] = useState<CarouselApi>()
+  const params = useParams();
+  const router = useRouter();
+  const [showCapture, setShowCapture] = useState(false);
+  const [api, setApi] = useState<CarouselApi>();
 
   // 현재 임시로 Store에서 가져옴
-  const wishItems = useWishlistStore((state) => state.items)
+  const wishItems = useWishlistStore((state) => state.items);
 
   // 초기 인덱스 설정 (URL의 id와 일치하는 아이템 찾기)
   const initialIndex = wishItems.findIndex(
     (v) => String(v.id) === String(params.id),
-  )
+  );
   const [currentIndex, setCurrentIndex] = useState(
     initialIndex !== -1 ? initialIndex : 0,
-  )
+  );
 
   // 현재 선택된 아이템 정보
-  const currentItem = wishItems[currentIndex]
+  const currentItem = wishItems[currentIndex];
   const categoryLabels = useMemo(
     () =>
       getCategoryLabels(currentItem?.main_category, currentItem?.sub_category),
     [currentItem],
-  )
+  );
   const searchQuery = currentItem
     ? `${currentItem.brand_name} ${currentItem.product_name}`
-    : ''
+    : '';
   const { data: youtubeData, isLoading: isYoutubeLoading } =
-    useYoutubeReview(searchQuery)
+    useYoutubeReview(searchQuery);
 
   // 캐러셀 움직임 감지하여 상태 업데이트
   useEffect(() => {
-    if (!api) return
+    if (!api) return;
 
     api.on('select', () => {
-      const index = api.selectedScrollSnap()
-      setCurrentIndex(index)
-      router.replace(`/wishlist/${wishItems[index].id}`, { scroll: false })
-    })
-  }, [api, wishItems, router])
+      const index = api.selectedScrollSnap();
+      setCurrentIndex(index);
+      router.replace(`/wish/${wishItems[index].id}`, { scroll: false });
+    });
+  }, [api, wishItems, router]);
 
   if (!currentItem)
     return (
       <div className="flex h-screen items-center justify-center">
         아이템이 없습니다.
       </div>
-    )
+    );
 
   return (
     <div className="relative min-h-screen max-w-120 py-5">
@@ -231,7 +231,7 @@ export default function WishlistDetailPage() {
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }
 
 // 상세 정보 행 컴포넌트
@@ -241,5 +241,5 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <span className="font-bold">{label}</span>
       <span>{value}</span>
     </div>
-  )
+  );
 }

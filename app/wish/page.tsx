@@ -1,42 +1,39 @@
-'use client'
+'use client';
 
-import Link from 'next/link'
-import { Plus, SearchIcon, X } from 'lucide-react'
-import Image from 'next/image'
-import { useEffect, useMemo, useState } from 'react'
-import { useWishlistStore } from '@/store/wishlistStore'
+import Link from 'next/link';
+import { Plus, X } from 'lucide-react';
+import Image from 'next/image';
+import { useEffect, useMemo, useState } from 'react';
+import { useWishlistStore } from '@/store/wishlistStore';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover'
-import { Button } from '@/components/ui/button'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+} from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   FILTER_CATEGORIES,
   FilterMainCategory,
   FilterSubCategory,
-} from '@/constants/category'
-import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea'
+} from '@/constants/category';
+import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea';
 
 export default function WishlistPage() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // TODO: 백엔드 API 연동 필요
-  const [isOpen, setIsOpen] = useState(false)
-  const [isHydrated, setIsHydrated] = useState(false)
-  const [localSearchQuery, setLocalSearchQuery] = useState(
-    searchParams.get('q') || '',
-  )
+  const [isOpen, setIsOpen] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  const wishItems = useWishlistStore((state) => state.items)
+  const wishItems = useWishlistStore((state) => state.items);
 
-  const searchQuery = searchParams.get('q') || ''
+  const searchQuery = searchParams.get('q') || '';
   const currentCategory =
-    (searchParams.get('category') as FilterMainCategory) || 'All'
-  const currentSub = (searchParams.get('sub') as FilterSubCategory) || 'All'
+    (searchParams.get('category') as FilterMainCategory) || 'All';
+  const currentSub = (searchParams.get('sub') as FilterSubCategory) || 'All';
 
   // 백엔드 완성 시 이 부분은 API 호출 결과로 대체
   const filteredItems = useMemo(() => {
@@ -44,113 +41,54 @@ export default function WishlistPage() {
       const matchesSearch =
         searchQuery === '' ||
         item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.brand_name.toLowerCase().includes(searchQuery.toLowerCase())
+        item.brand_name.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesMain =
-        currentCategory === 'All' || item.main_category === currentCategory
+        currentCategory === 'All' || item.main_category === currentCategory;
 
       const matchesSub =
-        currentSub === 'All' || item.sub_category === currentSub
+        currentSub === 'All' || item.sub_category === currentSub;
 
-      return matchesSearch && matchesMain && matchesSub
-    })
-  }, [wishItems, searchQuery, currentCategory, currentSub])
-
-  const executeSearch = (e?: React.FormEvent, overrideTerm?: string) => {
-    e?.preventDefault()
-
-    // trim()을 호출하기 전에 값이 있는지 확인
-    const searchTerm = (
-      overrideTerm !== undefined ? overrideTerm : localSearchQuery
-    ).trim()
-    const params = new URLSearchParams(searchParams.toString())
-
-    if (searchTerm) {
-      params.set('q', searchTerm)
-    } else {
-      params.delete('q')
-    }
-
-    // 검색어가 바뀌면 페이지나 필터 조건이 초기화되어야 할 경우를 대비해 sub도 삭제 고려 가능
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }
+      return matchesSearch && matchesMain && matchesSub;
+    });
+  }, [wishItems, searchQuery, currentCategory, currentSub]);
 
   const handleMainChange = (category: FilterMainCategory) => {
-    const params = new URLSearchParams(searchParams)
+    const params = new URLSearchParams(searchParams);
     if (category === 'All') {
-      params.delete('category')
+      params.delete('category');
     } else {
-      params.set('category', category)
+      params.set('category', category);
     }
-    params.delete('sub') // 대분류가 바뀌면 소분류 필터는 제거
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }
+    params.delete('sub'); // 대분류가 바뀌면 소분류 필터는 제거
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   const handleSubChange = (sub: FilterSubCategory) => {
-    const params = new URLSearchParams(searchParams)
+    const params = new URLSearchParams(searchParams);
     if (sub === 'All') {
-      params.delete('sub')
+      params.delete('sub');
     } else {
-      params.set('sub', sub)
+      params.set('sub', sub);
     }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-  }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
 
   useEffect(() => {
-    setIsHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    setLocalSearchQuery(searchParams.get('q') || '')
-  }, [searchParams])
+    setIsHydrated(true);
+  }, []);
 
   const activeSubCategories = useMemo(
     () =>
       FILTER_CATEGORIES.find((c) => c.value === currentCategory)
         ?.subCategories || [],
     [currentCategory],
-  )
+  );
 
-  if (!isHydrated) return null
+  if (!isHydrated) return null;
 
   return (
     <div className="relative min-h-screen">
-      {/* 검색바 */}
-      <form onSubmit={executeSearch} className="relative mb-4 flex gap-2">
-        <div className="relative flex-1">
-          <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
-            <SearchIcon size={18} className="text-zinc-400" />
-          </div>
-          <input
-            type="text"
-            value={localSearchQuery}
-            onChange={(e) => setLocalSearchQuery(e.target.value)}
-            placeholder="제품명 또는 브랜드 검색"
-            className="w-full rounded-2xl bg-zinc-100 py-3 pr-10 pl-11 text-sm transition-all outline-none focus:bg-zinc-200"
-          />
-          {localSearchQuery && (
-            <button
-              type="button"
-              onClick={() => {
-                setLocalSearchQuery('')
-                executeSearch(undefined, '')
-              }}
-              className="absolute inset-y-0 right-3 flex items-center text-zinc-400"
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
-
-        {/* 검색 버튼 추가 */}
-        <button
-          type="submit"
-          className="shrink-0 rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition-transform active:scale-95"
-        >
-          검색
-        </button>
-      </form>
-
       {/* 카테고리 필터링 영역 */}
       <CategoryFilterArea
         mainCategories={FILTER_CATEGORIES}
@@ -172,7 +110,7 @@ export default function WishlistPage() {
             {filteredItems.map((item: any) => (
               <Link
                 key={item.id}
-                href={`/wishlist/${item.id}`}
+                href={`/wish/${item.id}`}
                 className="flex flex-col gap-4 overflow-hidden rounded-2xl p-4 shadow-lg"
               >
                 <div className="overflow-hidden rounded-2xl border-2">
@@ -217,7 +155,7 @@ export default function WishlistPage() {
             >
               <div className="flex flex-col">
                 <Link
-                  href="/wishlist/register/scan"
+                  href="/wish/register/scan"
                   onClick={() => setIsOpen(false)}
                   className="flex w-full items-center justify-center rounded-t-[20px] py-4 text-[15px] font-medium transition-colors hover:bg-gray-100"
                 >
@@ -228,7 +166,7 @@ export default function WishlistPage() {
                 <div className="h-px w-full bg-gray-100" />
 
                 <Link
-                  href="/wishlist/register/direct"
+                  href="/wish/register/direct"
                   onClick={() => setIsOpen(false)}
                   className="flex w-full items-center justify-center rounded-b-[20px] py-4 text-[15px] font-medium transition-colors hover:bg-gray-100"
                 >
@@ -240,5 +178,5 @@ export default function WishlistPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

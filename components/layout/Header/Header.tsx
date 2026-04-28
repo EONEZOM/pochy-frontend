@@ -8,12 +8,12 @@ import { Star, Share2 } from 'lucide-react';
 
 const HEADER_ICON = {
   back: '/icons/back.svg',
-  search: '/icons/serch.svg',
+  search: '/icons/search.svg',
   filter: '/icons/filter.svg',
 } as const;
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import Input from '@/components/common/Input/Input';
 import { cn } from '@/lib/utils';
 
 const ICON_CONFIG = {
@@ -70,6 +70,7 @@ export type HeaderProps = {
   className?: string;
   showBack?: boolean;
   onBack?: () => void;
+  onSearch?: () => void;
   backAriaLabel?: string;
   right?: React.ReactNode;
   rightIcons?: HeaderRightIcons;
@@ -85,7 +86,11 @@ type HeaderTitleVariantProps = {
 type HeaderSearchVariantProps = {
   variant: 'search';
   title?: never;
-  searchProps?: Omit<React.ComponentProps<'input'>, 'className'> & {
+  onSearch?: () => void;
+  searchProps?: Omit<
+    React.ComponentProps<typeof Input>,
+    'className' | 'rightElement'
+  > & {
     className?: string;
   };
 };
@@ -95,7 +100,7 @@ export type HeaderVariantProps =
   | HeaderSearchVariantProps;
 export type HeaderComponentProps = HeaderProps & HeaderVariantProps;
 
-export function Header({
+export default function Header({
   className,
   showBack = true,
   onBack,
@@ -103,6 +108,7 @@ export function Header({
   variant = 'title',
   title,
   searchProps,
+  onSearch,
   right,
   rightIcons,
   sticky,
@@ -149,20 +155,46 @@ export function Header({
       </div>
 
       {/* 중앙 영역 */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-14">
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-0 flex items-center',
+          variant === 'search' ? 'px-12' : 'justify-center px-14',
+        )}
+      >
         {variant === 'title' ? (
           <h3 className="pointer-events-auto max-w-full truncate text-center text-base font-bold tracking-tight text-zinc-900">
             {title}
           </h3>
         ) : (
+          // 일단 공통컴포넌트 만들어둔거 적용하겠음
+          // <Input
+          //   {...searchProps}
+          //   type={searchProps?.type ?? 'search'}
+          //   enterKeyHint={searchProps?.enterKeyHint ?? 'search'}
+          //   className={cn(
+          //     'pointer-events-auto absolute left-15 h-10 w-[calc(90%-60px)] max-w-full rounded-lg border-zinc-900/80 bg-white text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus-visible:border-zinc-900 focus-visible:ring-zinc-900/20',
+          //     searchProps?.className,
+          //   )}
+          // />
           <Input
             {...searchProps}
             type={searchProps?.type ?? 'search'}
-            enterKeyHint={searchProps?.enterKeyHint ?? 'search'}
-            className={cn(
-              'pointer-events-auto absolute left-15 h-10 w-[calc(90%-60px)] max-w-full rounded-lg border-zinc-900/80 bg-white text-sm font-medium text-zinc-900 placeholder:text-zinc-400 focus-visible:border-zinc-900 focus-visible:ring-zinc-900/20',
-              searchProps?.className,
-            )}
+            className="pointer-events-auto w-full"
+            rightElement={
+              <button
+                type="button"
+                className="cursor-pointer"
+                onClick={onSearch}
+              >
+                <Image
+                  src={HEADER_ICON.search}
+                  alt="검색"
+                  width={18}
+                  height={18}
+                  unoptimized
+                />
+              </button>
+            }
           />
         )}
       </div>

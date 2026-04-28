@@ -45,9 +45,9 @@ export const Tab = memo(
         'gap-6',
         bordered
           ? 'rounded-2xl border border-mono-gray p-4'
-          : 'border-b border-mono-bright-gray px-5',
+          : 'border-b border-mono-bright-gray px-4 pt-3',
       ],
-      variant === 'pill' && 'gap-2 px-5 py-3',
+      variant === 'pill' && 'gap-1.25 px-4 py-3',
       className,
     );
 

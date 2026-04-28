@@ -18,13 +18,14 @@ export default function Input({
   const inputId = id || generatedId;
 
   return (
-    <div className="relative flex items-center">
+    <div className="relative flex w-full items-center">
       <BaseInput
         id={inputId}
         className={cn(
           'border-mono-gray h-12 rounded-sm border px-4 py-4 text-sm',
           'placeholder:text-mono-dark-gray',
           'focus-visible:border-brand-pink focus-visible:ring-0',
+          '[&::-webkit-search-cancel-button]:hidden',
           rightElement && 'pr-12',
           className,
         )}

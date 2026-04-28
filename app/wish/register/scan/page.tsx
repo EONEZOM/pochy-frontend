@@ -1,51 +1,51 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { extractImageFileData } from '@/utils/image-utils'
-import { useAnalyzeCosmeticCapture } from '@/hooks/mutation/useAnalyzeCosmeticCapture'
-import { useWishlistStore } from '@/store/wishlistStore'
-import { X } from 'lucide-react'
-import Image from 'next/image'
-import { ImageFileData } from '@/types/image'
-import RegisterReviewStep from '@/components/wishlist/RegisterReviewStep'
-import { Button } from '@/components/ui/button'
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { extractImageFileData } from '@/utils/image-utils';
+import { useAnalyzeCosmeticCapture } from '@/hooks/mutation/useAnalyzeCosmeticCapture';
+import { useWishlistStore } from '@/store/wishlistStore';
+import { X } from 'lucide-react';
+import Image from 'next/image';
+import { ImageFileData } from '@/types/image';
+import RegisterReviewStep from '@/components/wishlist/RegisterReviewStep';
+import { Button } from '@/components/ui/button';
 
 export default function WishlistRegisterPage() {
-  const router = useRouter()
-  const [images, setImages] = useState<ImageFileData[]>([])
-  const [analysisResults, setAnalysisResults] = useState<any[]>([])
-  const [isReviewStep, setIsReviewStep] = useState(false)
+  const router = useRouter();
+  const [images, setImages] = useState<ImageFileData[]>([]);
+  const [analysisResults, setAnalysisResults] = useState<any[]>([]);
+  const [isReviewStep, setIsReviewStep] = useState(false);
 
-  const addItem = useWishlistStore((state) => state.addItem)
-  const { mutate: analyze, isPending } = useAnalyzeCosmeticCapture()
+  const addItem = useWishlistStore((state) => state.addItem);
+  const { mutate: analyze, isPending } = useAnalyzeCosmeticCapture();
 
   // 이미지 업로드 핸들러
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const data = extractImageFileData(e.target.files)
-    setImages((prev) => [...prev, ...data])
-  }
+    const data = extractImageFileData(e.target.files);
+    setImages((prev) => [...prev, ...data]);
+  };
 
   // 이미지 개별 삭제
   const removeImage = (index: number) => {
-    const target = images[index]
-    URL.revokeObjectURL(target.previewUrl)
-    setImages(images.filter((_, i) => i !== index))
-  }
+    const target = images[index];
+    URL.revokeObjectURL(target.previewUrl);
+    setImages(images.filter((_, i) => i !== index));
+  };
 
   // 분석 시작 (GPT 호출)
   const startAnalysis = async () => {
-    if (images.length === 0) return alert('이미지를 선택해주세요.')
+    if (images.length === 0) return alert('이미지를 선택해주세요.');
 
-    const fileArray = images.map((img) => img.file)
+    const fileArray = images.map((img) => img.file);
     analyze(fileArray, {
       onSuccess: (data) => {
-        setAnalysisResults(data.results)
-        setIsReviewStep(true)
+        setAnalysisResults(data.results);
+        setIsReviewStep(true);
       },
       onError: (err) => alert('분석 중 오류 발생: ' + err.message),
-    })
-  }
+    });
+  };
 
   // 저장 (Zustand 스토어에 추가 + persist)
   const handleSave = () => {
@@ -54,11 +54,11 @@ export default function WishlistRegisterPage() {
         ...item,
         id: Date.now() + Math.random(),
         user_memo: '',
-      })
-    })
-    alert('위시리스트에 등록되었습니다.')
-    router.push('/wishlist')
-  }
+      });
+    });
+    alert('위시리스트에 등록되었습니다.');
+    router.push('/wish');
+  };
 
   if (isReviewStep) {
     return (
@@ -68,11 +68,11 @@ export default function WishlistRegisterPage() {
         onSave={handleSave}
         onCancel={() => {
           if (confirm('수정 중인 내용이 사라집니다. 취소하시겠습니까?')) {
-            setIsReviewStep(false)
+            setIsReviewStep(false);
           }
         }}
       />
-    )
+    );
   }
 
   return (
@@ -122,5 +122,5 @@ export default function WishlistRegisterPage() {
         {isPending ? 'AI 분석 중...' : `${images.length}개의 이미지 분석하기`}
       </Button>
     </div>
-  )
+  );
 }

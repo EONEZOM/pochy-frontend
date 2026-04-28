@@ -1,21 +1,21 @@
-'use client'
+'use client';
 
-import ProductDetailForm from '@/components/wishlist/ProductDetailForm'
-import { useWishlistStore } from '@/store/wishlistStore'
-import { useRouter } from 'next/navigation'
+import ProductDetailForm from '@/components/wishlist/ProductDetailForm';
+import { useWishlistStore } from '@/store/wishlistStore';
+import { useRouter } from 'next/navigation';
 
 export default function DirectRegisterPage() {
-  const addItem = useWishlistStore((state) => state.addItem)
-  const router = useRouter()
+  const addItem = useWishlistStore((state) => state.addItem);
+  const router = useRouter();
 
   const handleDirectSave = (data: any) => {
     addItem({
       ...data,
       id: Date.now(), // 고유 ID 생성
       created_at: new Date().toISOString(),
-    })
-    router.push('/wishlist')
-  }
+    });
+    router.push('/wish');
+  };
 
   return (
     <ProductDetailForm
@@ -24,5 +24,5 @@ export default function DirectRegisterPage() {
       onBack={() => router.back()}
       onSubmit={handleDirectSave}
     />
-  )
+  );
 }

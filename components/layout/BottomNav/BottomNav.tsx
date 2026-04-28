@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 
 import { cn } from '@/lib/utils';
 
-export const BOTTOM_NAV_MAX_WIDTH_CLASS = 'max-w-[480px]';
+export const BOTTOM_NAV_MAX_WIDTH_CLASS = 'max-w-120';
 
 export type BottomNavItem = {
   href: string;
@@ -62,7 +62,7 @@ export function BottomNav({ className }: { className?: string }) {
   return (
     <nav
       className={cn(
-        'border-mono-bright-gray bg-mono-white fixed bottom-0 left-1/2 w-full -translate-x-1/2 border-t pb-[var(--safe-area-bottom)]',
+        'border-mono-bright-gray bg-mono-white border-t pb-[(--safe-area-bottom)]',
         BOTTOM_NAV_MAX_WIDTH_CLASS,
         className,
       )}
@@ -81,7 +81,7 @@ export function BottomNav({ className }: { className?: string }) {
                 aria-current={active ? 'page' : undefined}
               >
                 <div
-                  className="relative flex size-[26px] shrink-0 items-center justify-center"
+                  className="relative flex size-6.5 shrink-0 items-center justify-center"
                   aria-hidden
                 >
                   <Image
@@ -111,7 +111,7 @@ export function BottomNav({ className }: { className?: string }) {
                   className={cn(
                     'max-w-full truncate text-[11px] leading-tight transition-colors',
                     active
-                      ? 'font-bold text-[color:var(--brand-classic)]'
+                      ? 'font-bold text-[(--brand-classic)]'
                       : 'text-mono-dark-gray font-normal',
                   )}
                 >

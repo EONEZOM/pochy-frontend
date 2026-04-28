@@ -152,6 +152,7 @@ small {
   --color-mono-dark-gray: var(--mono-dark-gray);
   --color-mono-gray: var(--mono-gray);
   --color-mono-bright-gray: var(--mono-bright-gray);
+  --color-mono-white: var(--mono-white);
 
   --font-weight-bold: var(--weight-bold);
   --font-weight-regular: var(--weight-regular);
