@@ -5,9 +5,10 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
+import type { CreateDetailDto } from './createDetailDto';
 
-export interface ApiResponseDTOObject {
+export interface ApiResponseDTOListCreateDetailDto {
   code?: string;
   message?: string;
-  result?: unknown;
+  result?: CreateDetailDto[];
 }

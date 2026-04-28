@@ -5,10 +5,16 @@ const OPENAPI_BASE_URL = process.env.OPENAPI_BASE_URL;
 if (!OPENAPI_BASE_URL) {
   throw new Error('OPENAPI_BASE_URL is required');
 }
+const normalizedBase = OPENAPI_BASE_URL.replace(/\/$/, '');
+const openApiTarget = normalizedBase.endsWith('/v3/api-docs')
+  ? normalizedBase
+  : `${normalizedBase}/v3/api-docs`;
 
 module.exports = {
   pouchy: {
-    input: `${OPENAPI_BASE_URL.replace(/\/$/, '')}/v3/api-docs`,
+    input: {
+      target: openApiTarget,
+    },
     output: {
       mode: 'tags-split',
       target: './api/generated/pouchy.ts',

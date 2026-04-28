@@ -6,6 +6,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type VerifyMagicLinkParams = {
-token: string;
-};
+export interface TokenDto {
+  accessToken?: string;
+}

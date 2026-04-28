@@ -1,36 +1,70 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/common/BottomSheet';
 import { Input } from '@/components/ui/input';
-import { useRequestMagicLink } from '@/api/generated/login-controller/login-controller';
+import {
+  reissue,
+  useRequestMagicLink,
+} from '@/api/generated/login-controller/login-controller';
 import Image from 'next/image';
 import mainLogo from '@/public/logo/main-logo.png';
 
-export default function Home() {
+function LoginContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isFromLogout = searchParams.get('fromLogout') === '1';
   const [email, setEmail] = useState('');
+  const [isCheckingSession, setIsCheckingSession] = useState(!isFromLogout);
+  const [submittedEmail, setSubmittedEmail] = useState('');
+
+  useEffect(() => {
+    if (isFromLogout) return;
+
+    let isMounted = true;
+
+    const checkSession = async () => {
+      try {
+        await reissue();
+        if (!isMounted) return;
+        router.replace('/?setupNickname=1');
+      } catch {
+        if (!isMounted) return;
+        setIsCheckingSession(false);
+      }
+    };
+
+    checkSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isFromLogout, router]);
 
   const { mutate: requestMagicLink, isPending } = useRequestMagicLink({
     mutation: {
       onSuccess: () => {
-        alert(
-          '메일을 보냈어요!\n\n' +
-            '1. 입력하신 이메일함으로 이동해 주세요.\n' +
-            '2. 포치가 보낸 [로그인하기] 버튼을 눌러주세요.\n' +
-            '3. 다시 이메일에서 앱으로 돌아오면 가입 완료!\n\n' +
-            '메일이 오지 않았다면 스팸 메일함을 확인하거나\n[다시 보내기]를 눌러주세요',
-        );
+        router.push(`/login/sent?email=${encodeURIComponent(submittedEmail)}`);
       },
       onError: (error) => {
-        alert('발송 실패: ' + error);
+        const message =
+          error instanceof Error && error.message.includes('timeout')
+            ? '메일 발송이 지연되고 있어요. 잠시 후 다시 시도해 주세요.'
+            : '발송에 실패했어요. 잠시 후 다시 시도해 주세요.';
+        alert(message);
       },
     },
   });
 
   const handleLogin = () => {
-    if (!email) return;
-    requestMagicLink({ params: { email } });
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) return;
+    setSubmittedEmail(trimmedEmail);
+    requestMagicLink({
+      params: { email: trimmedEmail },
+    });
   };
 
   return (
@@ -68,15 +102,15 @@ export default function Home() {
             <Button
               className="text-md h-14 w-full rounded-xl bg-zinc-900 font-bold text-white shadow-lg transition-transform active:scale-[0.98]"
               onClick={handleLogin}
-              disabled={isPending}
+              disabled={isPending || isCheckingSession}
             >
-              {isPending ? (
+              {isPending || isCheckingSession ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  발송 중...
+                  {isCheckingSession ? '확인 중...' : '발송 중...'}
                 </span>
               ) : (
-                '매직링크 받기'
+                '로그인 하기'
               )}
             </Button>
           </div>
@@ -104,5 +138,19 @@ export default function Home() {
         </Button>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col items-center justify-center bg-white">
+          <p className="text-sm text-zinc-500">확인 중...</p>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
