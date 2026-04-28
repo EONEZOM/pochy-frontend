@@ -201,6 +201,7 @@ function WishlistPageContent() {
         </div>
       </div>
 
+      {/* 빌드 테스트용 주석 */}
       {/* 스캔 모달 */}
       <Modal
         open={isScanModalOpen}
