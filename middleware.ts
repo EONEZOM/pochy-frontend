@@ -151,11 +151,17 @@ export async function middleware(request: NextRequest) {
       status: backendRes.status,
       verifyUrl,
     });
+
+    const consoleData = {
+      verifyUrl,
+      backedRes: backendRes,
+      requestUrl: request.url,
+    };
+
+    localStorage.setItem('consoleData', JSON.stringify(consoleData));
+
     return NextResponse.redirect(
-      new URL(
-        `/verify?error=invalid&status=${backendRes.status}&verifyUrl=${JSON.stringify(verifyUrl)}&backedRes=${JSON.stringify(backendRes)}`,
-        request.url,
-      ),
+      new URL(`/verify?error=invalid&status=${backendRes.status}`, request.url),
     );
   }
 
