@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import Header from '@/components/layout/Header/Header';
+import { Header } from '@/components/layout/Header';
 import { ExtraNav } from '@/components/common/ExtraNav';
 
 export function WishlistHeader() {

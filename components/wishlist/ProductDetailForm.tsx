@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import Input from '@/components/common/Input/Input';
-import Header from '@/components/layout/Header/Header';
+import { Header } from '@/components/layout/Header';
 
 interface ProductDetailFormProps {
   initialData: any;

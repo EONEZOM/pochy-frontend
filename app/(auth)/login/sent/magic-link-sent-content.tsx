@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/common/Button';
 import { useRequestMagicLink } from '@/api/generated/login-controller/login-controller';
-import Header from '@/components/layout/Header/Header';
+import { Header } from '@/components/layout/Header';
 
 function getWebmailUrl(email: string): string | null {
   const domain = email.split('@')[1]?.toLowerCase().trim();

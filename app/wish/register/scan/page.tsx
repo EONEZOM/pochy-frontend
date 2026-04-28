@@ -10,7 +10,7 @@ import { ImageFileData } from '@/types/image';
 import RegisterReviewStep from '@/components/wishlist/RegisterReviewStep';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/common/Modal';
-import Header from '@/components/layout/Header/Header';
+import { Header } from '@/components/layout/Header';
 import type { CreateDetailDto } from '@/api/model';
 import { createWishCosmeticsMultipart } from '@/api/wish-cosmetics';
 

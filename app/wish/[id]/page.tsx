@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Share2, Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview';
-import Header from '@/components/layout/Header/Header';
+import { Header } from '@/components/layout/Header';
 import {
   useReadWishCosmeticsDetail,
   useReadWishCosmeticsList,

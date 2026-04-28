@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import ProductDetailForm from '@/components/wishlist/ProductDetailForm';
 import ResultCard from '@/components/wishlist/ResultCard';
-import Header from '@/components/layout/Header/Header';
+import { Header } from '@/components/layout/Header';
 
 interface ReviewStepProps {
   results: any[];
