@@ -65,11 +65,19 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname !== '/api/auth/verify-magic-link'
   ) {
     if (!API_BASE) {
+      console.error('[middleware][auth-rewrite] API_BASE missing', {
+        path: request.nextUrl.pathname,
+      });
       return NextResponse.next();
     }
 
     const targetUrl = new URL(`${API_BASE}${request.nextUrl.pathname}`);
     targetUrl.search = request.nextUrl.search;
+    console.info('[middleware][auth-rewrite]', {
+      method: request.method,
+      from: `${request.nextUrl.pathname}${request.nextUrl.search}`,
+      to: targetUrl.toString(),
+    });
     return NextResponse.rewrite(targetUrl);
   }
 
@@ -91,10 +99,15 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!API_BASE) {
+    console.error('[middleware][verify] API_BASE missing');
     return NextResponse.redirect(new URL('/verify?error=config', request.url));
   }
 
   const verifyUrl = `${API_BASE}/api/auth/verify-magic-link?token=${encodeURIComponent(token)}`;
+  console.info('[middleware][verify] start', {
+    verifyUrl,
+    tokenLength: token.length,
+  });
   let backendRes: Response;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -115,6 +128,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!backendRes.ok) {
+    console.warn('[middleware][verify] backend non-2xx', {
+      status: backendRes.status,
+      verifyUrl,
+    });
     return NextResponse.redirect(
       new URL(`/verify?error=invalid&status=${backendRes.status}`, request.url),
     );
@@ -165,6 +182,10 @@ export async function middleware(request: NextRequest) {
     );
 
     if (!refreshToken) {
+      console.warn('[middleware][verify] cookie fallback failed', {
+        reason: 'missing_refresh_token_in_body',
+        status: backendRes.status,
+      });
       return NextResponse.redirect(
         new URL(
           `/verify?error=cookie_missing&status=${backendRes.status}`,
@@ -193,6 +214,11 @@ export async function middleware(request: NextRequest) {
       });
     }
   }
+
+  console.info('[middleware][verify] success', {
+    status: backendRes.status,
+    setCookieCount: appendedCookieCount,
+  });
 
   return redirect;
 }
