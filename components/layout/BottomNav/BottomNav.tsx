@@ -1,9 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { Modal } from '@/components/common/Modal';
 import { cn } from '@/lib/utils';
 
 export const BOTTOM_NAV_MAX_WIDTH_CLASS = 'max-w-120';
@@ -50,6 +52,8 @@ const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
 ];
 
 const ICON_PX = 24;
+const BOTTOM_NAV_HIDDEN_PATHS = ['/login', '/verify', '/success'];
+const PREPARING_PATHS = ['/my', '/feed'];
 
 function isNavActive(pathname: string, href: string) {
   if (href === '/') return pathname === '/';
@@ -58,70 +62,95 @@ function isNavActive(pathname: string, href: string) {
 
 export function BottomNav({ className }: { className?: string }) {
   const pathname = usePathname() ?? '/';
+  const [isPreparingModalOpen, setIsPreparingModalOpen] = useState(false);
+  const shouldHideBottomNav = BOTTOM_NAV_HIDDEN_PATHS.some((path) => {
+    return pathname === path || pathname.startsWith(`${path}/`);
+  });
+
+  if (shouldHideBottomNav) {
+    return null;
+  }
 
   return (
-    <nav
-      className={cn(
-        'border-mono-bright-gray bg-mono-white border-t pb-(--safe-area-bottom)',
-        BOTTOM_NAV_MAX_WIDTH_CLASS,
-        className,
-      )}
-      role="navigation"
-      aria-label="하단 내비게이션"
-    >
-      <ul className="grid grid-cols-5">
-        {BOTTOM_NAV_ITEMS.map((item) => {
-          const active = isNavActive(pathname, item.href);
+    <>
+      <nav
+        className={cn(
+          'border-mono-bright-gray bg-mono-white border-t pb-(--safe-area-bottom)',
+          BOTTOM_NAV_MAX_WIDTH_CLASS,
+          className,
+        )}
+        role="navigation"
+        aria-label="하단 내비게이션"
+      >
+        <ul className="grid grid-cols-5">
+          {BOTTOM_NAV_ITEMS.map((item) => {
+            const active = isNavActive(pathname, item.href);
 
-          return (
-            <li key={item.href} className="min-w-0">
-              <Link
-                href={item.href}
-                className="flex min-h-14 flex-col items-center justify-center gap-1 py-1.5"
-                aria-current={active ? 'page' : undefined}
-              >
-                <div
-                  className="relative flex size-6.5 shrink-0 items-center justify-center"
-                  aria-hidden
+            return (
+              <li key={item.href} className="min-w-0">
+                <Link
+                  href={item.href}
+                  className="flex min-h-14 flex-col items-center justify-center gap-1 py-1.5"
+                  aria-current={active ? 'page' : undefined}
+                  onClick={(event) => {
+                    if (PREPARING_PATHS.includes(item.href)) {
+                      event.preventDefault();
+                      setIsPreparingModalOpen(true);
+                    }
+                  }}
                 >
-                  <Image
-                    src={item.iconPath}
-                    alt=""
-                    width={ICON_PX}
-                    height={ICON_PX}
-                    unoptimized
+                  <div
+                    className="relative flex size-6.5 shrink-0 items-center justify-center"
+                    aria-hidden
+                  >
+                    <Image
+                      src={item.iconPath}
+                      alt=""
+                      width={ICON_PX}
+                      height={ICON_PX}
+                      unoptimized
+                      className={cn(
+                        'object-contain transition-opacity duration-200',
+                        active ? 'opacity-0' : 'opacity-100',
+                      )}
+                    />
+                    <Image
+                      src={item.iconActivePath}
+                      alt=""
+                      width={ICON_PX}
+                      height={ICON_PX}
+                      unoptimized
+                      className={cn(
+                        'absolute inset-0 m-auto object-contain transition-opacity duration-200',
+                        active ? 'opacity-100' : 'opacity-0',
+                      )}
+                    />
+                  </div>
+                  <span
                     className={cn(
-                      'object-contain transition-opacity duration-200',
-                      active ? 'opacity-0' : 'opacity-100',
+                      'max-w-full truncate text-[11px] leading-tight transition-colors',
+                      active
+                        ? 'font-bold text-(--brand-classic)'
+                        : 'text-mono-dark-gray font-normal',
                     )}
-                  />
-                  <Image
-                    src={item.iconActivePath}
-                    alt=""
-                    width={ICON_PX}
-                    height={ICON_PX}
-                    unoptimized
-                    className={cn(
-                      'absolute inset-0 m-auto object-contain transition-opacity duration-200',
-                      active ? 'opacity-100' : 'opacity-0',
-                    )}
-                  />
-                </div>
-                <span
-                  className={cn(
-                    'max-w-full truncate text-[11px] leading-tight transition-colors',
-                    active
-                      ? 'font-bold text-(--brand-classic)'
-                      : 'text-mono-dark-gray font-normal',
-                  )}
-                >
-                  {item.label}
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+      <Modal
+        open={isPreparingModalOpen}
+        onOpenChange={setIsPreparingModalOpen}
+        title="준비중"
+        description="아직 준비중인 기능이에요."
+        confirmText="확인"
+        variant="warning"
+        showCancel={false}
+      />
+    </>
   );
 }
