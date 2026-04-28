@@ -8,7 +8,7 @@ if (!baseURL) {
 const ACCESS_TOKEN_STORAGE_KEY = 'ACCESS_TOKEN';
 
 export const axiosInstance = axios.create({
-  baseURL: '/',
+  baseURL: baseURL,
   timeout: 15000,
   withCredentials: true,
   headers: {
