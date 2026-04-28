@@ -10,9 +10,11 @@ import Image from 'next/image';
 import { ImageFileData } from '@/types/image';
 import RegisterReviewStep from '@/components/wishlist/RegisterReviewStep';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/common/Modal';
 
 export default function WishlistRegisterPage() {
   const router = useRouter();
+  const [isTipModalOpen, setIsTipModalOpen] = useState(true);
   const [images, setImages] = useState<ImageFileData[]>([]);
   const [analysisResults, setAnalysisResults] = useState<any[]>([]);
   const [isReviewStep, setIsReviewStep] = useState(false);
@@ -76,12 +78,22 @@ export default function WishlistRegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-between p-5">
+    <div className="flex h-full flex-col items-center justify-between p-5">
       <div className="w-full">
-        {/* 이미지 업로드 영역 */}
-        <div className="flex flex-col items-center justify-center">
-          <label className="flex h-11 w-50 cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50 hover:bg-zinc-100">
-            <span className="font-bold">캡쳐 사진 등록하기</span>
+        {images.length === 0 ? (
+          // 이미지 없을 때 - 넓은 버튼
+          <label className="border-mono-gray hover:bg-mono-bright-gray flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border-2 border-dashed py-8 transition-colors">
+            <Image
+              src="/icons/imgplus.svg"
+              alt=""
+              width={32}
+              height={32}
+              unoptimized
+              className="opacity-50"
+            />
+            <span className="text-mono-dark-gray text-sm font-bold">
+              캡쳐 사진 등록하기
+            </span>
             <input
               type="file"
               multiple
@@ -90,37 +102,69 @@ export default function WishlistRegisterPage() {
               onChange={handleFileChange}
             />
           </label>
-        </div>
-        {/* 프리뷰 리스트 */}
-        <div className="mt-6 grid w-full grid-cols-3 gap-3">
-          {images.map((img, idx) => (
-            <div
-              key={idx}
-              className="relative aspect-square overflow-hidden rounded-lg bg-zinc-100"
-            >
-              <Image
-                src={img.previewUrl}
-                alt="preview"
-                fill
-                className="object-cover"
-              />
-              <button
-                onClick={() => removeImage(idx)}
-                className="absolute top-1 right-1 rounded-full bg-black/50 p-1 text-white"
+        ) : (
+          // 이미지 있을 때 - 그리드
+          <div className="grid w-full grid-cols-3 gap-3">
+            {images.map((img, idx) => (
+              <div
+                key={idx}
+                className="border-mono-bright-gray bg-mono-bright-gray relative aspect-square overflow-hidden rounded-2xl border"
               >
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-        </div>
+                <Image
+                  src={img.previewUrl}
+                  alt="preview"
+                  fill
+                  className="object-cover"
+                />
+                <button
+                  onClick={() => removeImage(idx)}
+                  className="absolute top-1.5 right-1.5 flex size-5 items-center justify-center rounded-full bg-black/50 text-white"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+            {/* ✅ 이미지와 동일한 사이즈의 추가 버튼 */}
+            <label className="border-mono-gray hover:bg-mono-bright-gray flex aspect-square cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors">
+              <Image
+                src="/icons/imgplus.svg"
+                alt=""
+                width={24}
+                height={24}
+                unoptimized
+                className="opacity-40"
+              />
+              <input
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </label>
+          </div>
+        )}
       </div>
+
+      {/* 스캔 버튼 */}
       <Button
         onClick={startAnalysis}
         disabled={isPending || images.length === 0}
-        className="h-11 w-50 font-bold"
+        className="bg-mono-jet text-mono-white h-11 rounded-full px-5 py-3 text-sm font-bold transition-opacity disabled:opacity-30"
       >
-        {isPending ? 'AI 분석 중...' : `${images.length}개의 이미지 분석하기`}
+        {isPending ? 'AI 분석 중...' : `${images.length}개의 이미지 스캔하기`}
       </Button>
+
+      {/* 팁 모달 */}
+      <Modal
+        open={isTipModalOpen}
+        onOpenChange={setIsTipModalOpen}
+        variant="warning" // warning 아이콘 = warning.svg
+        title="팁"
+        description={`제품 사진은 물론,\n이름만 적힌 텍스트 캡쳐본도 포치가\n똑똑하게 읽어드려요!`}
+        confirmText="확인"
+        closeOnOverlayClick={false} // ✅ 배경 클릭으로 못 닫게
+      />
     </div>
   );
 }

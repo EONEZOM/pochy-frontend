@@ -58,13 +58,11 @@ export default function WishlistDetailPage() {
 
   if (!currentItem)
     return (
-      <div className="flex h-screen items-center justify-center">
-        아이템이 없습니다.
-      </div>
+      <div className="flex items-center justify-center">아이템이 없습니다.</div>
     );
 
   return (
-    <div className="relative min-h-screen max-w-120 py-5">
+    <div className="relative max-w-120 py-5">
       <div className="">
         {/* 제품 정보 헤더 */}
         <div className="text-center">

@@ -90,7 +90,7 @@ export default function WishlistPage() {
   if (!isHydrated) return null;
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative">
       {/* 카테고리 필터링 영역 */}
       <CategoryFilterArea
         mainCategories={FILTER_CATEGORIES}
@@ -101,12 +101,13 @@ export default function WishlistPage() {
         onSubChange={handleSubChange}
       />
 
-      <main className="overflow-visible px-4 py-4">
+      <main className="p-4">
         {filteredItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <p className="text-mono-dark-gray text-sm">
-              등록된 제품이 없습니다
-            </p>
+          <div className="flex min-h-[60vh] flex-col items-center justify-center">
+            <div className="font-bold">첫 번째 위시템을 기다리고 있어요.</div>
+            <div className="text-mono-dark-gray">
+              + 버튼을 눌러 등록해 보세요.
+            </div>
           </div>
         ) : (
           <div className="columns-2 gap-3 space-y-3 pb-4">

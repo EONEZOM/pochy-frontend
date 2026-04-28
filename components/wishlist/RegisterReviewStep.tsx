@@ -1,15 +1,15 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { ChevronLeft, AlertCircle } from 'lucide-react'
-import ProductDetailForm from '@/components/wishlist/ProductDetailForm'
-import ResultCard from '@/components/wishlist/ResultCard'
+import { useState } from 'react';
+import { ChevronLeft, AlertCircle } from 'lucide-react';
+import ProductDetailForm from '@/components/wishlist/ProductDetailForm';
+import ResultCard from '@/components/wishlist/ResultCard';
 
 interface ReviewStepProps {
-  results: any[]
-  setResults: (results: any[]) => void
-  onSave: () => void
-  onCancel: () => void
+  results: any[];
+  setResults: (results: any[]) => void;
+  onSave: () => void;
+  onCancel: () => void;
 }
 
 export default function RegisterReviewStep({
@@ -18,19 +18,19 @@ export default function RegisterReviewStep({
   onSave,
   onCancel,
 }: ReviewStepProps) {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const handleDelete = (index: number) => {
-    if (!confirm('이 항목을 삭제할까요?')) return
-    setResults(results.filter((_, i) => i !== index))
-  }
+    if (!confirm('이 항목을 삭제할까요?')) return;
+    setResults(results.filter((_, i) => i !== index));
+  };
 
   const handleDetailSubmit = (updatedData: any) => {
-    const updatedResults = [...results]
-    updatedResults[selectedIndex!] = updatedData
-    setResults(updatedResults)
-    setSelectedIndex(null)
-  }
+    const updatedResults = [...results];
+    updatedResults[selectedIndex!] = updatedData;
+    setResults(updatedResults);
+    setSelectedIndex(null);
+  };
 
   // 상세 수정 뷰
   if (selectedIndex !== null) {
@@ -42,29 +42,28 @@ export default function RegisterReviewStep({
         onBack={() => setSelectedIndex(null)}
         onSubmit={handleDetailSubmit}
       />
-    )
+    );
   }
 
   // 결과 그리드 뷰
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <header className="flex items-center justify-between border-b px-5 py-4">
-        <button onClick={onCancel} className="-ml-1 p-1">
-          <ChevronLeft size={24} />
-        </button>
-        <h1 className="text-lg font-bold">스캔 결과 확인</h1>
+    <div className="flex flex-col bg-white">
+      <header className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+        <div className="font-bold">스캔 결과 확인</div>
         <button
           onClick={onSave}
-          className="rounded-full bg-zinc-900 px-4 py-1.5 text-sm font-bold text-white transition-transform active:scale-95"
+          className="bg-mono-jet rounded-full px-4 py-1.5 text-sm font-bold text-white transition-transform active:scale-95"
         >
           등록
         </button>
       </header>
 
       <main className="overflow-y-auto p-5">
-        <div className="mb-6 flex items-center gap-2 rounded-xl bg-zinc-50 p-4 text-xs text-zinc-500">
+        <div className="text-mono-jet mb-6 flex items-center gap-2 rounded-xl bg-zinc-50 p-4">
           <AlertCircle size={14} className="shrink-0" />
-          <p>스캔된 정보를 확인하고 수정이 필요한 항목을 선택하세요.</p>
+          <div className="text-xs">
+            스캔된 정보를 확인하고 수정이 필요한 항목을 선택하세요.
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-x-3 gap-y-6">
@@ -79,5 +78,5 @@ export default function RegisterReviewStep({
         </div>
       </main>
     </div>
-  )
+  );
 }
