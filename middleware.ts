@@ -119,7 +119,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/verify?error=config', request.url));
   }
 
-  const verifyUrl = `${API_BASE}/api/auth/verify-magic-link?token=${token}`;
+  const verifyUrl = `${API_BASE}.nip.io/api/auth/verify-magic-link?token=${token}`;
   console.info('[middleware][verify] start', {
     verifyUrl,
     tokenLength: token.length,
