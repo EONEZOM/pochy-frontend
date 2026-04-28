@@ -29,6 +29,19 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  if (
+    request.nextUrl.pathname.startsWith('/api/auth/') &&
+    request.nextUrl.pathname !== '/api/auth/verify-magic-link'
+  ) {
+    if (!API_BASE) {
+      return NextResponse.next();
+    }
+
+    const targetUrl = new URL(`${API_BASE}${request.nextUrl.pathname}`);
+    targetUrl.search = request.nextUrl.search;
+    return NextResponse.rewrite(targetUrl);
+  }
+
   if (request.nextUrl.pathname !== '/api/auth/verify-magic-link') {
     return NextResponse.next();
   }
@@ -104,5 +117,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/api/auth/verify-magic-link'],
+  matcher: ['/', '/api/auth/:path*'],
 };
