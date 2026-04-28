@@ -27,6 +27,19 @@ const normalizeImageUrl = (value: unknown): string | undefined => {
   return url;
 };
 
+const buildCaptureImagesForRequest = (
+  files: File[],
+  requestLength: number,
+): File[] => {
+  if (files.length === 0 || requestLength <= 0) return [];
+  if (files.length >= requestLength) return files.slice(0, requestLength);
+
+  return Array.from({ length: requestLength }, (_, index) => {
+    const source = files[index % files.length];
+    return source;
+  });
+};
+
 export default function WishlistRegisterPage() {
   const router = useRouter();
   const [isTipModalOpen, setIsTipModalOpen] = useState(true);
@@ -85,9 +98,14 @@ export default function WishlistRegisterPage() {
 
     setIsCreatePending(true);
     try {
+      const normalizedCaptureImages = buildCaptureImagesForRequest(
+        images.map((img) => img.file),
+        request.length,
+      );
+
       await createWishCosmeticsMultipart({
         request,
-        captureImages: images.map((img) => img.file),
+        captureImages: normalizedCaptureImages,
       });
       alert('위시리스트에 등록되었습니다.');
       router.push('/wish');

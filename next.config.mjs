@@ -20,9 +20,9 @@ const nextConfig = {
         ...config.resolve.alias,
         sharp$: false,
         'onnxruntime-node$': false,
-      }
+      };
     }
-    return config
+    return config;
   },
 
   // 2) Security headers for SharedArrayBuffer-enabled workloads.
@@ -41,7 +41,7 @@ const nextConfig = {
           },
         ],
       },
-    ]
+    ];
   },
 
   /** (auth) route group: 실제 URL은 /verify, /success */
@@ -49,7 +49,7 @@ const nextConfig = {
     return [
       { source: '/auth/verify', destination: '/verify', permanent: false },
       { source: '/auth/success', destination: '/success', permanent: false },
-    ]
+    ];
   },
 
   async rewrites() {
@@ -60,7 +60,7 @@ const nextConfig = {
         // 실제 백엔드 서버 주소로 매핑
         destination: `${apiBase}/api/:path*`,
       },
-    ]
+    ];
   },
 
   // 3) Remote image allowlist for Naver hosts.
@@ -83,10 +83,18 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'i.ytimg.com', // 유튜브 썸네일 도메인
       },
+      // 포치 백엔드 이미지 버켓 주소
+      {
+        protocol: 'https',
+        hostname:
+          'pochy-s3-bucket-538747156157-ap-northeast-2-an.s3.amazonaws.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 
   reactStrictMode: true,
-}
+};
 
-export default nextConfig
+export default nextConfig;

@@ -93,9 +93,17 @@ axiosInstance.interceptors.request.use((config) => {
   const isFormData =
     typeof FormData !== 'undefined' && config.data instanceof FormData;
 
-  if (isFormData && config.headers) {
+  if (isFormData) {
     // FormData는 브라우저가 boundary 포함 Content-Type을 자동으로 설정해야 한다.
-    delete config.headers['Content-Type'];
+    // (orval/기본 axios 헤더와 충돌하지 않도록 대소문자 모두 제거)
+    if (config.headers && typeof (config.headers as any).set === 'function') {
+      (config.headers as any).set('Content-Type', undefined);
+      (config.headers as any).set('content-type', undefined);
+    }
+    if (config.headers && typeof config.headers === 'object') {
+      delete (config.headers as Record<string, unknown>)['Content-Type'];
+      delete (config.headers as Record<string, unknown>)['content-type'];
+    }
   }
 
   if (token) {

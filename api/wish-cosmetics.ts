@@ -13,9 +13,22 @@ export const createWishCosmeticsMultipart = async ({
   const formData = new FormData();
 
   captureImages.forEach((image, index) => {
-    formData.append('captureImages', image, image.name || `capture-${index}.jpg`);
+    const normalizedFile =
+      image.type && image.type.length > 0
+        ? image
+        : new File([image], image.name || `capture-${index}.jpg`, {
+            type: 'image/jpeg',
+          });
+    formData.append(
+      'captureImages',
+      normalizedFile,
+      normalizedFile.name || `capture-${index}.jpg`,
+    );
   });
-  request.forEach((item) => formData.append('request', JSON.stringify(item)));
+  formData.append(
+    'request',
+    new Blob([JSON.stringify(request)], { type: 'application/json' }),
+  );
 
   return customInstance({
     url: '/api/wish-cosmetics',
