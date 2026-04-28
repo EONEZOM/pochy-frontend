@@ -29,24 +29,31 @@ export default function WishlistPage() {
   const currentCategory =
     (searchParams.get('category') as FilterMainCategory) || 'All';
   const currentSub = (searchParams.get('sub') as FilterSubCategory) || 'All';
+  const sortOrder = searchParams.get('sort') || 'latest';
 
   // 백엔드 완성 시 이 부분은 API 호출 결과로 대체
   const filteredItems = useMemo(() => {
-    return wishItems.filter((item) => {
-      const matchesSearch =
-        searchQuery === '' ||
-        item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.brand_name.toLowerCase().includes(searchQuery.toLowerCase());
+    return wishItems
+      .filter((item) => {
+        const matchesSearch =
+          searchQuery === '' ||
+          item.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          item.brand_name.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesMain =
-        currentCategory === 'All' || item.main_category === currentCategory;
+        const matchesMain =
+          currentCategory === 'All' || item.main_category === currentCategory;
 
-      const matchesSub =
-        currentSub === 'All' || item.sub_category === currentSub;
+        const matchesSub =
+          currentSub === 'All' || item.sub_category === currentSub;
 
-      return matchesSearch && matchesMain && matchesSub;
-    });
-  }, [wishItems, searchQuery, currentCategory, currentSub]);
+        return matchesSearch && matchesMain && matchesSub;
+      })
+      .sort((a, b) => {
+        if (sortOrder === 'oldest') return a.id - b.id;
+        if (sortOrder === 'price') return (a.price ?? 0) - (b.price ?? 0);
+        return b.id - a.id; // latest 기본
+      });
+  }, [wishItems, searchQuery, currentCategory, currentSub, sortOrder]);
 
   const handleMainChange = (category: FilterMainCategory) => {
     const params = new URLSearchParams(searchParams);
