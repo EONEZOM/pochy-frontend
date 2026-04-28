@@ -7,9 +7,11 @@ const normalizeApiBase = (value?: string) => {
   return value.replace(/\/$/, '').replace(/\/v3\/api-docs$/, '').replace(/\/api$/, '');
 };
 
+const FALLBACK_API_BASE = 'http://43.200.208.148:8080';
 const runtimeApiBase = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
 const openApiBase = normalizeApiBase(process.env.OPENAPI_BASE_URL);
-const API_BASE = runtimeApiBase || openApiBase || '';
+// TODO: Vercel env 복구 후 하드코딩 fallback 제거 필요
+const API_BASE = runtimeApiBase || openApiBase || FALLBACK_API_BASE;
 const AUTH_COOKIE_KEYS = ['REFRESH_TOKEN'];
 const ACCESS_TOKEN_COOKIE_KEY = 'ACCESS_TOKEN';
 const REFRESH_TOKEN_COOKIE_KEY = 'REFRESH_TOKEN';
