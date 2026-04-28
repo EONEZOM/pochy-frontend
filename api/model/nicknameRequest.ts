@@ -6,6 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type VerifyMagicLinkParams = {
-token: string;
-};
+export interface NicknameRequest {
+  /**
+     * @minLength 2
+     * @maxLength 10
+     */
+  nickname: string;
+}

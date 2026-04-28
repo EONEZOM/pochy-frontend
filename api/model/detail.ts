@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type VerifyMagicLinkParams = {
-token: string;
-};
+export interface Detail {
+  id?: number;
+  imageUrl?: string;
+}

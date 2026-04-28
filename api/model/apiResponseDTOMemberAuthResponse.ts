@@ -5,9 +5,10 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
+import type { MemberAuthResponse } from './memberAuthResponse';
 
-export interface ApiResponseDTOObject {
+export interface ApiResponseDTOMemberAuthResponse {
   code?: string;
   message?: string;
-  result?: unknown;
+  result?: MemberAuthResponse;
 }

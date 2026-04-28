@@ -19,6 +19,8 @@ type ModalProps = {
   onCancel?: () => void;
   showCancel?: boolean;
   closeOnOverlayClick?: boolean;
+  closeOnConfirm?: boolean;
+  closeOnCancel?: boolean;
   hideIcon?: boolean;
   variant?: 'warning' | 'success' | 'error';
   className?: string;
@@ -53,6 +55,8 @@ export function Modal({
   onCancel,
   showCancel = false,
   closeOnOverlayClick = true,
+  closeOnConfirm = true,
+  closeOnCancel = true,
   hideIcon = false,
   variant = 'warning',
   className,
@@ -76,13 +80,13 @@ export function Modal({
 
   const handleConfirm = React.useCallback(() => {
     onConfirm?.();
-    onOpenChange(false);
-  }, [onConfirm, onOpenChange]);
+    if (closeOnConfirm) onOpenChange(false);
+  }, [closeOnConfirm, onConfirm, onOpenChange]);
 
   const handleCancel = React.useCallback(() => {
     onCancel?.();
-    onOpenChange(false);
-  }, [onCancel, onOpenChange]);
+    if (closeOnCancel) onOpenChange(false);
+  }, [closeOnCancel, onCancel, onOpenChange]);
 
   const resolvedTitle = title ?? MODAL_VARIANT_META[variant].defaultTitle;
 

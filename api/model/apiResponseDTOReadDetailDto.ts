@@ -5,9 +5,10 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
+import type { ReadDetailDto } from './readDetailDto';
 
-export interface ApiResponseDTOObject {
+export interface ApiResponseDTOReadDetailDto {
   code?: string;
   message?: string;
-  result?: unknown;
+  result?: ReadDetailDto;
 }

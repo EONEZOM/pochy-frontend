@@ -150,11 +150,11 @@ export function Header({
 
       {/* 중앙 영역 */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-14">
-        {variant === 'title' ? (
+        {variant === 'title' && title ? (
           <h3 className="pointer-events-auto max-w-full truncate text-center text-base font-bold tracking-tight text-zinc-900">
             {title}
           </h3>
-        ) : (
+        ) : variant === 'search' ? (
           <Input
             {...searchProps}
             type={searchProps?.type ?? 'search'}
@@ -164,7 +164,7 @@ export function Header({
               searchProps?.className,
             )}
           />
-        )}
+        ) : null}
       </div>
 
       {/* 우측 영역 */}

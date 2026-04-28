@@ -5,9 +5,10 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
+import type { GetHomeData } from './getHomeData';
 
-export interface ApiResponseDTOObject {
+export interface ApiResponseDTOGetHomeData {
   code?: string;
   message?: string;
-  result?: unknown;
+  result?: GetHomeData;
 }
