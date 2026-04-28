@@ -119,7 +119,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/verify?error=config', request.url));
   }
 
-  const verifyUrl = `${API_BASE}/api/auth/verify-magic-link?token=${encodeURIComponent(token)}`;
+  const verifyUrl = `${API_BASE}/api/auth/verify-magic-link?token=${token}`;
   console.info('[middleware][verify] start', {
     verifyUrl,
     tokenLength: token.length,
@@ -133,6 +133,7 @@ export async function middleware(request: NextRequest) {
       signal: controller.signal,
       headers: {
         Origin: request.nextUrl.origin,
+        Referer: request.url,
         'User-Agent':
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         Accept: 'application/json, text/plain, */*',
@@ -154,6 +155,15 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!backendRes.ok) {
+    const errorBody = await backendRes.text().catch(() => 'No body');
+    const responseHeaders = Object.fromEntries(backendRes.headers.entries());
+    console.warn('[middleware][verify] backend non-2xx - 403', {
+      status: backendRes.status,
+      verifyUrl,
+      errorBody,
+      responseHeaders,
+    });
+
     console.warn('[middleware][verify] backend non-2xx', {
       status: backendRes.status,
       verifyUrl,
