@@ -184,11 +184,16 @@ export default function ProductDetailForm({
             src={
               formData.official_image ||
               formData.image_url ||
-              '/placeholder-image.png'
+              '/icons/imgplus.svg'
             }
             alt="product"
             fill
-            className="object-cover transition-opacity group-hover:opacity-80"
+            className={cn(
+              'transition-opacity group-hover:opacity-80',
+              !formData.official_image && !formData.image_url
+                ? 'object-none p-10'
+                : 'object-cover',
+            )}
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 transition-opacity group-hover:opacity-100">
             <div className="flex size-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md">

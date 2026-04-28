@@ -14,6 +14,7 @@ import {
   type CarouselApi,
 } from '@/components/ui/carousel';
 import { getCategoryLabels } from '@/utils/category';
+import { cn } from '@/lib/utils';
 
 export default function WishlistDetailPage() {
   const params = useParams();
@@ -72,30 +73,40 @@ export default function WishlistDetailPage() {
           <h2 className="text-xl font-bold">{currentItem.product_name}</h2>
         </div>
 
-        {/* 상품 이미지 영역 (Carousel UI?) */}
+        {/* 상품 이미지 영역 */}
         <div className="relative mt-4">
           <Carousel
             setApi={setApi}
             opts={{
               startIndex: initialIndex,
-              align: 'center', // 센터 정렬
-              loop: true, // 무한 루프
+              align: 'center',
+              loop: wishItems.length > 2, // 3개 이상일 때만 루프 활성화
+              containScroll: false, // 가장자리에 도달해도 강제로 중앙 정렬 유지
             }}
             className="w-full"
           >
+            {/* 억지 중앙 정렬 클래스(justify-center) 제거, Embla 엔진에 위임 */}
             <CarouselContent>
               {wishItems.map((item, index) => (
-                <CarouselItem key={item.id} className="basis-[50%] py-5">
+                <CarouselItem
+                  key={item.id}
+                  className={cn(
+                    'py-5 transition-all',
+                    // 1~2개일 때는 60% 크기 유지, 3개 이상부터는 50%
+                    wishItems.length <= 2 ? 'basis-[50%]' : 'basis-[50%]',
+                  )}
+                >
                   <div
-                    className={`relative aspect-2/3 w-full rounded-3xl bg-white shadow transition-all duration-500 ${
+                    className={cn(
+                      'relative aspect-2/3 w-full rounded-3xl bg-white shadow transition-all duration-500',
                       currentIndex === index
                         ? 'scale-100 opacity-100'
-                        : 'opacity-60'
-                    }`}
+                        : 'scale-90 opacity-40',
+                    )}
                   >
                     <div className="absolute inset-0 overflow-hidden rounded-3xl">
                       <Image
-                        src={item.official_image}
+                        src={item.official_image || item.image_url}
                         alt={item.product_name}
                         fill
                         className="object-cover"
@@ -118,8 +129,10 @@ export default function WishlistDetailPage() {
             transition={{ duration: 0.2 }}
             className="space-y-4"
           >
-            <DetailRow label="대분류" value={categoryLabels.main} />
-            <DetailRow label="소분류" value={categoryLabels.sub} />
+            <DetailRow
+              label="카테고리"
+              value={`${categoryLabels.main} / ${categoryLabels.sub}`}
+            />
             <DetailRow label="특징" value={currentItem.features} />
             <DetailRow label="가격" value={currentItem.price} />
             <DetailRow label="메모" value={currentItem.memo || '-'} />
@@ -137,48 +150,58 @@ export default function WishlistDetailPage() {
         </div>
 
         {/* 제품 연관 리뷰 영상 불러오는 영역 */}
-        <section className="mt-12">
-          <h3 className="mb-4 text-lg font-bold text-zinc-900">
+        <section className="mt-12 px-5">
+          <h3 className="mb-4 px-1 text-lg font-bold text-zinc-900">
             연관 리뷰 영상
           </h3>
 
-          {isYoutubeLoading ? (
-            <div className="flex gap-4 overflow-x-auto">
-              {[1, 2, 3].map((n) => (
-                <div
-                  key={n}
-                  className="h-40 w-64 shrink-0 animate-pulse rounded-xl bg-zinc-100"
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="scrollbar-hide flex gap-4 overflow-x-auto pb-4">
-              {youtubeData?.items?.map((video: any) => (
-                <a
-                  key={video.id.videoId}
-                  href={`https://www.youtube.com/watch?v=${video.id.videoId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-64 shrink-0 transition-transform active:scale-95"
-                >
-                  <div className="relative aspect-video w-full overflow-hidden rounded-xl">
-                    <Image
-                      src={video.snippet.thumbnails.high.url}
-                      alt={video.snippet.title}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-sm font-semibold text-zinc-900">
-                    {video.snippet.title}
-                  </p>
-                  <p className="text-xs text-zinc-400">
-                    {video.snippet.channelTitle}
-                  </p>
-                </a>
-              ))}
-            </div>
-          )}
+          <Carousel
+            opts={{
+              align: 'start',
+              containScroll: 'trimSnaps',
+            }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4">
+              {isYoutubeLoading
+                ? // 로딩 상태 (3개 아이템 유지)
+                  [1, 2, 3].map((n) => (
+                    <CarouselItem key={n} className="basis-[38%] pl-4">
+                      <div className="h-40 w-full animate-pulse rounded-xl bg-zinc-100" />
+                      <div className="mt-2 h-4 w-3/4 animate-pulse rounded bg-zinc-100" />
+                    </CarouselItem>
+                  ))
+                : // 데이터 렌더링
+                  youtubeData?.items?.map((video: any) => (
+                    <CarouselItem
+                      key={video.id.videoId}
+                      className="basis-[38%] pl-4"
+                    >
+                      <a
+                        href={`https://www.youtube.com/watch?v=${video.id.videoId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group block transition-transform active:scale-95"
+                      >
+                        <div className="relative aspect-video w-full overflow-hidden rounded-xl">
+                          <Image
+                            src={video.snippet.thumbnails.high.url}
+                            alt={video.snippet.title}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <p className="mt-2 line-clamp-2 text-sm font-semibold text-zinc-900">
+                          {video.snippet.title}
+                        </p>
+                        <p className="text-xs text-zinc-400">
+                          {video.snippet.channelTitle}
+                        </p>
+                      </a>
+                    </CarouselItem>
+                  ))}
+            </CarouselContent>
+          </Carousel>
         </section>
       </div>
 
