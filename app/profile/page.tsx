@@ -32,6 +32,10 @@ function getErrorMessage(error: unknown): string {
   return '요청 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
 }
 
+function isNicknameLengthValid(nickname: string): boolean {
+  return nickname.length >= 2 && nickname.length <= 10;
+}
+
 export default function MyPage() {
   const router = useRouter();
   const { data, isLoading, refetch } = useGetHomeData();
@@ -71,6 +75,9 @@ export default function MyPage() {
       onSuccess: () => {
         router.replace('/login?fromLogout=1');
       },
+      onError: () => {
+        alert('로그아웃 처리에 실패했어요. 다시 시도해 주세요.');
+      },
     },
   });
 
@@ -78,6 +85,10 @@ export default function MyPage() {
     const trimmed = nickname.trim();
     if (!trimmed) {
       alert('닉네임을 입력해 주세요.');
+      return;
+    }
+    if (!isNicknameLengthValid(trimmed)) {
+      alert('닉네임은 2자 이상 10자 이하로 입력해 주세요.');
       return;
     }
     updateNickname({ data: { nickname: trimmed } });
@@ -143,7 +154,7 @@ export default function MyPage() {
               setNicknameInput(event.target.value);
               if (!isNicknameTouched) setIsNicknameTouched(true);
             }}
-            maxLength={20}
+            maxLength={10}
             placeholder="닉네임을 입력해 주세요."
             className="border-mono-dark-gray text-mono-jet placeholder:text-mono-dark-gray h-10 rounded-none text-sm font-medium"
             disabled={isSaving}

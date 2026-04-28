@@ -18,12 +18,10 @@ function LoginContent() {
   const isFromLogout = searchParams.get('fromLogout') === '1';
   const [email, setEmail] = useState('');
   const [isCheckingSession, setIsCheckingSession] = useState(!isFromLogout);
+  const [submittedEmail, setSubmittedEmail] = useState('');
 
   useEffect(() => {
-    if (isFromLogout) {
-      setIsCheckingSession(false);
-      return;
-    }
+    if (isFromLogout) return;
 
     let isMounted = true;
 
@@ -48,7 +46,7 @@ function LoginContent() {
   const { mutate: requestMagicLink, isPending } = useRequestMagicLink({
     mutation: {
       onSuccess: () => {
-        router.push(`/login/sent?email=${encodeURIComponent(email.trim())}`);
+        router.push(`/login/sent?email=${encodeURIComponent(submittedEmail)}`);
       },
       onError: (error) => {
         const message =
@@ -61,9 +59,11 @@ function LoginContent() {
   });
 
   const handleLogin = () => {
-    if (!email) return;
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) return;
+    setSubmittedEmail(trimmedEmail);
     requestMagicLink({
-      params: { email },
+      params: { email: trimmedEmail },
     });
   };
 

@@ -40,16 +40,17 @@ function getNicknameErrorMessage(error: unknown): string {
   return '알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해 주세요.';
 }
 
+function isNicknameLengthValid(nickname: string): boolean {
+  return nickname.length >= 2 && nickname.length <= 10;
+}
+
 function MainPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const shouldOpenSetupNickname = searchParams.get('setupNickname') === '1';
 
-  const [isNicknameModalOpen, setIsNicknameModalOpen] = React.useState(() => {
-    if (!shouldOpenSetupNickname) return false;
-    if (typeof window === 'undefined') return true;
-    return localStorage.getItem(NICKNAME_SETUP_DONE_KEY) !== '1';
-  });
+  const [isNicknameModalDismissed, setIsNicknameModalDismissed] =
+    React.useState(false);
   const [nickname, setNickname] = React.useState('');
   const [isSkipping, setIsSkipping] = React.useState(false);
   const [isDuplicateNickname, setIsDuplicateNickname] = React.useState(false);
@@ -64,6 +65,15 @@ function MainPageContent() {
     refetch: refetchHomeData,
   } = useGetHomeData();
   const homeData = homeResponse?.result;
+  const hasServerNickname = Boolean(homeData?.nickname?.trim());
+  const isNicknameSetupDoneLocal =
+    typeof window !== 'undefined' &&
+    localStorage.getItem(NICKNAME_SETUP_DONE_KEY) === '1';
+  const isNicknameModalOpen =
+    shouldOpenSetupNickname &&
+    !hasServerNickname &&
+    !isNicknameSetupDoneLocal &&
+    !isNicknameModalDismissed;
 
   const sections: Array<{ title: string; items: Detail[] }> = [
     { title: '위시', items: homeData?.wishList ?? [] },
@@ -85,10 +95,10 @@ function MainPageContent() {
           if (typeof window !== 'undefined') {
             localStorage.setItem(NICKNAME_SETUP_DONE_KEY, '1');
           }
+          setIsNicknameModalDismissed(true);
           void refetchHomeData();
           setIsEmptyNickname(false);
           setIsDuplicateNickname(false);
-          setIsNicknameModalOpen(false);
         },
         onError: (error) => {
           if (error instanceof AxiosError && error.response?.status === 403) {
@@ -106,9 +116,15 @@ function MainPageContent() {
     });
 
   const handleConfirmNickname = () => {
+    if (isPending) return;
     const trimmed = nickname.trim();
     if (!trimmed) {
       setIsEmptyNickname(true);
+      nicknameInputRef.current?.focus();
+      return;
+    }
+    if (!isNicknameLengthValid(trimmed)) {
+      alert('닉네임은 2자 이상 10자 이하로 입력해 주세요.');
       nicknameInputRef.current?.focus();
       return;
     }
@@ -199,7 +215,9 @@ function MainPageContent() {
 
       <Modal
         open={isNicknameModalOpen}
-        onOpenChange={setIsNicknameModalOpen}
+        onOpenChange={(open) => {
+          if (!open) setIsNicknameModalDismissed(true);
+        }}
         title="포치에서 당신을 뭐라고 부를까요?"
         confirmText={isPending ? '저장 중...' : '이 이름으로 결정!'}
         cancelText="건너뛰기"
@@ -220,7 +238,7 @@ function MainPageContent() {
               if (isEmptyNickname) setIsEmptyNickname(false);
               if (isDuplicateNickname) setIsDuplicateNickname(false);
             }}
-            maxLength={20}
+            maxLength={10}
             placeholder="닉네임을 입력해 주세요."
             className="border-mono-dark-gray text-mono-jet placeholder:text-mono-dark-gray h-10 rounded-none text-sm font-medium"
             disabled={isPending}
@@ -235,7 +253,7 @@ function MainPageContent() {
             </p>
           ) : (
             <p className="text-mono-dark-gray text-left text-xs font-normal">
-              이후 이름을 변경하실려면 <br /> 마이페이지에서 변경하실 수 있어요.
+              이후 이름을 변경하시려면 <br /> 마이페이지에서 변경하실 수 있어요.
             </p>
           )}
         </div>

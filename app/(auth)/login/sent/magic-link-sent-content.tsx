@@ -31,6 +31,7 @@ export function MagicLinkSentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email')?.trim() ?? '';
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   React.useEffect(() => {
     if (!email) {
@@ -66,7 +67,10 @@ export function MagicLinkSentContent() {
   };
 
   const handleResend = () => {
-    if (!email) return;
+    if (!isValidEmail) {
+      alert('올바른 이메일 형식이 아니에요. 다시 로그인해 주세요.');
+      return;
+    }
     requestMagicLink({ params: { email } });
   };
 
@@ -123,7 +127,7 @@ export function MagicLinkSentContent() {
           size="lg"
           className="h-14 w-full max-w-full rounded-full text-base"
           onClick={handleResend}
-          disabled={isResending}
+          disabled={isResending || !isValidEmail}
         >
           {isResending ? (
             <span className="flex items-center justify-center gap-2">

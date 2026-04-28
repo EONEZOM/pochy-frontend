@@ -76,6 +76,9 @@ const requestReissue = async () => {
     response?.headers?.authorization?.replace?.(/^Bearer\s+/i, ''),
   );
   const nextAccessToken = tokenFromBody ?? tokenFromHeader;
+  if (!nextAccessToken) {
+    console.warn('Token reissue succeeded but no token found in response');
+  }
   persistAccessToken(nextAccessToken);
 };
 
@@ -98,13 +101,15 @@ axiosInstance.interceptors.response.use(
   },
   async (error) => {
     const status = error?.response?.status;
-    const originalRequest = error?.config as RetryableAxiosRequestConfig | undefined;
+    const originalRequest = error?.config as
+      | RetryableAxiosRequestConfig
+      | undefined;
     const requestUrl = originalRequest?.url ?? '';
 
     const shouldSkipReissue =
       !originalRequest ||
       originalRequest._retry ||
-      (status !== 401 && status !== 403) ||
+      status !== 401 ||
       requestUrl.includes('/api/auth/reissue') ||
       requestUrl.includes('/api/auth/logout');
 
