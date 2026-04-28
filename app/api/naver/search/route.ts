@@ -7,15 +7,31 @@ export async function GET(request: Request) {
   if (!query)
     return NextResponse.json({ error: 'Query is required' }, { status: 400 })
 
+  const clientId = process.env.NAVER_CLIENT_ID
+  const clientSecret = process.env.NAVER_CLIENT_SECRET
+  if (!clientId || !clientSecret) {
+    return NextResponse.json(
+      { error: 'NAVER API 환경 변수가 설정되지 않았습니다.' },
+      { status: 500 },
+    )
+  }
+
   const res = await fetch(
     `https://openapi.naver.com/v1/search/shop.json?query=${encodeURIComponent(query)}&display=1&sort=sim`,
     {
       headers: {
-        'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID!,
-        'X-Naver-Client-Secret': process.env.NAVER_CLIENT_SECRET!,
+        'X-Naver-Client-Id': clientId,
+        'X-Naver-Client-Secret': clientSecret,
       },
     },
   )
+
+  if (!res.ok) {
+    return NextResponse.json(
+      { error: 'Naver API 호출에 실패했습니다.' },
+      { status: res.status },
+    )
+  }
 
   const data = await res.json()
 

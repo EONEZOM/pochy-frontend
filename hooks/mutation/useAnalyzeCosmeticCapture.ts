@@ -21,25 +21,40 @@ export const useAnalyzeCosmeticCapture = () => {
 
       const data = await res.json()
 
-      const mappedResults = await Promise.all(
-        data.results
-          .filter((item: any) => item.is_cosmetic === true)
-          .map(async (item: any) => {
-            const searchQuery = `${item.brand_name} ${item.product_name}`
+      const filteredResults = (data.results ?? []).filter(
+        (item: any) => item.is_cosmetic === true,
+      )
 
+      const mappedResults = await Promise.all(
+        filteredResults.map(async (item: any) => {
+          const searchQuery = `${item.brand_name} ${item.product_name}`
+          let searchData: Record<string, unknown> = {}
+
+          try {
             const searchRes = await fetch(
               `/api/naver/search?query=${encodeURIComponent(searchQuery)}`,
             )
-            const searchData = await searchRes.json()
-
-            return {
-              ...item,
-              image_url: URL.createObjectURL(imageFiles[item.image_index]), // 원본 캡쳐 이미지
-              official_image: searchData.official_image || null, // 네이버 상품 이미지
-              price: searchData.lowest_price || '정보 없음', // 최저가
-              link: searchData.mall_url || '',
+            if (searchRes.ok) {
+              searchData = await searchRes.json()
             }
-          }),
+          } catch {
+            searchData = {}
+          }
+
+          const imageIndex = Number(item.image_index)
+          const sourceImage =
+            Number.isFinite(imageIndex) && imageFiles[imageIndex]
+              ? imageFiles[imageIndex]
+              : imageFiles[0]
+
+          return {
+            ...item,
+            image_url: sourceImage ? URL.createObjectURL(sourceImage) : '',
+            official_image: searchData.official_image || null,
+            price: searchData.lowest_price || '정보 없음',
+            link: searchData.mall_url || '',
+          }
+        }),
       )
 
       return {

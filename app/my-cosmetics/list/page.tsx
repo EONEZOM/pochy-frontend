@@ -1,3 +1,5 @@
-export default function MyCosmeticsListPage() {
-  return <div></div>
-}
+const MyCosmeticsListPage = () => {
+  return <div></div>;
+};
+
+export default MyCosmeticsListPage;

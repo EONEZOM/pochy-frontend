@@ -27,6 +27,7 @@ export default function WishlistDetailPage() {
   const [api, setApi] = useState<CarouselApi>();
   const wishId = Number(params.id);
   const isValidWishId = Number.isFinite(wishId) && wishId > 0;
+  const [selectedWishId, setSelectedWishId] = useState(wishId);
 
   const { data: listData, isLoading: isListLoading } = useReadWishCosmeticsList({
     size: 100,
@@ -47,11 +48,13 @@ export default function WishlistDetailPage() {
     }
   }, [initialIndex]);
 
-  const currentListItem = wishItems[currentIndex];
-  const currentWishId = currentListItem?.wishCosmeticsId ?? wishId;
+  useEffect(() => {
+    setSelectedWishId(wishId);
+  }, [wishId]);
+
   const { data: detailData, isLoading: isDetailLoading } =
-    useReadWishCosmeticsDetail(currentWishId, {
-      query: { enabled: !!currentWishId && isValidWishId },
+    useReadWishCosmeticsDetail(selectedWishId, {
+      query: { enabled: !!selectedWishId && isValidWishId },
     });
   const currentItem = detailData?.result;
 
@@ -140,6 +143,7 @@ export default function WishlistDetailPage() {
       setCurrentIndex(index);
       const selectedId = wishItems[index]?.wishCosmeticsId;
       if (!selectedId) return;
+      setSelectedWishId(selectedId);
       router.replace(`/wish/${selectedId}`, { scroll: false });
     });
   }, [api, wishItems, router]);

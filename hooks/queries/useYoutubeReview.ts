@@ -4,12 +4,15 @@ import { useQuery } from '@tanstack/react-query'
  * 유튜브 리뷰 영상을 가져오는 커스텀 훅
  * @param query - 검색할 제품명 (브랜드 + 제품명)
  */
-export function useYoutubeReview(query: string) {
+export const useYoutubeReview = (query: string) => {
+  const normalizedQuery = query.trim()
+
   return useQuery({
-    queryKey: ['youtube', query],
-    queryFn: async () => {
+    queryKey: ['youtube', normalizedQuery],
+    queryFn: async ({ signal }) => {
       const res = await fetch(
-        `/api/youtube?query=${encodeURIComponent(query + ' 리뷰')}`,
+        `/api/youtube?query=${encodeURIComponent(normalizedQuery + ' 리뷰')}`,
+        { signal },
       )
 
       if (!res.ok) {
@@ -21,7 +24,7 @@ export function useYoutubeReview(query: string) {
     // 할당량 절약을 위한 공격적 캐싱 (6시간 동안 캐시 유지)
     staleTime: 1000 * 60 * 60 * 6,
     gcTime: 1000 * 60 * 60 * 24, // 가비지 컬렉션 타임 (24시간)
-    enabled: !!query, // 쿼리가 있을 때만 실행
+    enabled: !!normalizedQuery, // 쿼리가 있을 때만 실행
     retry: 1, // 에러 발생 시 재시도는 한 번만
   })
 }

@@ -9,9 +9,16 @@ const openai = new OpenAI({
 export async function POST(req: Request) {
   try {
     const { images } = await req.json()
+    const MAX_IMAGES_PER_REQUEST = 8
 
     if (!images || !Array.isArray(images) || images.length === 0) {
       return NextResponse.json({ error: '이미지가 없습니다.' }, { status: 400 })
+    }
+    if (images.length > MAX_IMAGES_PER_REQUEST) {
+      return NextResponse.json(
+        { error: `이미지는 최대 ${MAX_IMAGES_PER_REQUEST}장까지 분석할 수 있습니다.` },
+        { status: 400 },
+      )
     }
 
     const response = await openai.chat.completions.create({
@@ -100,9 +107,12 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(parsedData)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('\n--- ❌ Vision API Error ---')
-    console.error(error.message)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error(error)
+    return NextResponse.json(
+      { error: '이미지 분석 중 서버 오류가 발생했습니다.' },
+      { status: 500 },
+    )
   }
 }

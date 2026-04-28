@@ -8,12 +8,14 @@ export const resizeImage = async (url: string): Promise<string> => {
   const response = await fetch(url)
   const blob = await response.blob()
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.readAsDataURL(blob)
+    reader.onerror = () => reject(new Error('이미지 파일 읽기에 실패했습니다.'))
     reader.onload = (event) => {
       const img = new Image()
       img.src = event.target?.result as string
+      img.onerror = () => reject(new Error('이미지 로드에 실패했습니다.'))
       img.onload = () => {
         const canvas = document.createElement('canvas')
         const MAX_SIDE = 768 // OpenAI High Detail 모드 최적화 기준

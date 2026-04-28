@@ -180,6 +180,12 @@ export default function Header({
           <Input
             {...searchProps}
             type={searchProps?.type ?? 'search'}
+            onKeyDown={(e) => {
+              searchProps?.onKeyDown?.(e);
+              if (e.key === 'Enter') {
+                onSearch?.();
+              }
+            }}
             className="pointer-events-auto w-full"
             rightElement={
               <button
