@@ -1,4 +1,4 @@
-import axios, { AxiosRequestConfig } from 'axios';
+import axios, { AxiosHeaders, AxiosRequestConfig } from 'axios';
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL;
 if (!baseURL) {
@@ -90,6 +90,22 @@ const requestReissue = async () => {
 
 axiosInstance.interceptors.request.use((config) => {
   const token = getAccessToken();
+  const isFormData =
+    typeof FormData !== 'undefined' && config.data instanceof FormData;
+
+  if (isFormData) {
+    // FormData는 브라우저가 boundary 포함 Content-Type을 자동으로 설정해야 한다.
+    // (orval/기본 axios 헤더와 충돌하지 않도록 대소문자 모두 제거)
+    if (config.headers instanceof AxiosHeaders) {
+      config.headers.set('Content-Type', undefined);
+      config.headers.set('content-type', undefined);
+    }
+    if (config.headers && typeof config.headers === 'object') {
+      delete (config.headers as Record<string, unknown>)['Content-Type'];
+      delete (config.headers as Record<string, unknown>)['content-type'];
+    }
+  }
+
   if (token) {
     config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;

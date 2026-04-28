@@ -66,6 +66,7 @@ const nextConfig = {
   // 3) Remote image allowlist for Naver hosts.
   images: {
     remotePatterns: [
+      // 네이버 검색 API 쇼핑 이미지 도메인
       {
         protocol: 'https',
         hostname: 'shopping-phinf.pstatic.net',
@@ -77,6 +78,18 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '**.pstatic.net',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com', // 유튜브 썸네일 도메인
+      },
+      // 포치 백엔드 이미지 버켓 주소
+      {
+        protocol: 'https',
+        hostname:
+          'pochy-s3-bucket-538747156157-ap-northeast-2-an.s3.amazonaws.com',
+        port: '',
+        pathname: '/**',
       },
     ],
   },

@@ -1,28 +1,29 @@
-/* Basic reset */
+/* Basic reset
 *,
 *::before,
 *::after {
   box-sizing: border-box;
-}
+} */
 
-* {
+/* 이 부분 margin, padding 0 때문에 p값 m값 적용안되서 한참 찾음 */
+/* * {
   margin: 0;
   padding: 0;
-}
+} */
 
-html,
+/* html,
 body {
   width: 100%;
   min-height: 100%;
-}
+} */
 
-body {
+/* body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-}
+} */
 
-img,
+/* img,
 picture,
 video,
 canvas,
@@ -46,4 +47,4 @@ a {
 ul,
 ol {
   list-style: none;
-}
+} */
