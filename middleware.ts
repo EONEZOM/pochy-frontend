@@ -99,8 +99,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const isConfirmed = request.nextUrl.searchParams.get('confirm') === '1';
-  const isDirectUserNavigation = request.headers.get('sec-fetch-user') === '?1';
-  if (!isConfirmed && !isDirectUserNavigation) {
+  if (!isConfirmed) {
     const verifyPageUrl = new URL('/verify', request.url);
     verifyPageUrl.searchParams.set('token', token);
     return NextResponse.redirect(verifyPageUrl);
