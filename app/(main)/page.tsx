@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ImageIcon } from 'lucide-react';
 import { BottomNav } from '@/components/layout/BottomNav';
-import { HomeSectionCarousel } from '@/components/common/HomeSectionCarousel';
+import { HomeSectionCarousel } from '@/components/main/HomeSectionCarousel';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/common/Modal';
 import { useGetHomeData } from '@/api/generated/home/home';
@@ -21,8 +21,7 @@ import mainLogo from '@/public/logo/main-logo.png';
 const NICKNAME_SETUP_DONE_KEY = 'nickname_setup_done_v1';
 
 /** `.env.local`에 `NEXT_PUBLIC_HOME_MOCK=1` 넣으면 위시/마이/피드에 임시 10개씩 표시 */
-const HOME_MOCK_ENABLED =
-  process.env.NEXT_PUBLIC_HOME_MOCK === '1';
+const HOME_MOCK_ENABLED = process.env.NEXT_PUBLIC_HOME_MOCK === '1';
 
 const makeMockDetails = (prefix: string): Detail[] =>
   Array.from({ length: 10 }, (_, i) => ({

@@ -1,24 +1,54 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/common/BottomSheet';
 import { Input } from '@/components/ui/input';
-import { useRequestMagicLink } from '@/api/generated/login-controller/login-controller';
+import {
+  reissue,
+  useRequestMagicLink,
+} from '@/api/generated/login-controller/login-controller';
 import Image from 'next/image';
 import mainLogo from '@/public/logo/main-logo.png';
 
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isFromLogout = searchParams.get('fromLogout') === '1';
   const [email, setEmail] = useState('');
+  const [isCheckingSession, setIsCheckingSession] = useState(!isFromLogout);
+
+  useEffect(() => {
+    if (isFromLogout) {
+      setIsCheckingSession(false);
+      return;
+    }
+
+    let isMounted = true;
+
+    const checkSession = async () => {
+      try {
+        await reissue();
+        if (!isMounted) return;
+        router.replace('/?setupNickname=1');
+      } catch {
+        if (!isMounted) return;
+        setIsCheckingSession(false);
+      }
+    };
+
+    checkSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isFromLogout, router]);
 
   const { mutate: requestMagicLink, isPending } = useRequestMagicLink({
     mutation: {
       onSuccess: () => {
-        router.push(
-          `/login/sent?email=${encodeURIComponent(email.trim())}`,
-        );
+        router.push(`/login/sent?email=${encodeURIComponent(email.trim())}`);
       },
       onError: (error) => {
         const message =
@@ -72,15 +102,15 @@ export default function Home() {
             <Button
               className="text-md h-14 w-full rounded-xl bg-zinc-900 font-bold text-white shadow-lg transition-transform active:scale-[0.98]"
               onClick={handleLogin}
-              disabled={isPending}
+              disabled={isPending || isCheckingSession}
             >
-              {isPending ? (
+              {isPending || isCheckingSession ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  발송 중...
+                  {isCheckingSession ? '세션 확인 중...' : '발송 중...'}
                 </span>
               ) : (
-                '매직링크 받기'
+                '로그인 하기'
               )}
             </Button>
           </div>
