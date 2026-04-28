@@ -94,12 +94,12 @@ function VerifyContent() {
         height={200}
         className="mx-auto mt-10 mb-10"
       />
-      <Link
+      <a
         href={verifyHref}
         className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-900 px-5 text-sm font-semibold text-white"
       >
         인증 계속하기
-      </Link>
+      </a>
     </main>
   );
 }
