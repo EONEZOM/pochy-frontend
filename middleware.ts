@@ -140,10 +140,7 @@ export async function middleware(request: NextRequest) {
       'name' in error &&
       (error as { name?: string }).name === 'AbortError';
     return NextResponse.redirect(
-      new URL(
-        `/verify?error=${isTimeout ? 'timeout' : 'config'}&verifyUrl=${encodeURIComponent(verifyUrl)}`,
-        request.url,
-      ),
+      new URL(`/verify?error=${isTimeout ? 'timeout' : 'config'}`, request.url),
     );
   } finally {
     clearTimeout(timeoutId);
@@ -155,7 +152,10 @@ export async function middleware(request: NextRequest) {
       verifyUrl,
     });
     return NextResponse.redirect(
-      new URL(`/verify?error=invalid&status=${backendRes.status}`, request.url),
+      new URL(
+        `/verify?error=invalid&status=${backendRes.status}&verifyUrl=${encodeURIComponent(verifyUrl)}&${JSON.stringify(backendRes)}`,
+        request.url,
+      ),
     );
   }
 
