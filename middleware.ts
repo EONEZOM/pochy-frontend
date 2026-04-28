@@ -153,7 +153,7 @@ export async function middleware(request: NextRequest) {
     });
     return NextResponse.redirect(
       new URL(
-        `/verify?error=invalid&status=${backendRes.status}&verifyUrl=${encodeURIComponent(verifyUrl)}&${JSON.stringify(backendRes)}`,
+        `/verify?error=invalid&status=${backendRes.status}&verifyUrl=${JSON.stringify(verifyUrl)}&backedRes=${JSON.stringify(backendRes)}`,
         request.url,
       ),
     );
