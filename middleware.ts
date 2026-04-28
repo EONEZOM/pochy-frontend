@@ -7,9 +7,11 @@ const normalizeApiBase = (value?: string) => {
   return value.replace(/\/$/, '').replace(/\/v3\/api-docs$/, '').replace(/\/api$/, '');
 };
 
+const FALLBACK_API_BASE = 'http://43.200.208.148:8080';
 const runtimeApiBase = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
 const openApiBase = normalizeApiBase(process.env.OPENAPI_BASE_URL);
-const API_BASE = runtimeApiBase || openApiBase || '';
+// TODO: Vercel env 복구 후 하드코딩 fallback 제거 필요
+const API_BASE = runtimeApiBase || openApiBase || FALLBACK_API_BASE;
 const AUTH_COOKIE_KEYS = ['REFRESH_TOKEN'];
 const ACCESS_TOKEN_COOKIE_KEY = 'ACCESS_TOKEN';
 const REFRESH_TOKEN_COOKIE_KEY = 'REFRESH_TOKEN';
@@ -56,6 +58,19 @@ export async function middleware(request: NextRequest) {
     if (!hasSessionCookie) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
+  }
+
+  if (
+    request.nextUrl.pathname.startsWith('/api/auth/') &&
+    request.nextUrl.pathname !== '/api/auth/verify-magic-link'
+  ) {
+    if (!API_BASE) {
+      return NextResponse.next();
+    }
+
+    const targetUrl = new URL(`${API_BASE}${request.nextUrl.pathname}`);
+    targetUrl.search = request.nextUrl.search;
+    return NextResponse.rewrite(targetUrl);
   }
 
   if (request.nextUrl.pathname !== '/api/auth/verify-magic-link') {
@@ -191,5 +206,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/', '/api/auth/verify-magic-link'],
+  matcher: ['/', '/api/auth/:path*'],
 };
