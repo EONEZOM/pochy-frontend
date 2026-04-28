@@ -75,6 +75,31 @@ function VerifyContent() {
     );
   }
 
+  if (token) {
+    const verifyHref = `/api/auth/verify-magic-link?token=${encodeURIComponent(token)}&confirm=1`;
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-white px-6 text-center">
+        <h1 className="text-2xl font-bold text-zinc-900">로그인 인증 준비 완료</h1>
+        <p className="mt-3 text-sm text-zinc-600">
+          버튼을 눌러 인증을 완료해 주세요.
+        </p>
+        <Image
+          src={mainLogo}
+          alt="main-logo"
+          width={200}
+          height={200}
+          className="mx-auto mt-10 mb-10"
+        />
+        <Link
+          href={verifyHref}
+          className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-900 px-5 text-sm font-semibold text-white"
+        >
+          인증 계속하기
+        </Link>
+      </main>
+    );
+  }
+
   return (
     <VerifyStatusView
       title="로그인 인증 중"
