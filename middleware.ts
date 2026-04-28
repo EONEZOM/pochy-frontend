@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const runtimeApiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
-const openApiBase = process.env.OPENAPI_BASE_URL?.replace(/\/$/, '');
-const normalizedOpenApiBase = openApiBase?.replace(/\/v3\/api-docs$/, '');
+const normalizeApiBase = (value?: string) => {
+  if (!value) {
+    return '';
+  }
+  return value.replace(/\/$/, '').replace(/\/v3\/api-docs$/, '').replace(/\/api$/, '');
+};
 
-const API_BASE = runtimeApiBase || normalizedOpenApiBase || '';
+const runtimeApiBase = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
+const openApiBase = normalizeApiBase(process.env.OPENAPI_BASE_URL);
+const API_BASE = runtimeApiBase || openApiBase || '';
 const AUTH_COOKIE_KEYS = ['REFRESH_TOKEN'];
 
 /**

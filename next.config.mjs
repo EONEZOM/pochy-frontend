@@ -1,8 +1,14 @@
 ﻿/** @type {import('next').NextConfig} */
-const runtimeApiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
-const openApiBase = process.env.OPENAPI_BASE_URL?.replace(/\/$/, '');
-const normalizedOpenApiBase = openApiBase?.replace(/\/v3\/api-docs$/, '');
-const apiBase = runtimeApiBase || normalizedOpenApiBase || '';
+const normalizeApiBase = (value) => {
+  if (!value) {
+    return '';
+  }
+  return value.replace(/\/$/, '').replace(/\/v3\/api-docs$/, '').replace(/\/api$/, '');
+};
+
+const runtimeApiBase = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
+const openApiBase = normalizeApiBase(process.env.OPENAPI_BASE_URL);
+const apiBase = runtimeApiBase || openApiBase || '';
 
 if (!apiBase) {
   throw new Error('NEXT_PUBLIC_API_URL or OPENAPI_BASE_URL is required');
