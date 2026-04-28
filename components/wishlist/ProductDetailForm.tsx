@@ -19,10 +19,12 @@ import Header from '@/components/layout/Header/Header';
 
 interface ProductDetailFormProps {
   initialData: any;
-  onSubmit: (updatedData: any) => void;
+  onSubmit: (updatedData: any) => void | Promise<void>;
   onBack: () => void;
   submitLabel?: string;
   showScanWarning?: boolean;
+  disableManualImageUpload?: boolean;
+  autoFillNaverOnSubmit?: boolean;
 }
 
 export default function ProductDetailForm({
@@ -31,6 +33,8 @@ export default function ProductDetailForm({
   onBack,
   submitLabel = '완료',
   showScanWarning = false,
+  disableManualImageUpload = false,
+  autoFillNaverOnSubmit = false,
 }: ProductDetailFormProps) {
   const [formData, setFormData] = useState(initialData);
   const [isSearching, setIsSearching] = useState(false);
@@ -87,10 +91,17 @@ export default function ProductDetailForm({
     { label: '메모', field: 'memo' },
   ];
 
-  const handleReSearch = async () => {
-    const { brand_name, product_name } = formData;
+  const fetchNaverShoppingInfo = async (
+    sourceData: any,
+    options?: { showSuccessAlert?: boolean; showFailureAlert?: boolean },
+  ) => {
+    const { showSuccessAlert = true, showFailureAlert = true } = options ?? {};
+    const { brand_name, product_name } = sourceData;
     if (!brand_name || !product_name) {
-      return alert('브랜드명과 제품명을 모두 입력해야 검색이 가능합니다.');
+      if (showFailureAlert) {
+        alert('브랜드명과 제품명을 모두 입력해야 검색이 가능합니다.');
+      }
+      return null;
     }
 
     const query = `${brand_name} ${product_name}`;
@@ -104,30 +115,44 @@ export default function ProductDetailForm({
       const data = await res.json();
 
       if (data.official_image) {
-        setFormData((prev: any) => {
+        const nextData = (() => {
           const isFeaturesEmpty =
-            !prev.features || String(prev.features).trim() === '';
+            !sourceData.features || String(sourceData.features).trim() === '';
           const categoryString = data.category_list
             ? data.category_list.join(', ')
             : '';
           return {
-            ...prev,
+            ...sourceData,
             official_image: data.official_image,
             price: data.lowest_price,
             mall_url: data.mall_url,
-            features: isFeaturesEmpty ? categoryString : prev.features,
+            features: isFeaturesEmpty ? categoryString : sourceData.features,
           };
-        });
-        alert('상품 정보를 새로 가져왔습니다.');
+        })();
+        setFormData(nextData);
+        if (showSuccessAlert) {
+          alert('상품 정보를 새로 가져왔습니다.');
+        }
+        return nextData;
       } else {
-        alert('검색 결과가 없습니다. 정보를 직접 확인해주세요.');
+        if (showFailureAlert) {
+          alert('검색 결과가 없습니다. 정보를 직접 확인해주세요.');
+        }
+        return null;
       }
     } catch (error) {
       console.error('Naver search error:', error);
-      alert('정보를 가져오는 중 오류가 발생했습니다.');
+      if (showFailureAlert) {
+        alert('정보를 가져오는 중 오류가 발생했습니다.');
+      }
+      return null;
     } finally {
       setIsSearching(false);
     }
+  };
+
+  const handleReSearch = async () => {
+    await fetchNaverShoppingInfo(formData);
   };
 
   const handleChange = (field: string, value: string) => {
@@ -135,10 +160,12 @@ export default function ProductDetailForm({
   };
 
   const handleImageClick = () => {
+    if (disableManualImageUpload) return;
     fileInputRef.current?.click();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disableManualImageUpload) return;
     const file = e.target.files?.[0];
     if (file) {
       if (formData.image_url?.startsWith('blob:')) {
@@ -154,6 +181,26 @@ export default function ProductDetailForm({
     }
   };
 
+  const handleSubmit = async () => {
+    let submitData = formData;
+
+    // TODO: 테스트 이후 직접 등록의 자동 네이버 보강 정책 재검토 필요
+    if (autoFillNaverOnSubmit) {
+      const enriched = await fetchNaverShoppingInfo(formData, {
+        showSuccessAlert: false,
+      });
+      if (!enriched?.official_image) {
+        alert(
+          '네이버쇼핑 정보(특히 상품 이미지) 조회에 실패해 등록할 수 없습니다.',
+        );
+        return;
+      }
+      submitData = enriched;
+    }
+
+    await onSubmit(submitData);
+  };
+
   return (
     <div className="flex min-h-full flex-col bg-white">
       <Header
@@ -165,7 +212,7 @@ export default function ProductDetailForm({
             kind: 'register',
             text: submitLabel,
             ariaLabel: submitLabel,
-            onClick: () => onSubmit(formData),
+            onClick: () => void handleSubmit(),
           },
         ]}
       />
@@ -174,7 +221,10 @@ export default function ProductDetailForm({
         {/* 제품 이미지 섹션 */}
         <div
           onClick={handleImageClick}
-          className="group relative mx-auto aspect-square w-36 cursor-pointer overflow-hidden rounded-3xl bg-zinc-100 shadow-inner"
+          className={cn(
+            'group relative mx-auto aspect-square w-36 overflow-hidden rounded-3xl bg-zinc-100 shadow-inner',
+            disableManualImageUpload ? 'cursor-not-allowed opacity-80' : 'cursor-pointer',
+          )}
         >
           <Image
             src={
@@ -191,11 +241,22 @@ export default function ProductDetailForm({
                 : 'object-cover',
             )}
           />
-          <div className="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 transition-opacity group-hover:opacity-100">
+          <div
+            className={cn(
+              'absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 transition-opacity group-hover:opacity-100',
+              disableManualImageUpload && 'opacity-100',
+            )}
+          >
             <div className="flex size-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-md">
               <Plus size={28} />
             </div>
           </div>
+          {disableManualImageUpload && (
+            // TODO: 테스트 이후 직접 이미지 업로드 재오픈 필요
+            <div className="absolute inset-x-0 bottom-2 text-center text-[11px] font-medium text-zinc-700">
+              테스트용: 직접 업로드 임시 비활성화
+            </div>
+          )}
           <input
             type="file"
             ref={fileInputRef}

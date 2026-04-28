@@ -56,6 +56,9 @@ export default function DirectRegisterPage() {
       submitLabel={isPending ? '등록 중...' : '위시리스트 추가'}
       onBack={() => router.back()}
       onSubmit={handleDirectSave}
+      // TODO: 테스트 이후 직접 업로드/등록 정책 정상화 필요
+      disableManualImageUpload
+      autoFillNaverOnSubmit
     />
   );
 }
