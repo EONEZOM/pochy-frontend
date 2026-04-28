@@ -255,8 +255,6 @@ function MainPageContent() {
         closeOnOverlayClick={false}
         showCancel={false}
       />
-
-      <BottomNav />
     </>
   );
 }
