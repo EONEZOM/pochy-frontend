@@ -5,17 +5,30 @@ import { AxiosError } from 'axios';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { ImageIcon } from 'lucide-react';
-
+import { BottomNav } from '@/components/layout/BottomNav';
+import { HomeSectionCarousel } from '@/components/common/HomeSectionCarousel';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/common/Modal';
+import { useGetHomeData } from '@/api/generated/home/home';
 import {
   autoNickname,
   useUpdateNickname,
 } from '@/api/generated/member-controller/member-controller';
 import type { ApiResponseDTO } from '@/api/model';
+import type { Detail } from '@/api/model';
 import mainLogo from '@/public/logo/main-logo.png';
 
 const NICKNAME_SETUP_DONE_KEY = 'nickname_setup_done_v1';
+
+/** `.env.local`에 `NEXT_PUBLIC_HOME_MOCK=1` 넣으면 위시/마이/피드에 임시 10개씩 표시 */
+const HOME_MOCK_ENABLED =
+  process.env.NEXT_PUBLIC_HOME_MOCK === '1';
+
+const makeMockDetails = (prefix: string): Detail[] =>
+  Array.from({ length: 10 }, (_, i) => ({
+    id: i + 1,
+    imageUrl: `https://picsum.photos/seed/${prefix}-${i + 1}/240/240`,
+  }));
 
 function resolveNicknameFromResponse(data: ApiResponseDTO): string | null {
   return typeof data?.result === 'string' && data.result.trim().length > 0
@@ -54,6 +67,26 @@ export default function MainPage() {
     string | null
   >(null);
   const nicknameInputRef = React.useRef<HTMLInputElement>(null);
+  const {
+    data: homeResponse,
+    isLoading: isHomeLoading,
+    refetch: refetchHomeData,
+  } = useGetHomeData();
+  const homeData = homeResponse?.result;
+
+  const sections: Array<{ title: string; items: Detail[] }> = HOME_MOCK_ENABLED
+    ? [
+        { title: '위시', items: makeMockDetails('wish') },
+        { title: '마이', items: makeMockDetails('my') },
+        { title: '피드', items: makeMockDetails('feed') },
+      ]
+    : [
+        { title: '위시', items: homeData?.wishList ?? [] },
+        { title: '마이', items: homeData?.myList ?? [] },
+        { title: '피드', items: homeData?.feed ?? [] },
+      ];
+
+  const showHomeSkeleton = isHomeLoading && !HOME_MOCK_ENABLED;
 
   React.useEffect(() => {
     if (!shouldOpenSetupNickname) return;
@@ -67,6 +100,7 @@ export default function MainPage() {
           if (typeof window !== 'undefined') {
             localStorage.setItem(NICKNAME_SETUP_DONE_KEY, '1');
           }
+          void refetchHomeData();
           setIsEmptyNickname(false);
           setIsDuplicateNickname(false);
           setIsNicknameModalOpen(false);
@@ -123,7 +157,6 @@ export default function MainPage() {
   };
 
   const isPending = isSavingNickname || isSkipping;
-  const sections = ['위시', '마이', '피드'] as const;
 
   return (
     <>
@@ -134,40 +167,51 @@ export default function MainPage() {
             alt="main-logo"
             width={94}
             height={56}
-            className="h-[120px] w-[180px]"
+            className="h-[80px] w-[120px]"
             priority
           />
         </div>
 
-        <section className="mt-4 flex items-center gap-2">
-          <div className="border-mono-dark-gray/70 text-mono-dark-gray flex size-9 items-center justify-center rounded-full border">
-            <ImageIcon className="size-5" />
-          </div>
-          <p className="text-mono-jet text-sm leading-snug font-bold">
-            반가워요 OO님,
+        <section className="mt-4 flex items-center justify-center gap-2">
+          {homeData?.profileUrl ? (
+            <Image
+              src={homeData.profileUrl}
+              alt="profile"
+              width={36}
+              height={36}
+              unoptimized
+              className="border-mono-dark-gray/70 size-9 rounded-full border object-cover"
+            />
+          ) : (
+            <div className="border-mono-dark-gray/70 text-mono-dark-gray flex size-12 items-center justify-center rounded-full border">
+              <ImageIcon className="size-5" />
+            </div>
+          )}
+          <h3 className="text-mono-jet flex flex-col text-lg leading-tight font-bold">
+            반가워요 {homeData?.nickname ?? '포치'}님,
             <br />
-            흩어져 있는 취식템을 포치에 모아봐요!
-          </p>
+            흩어져 있는 위시템을 포치에 모아봐요!
+          </h3>
         </section>
 
-        <div className="mt-4 space-y-5">
-          {sections.map((title) => (
-            <section key={title}>
-              <h2 className="text-mono-jet text-sm font-bold">{title}</h2>
-              <div className="mt-2 grid grid-cols-3 gap-2.5">
-                {Array.from({ length: 3 }).map((_, index) => (
-                  <div
-                    key={`${title}-${index}`}
-                    className="border-mono-dark-gray/70 bg-mono-white text-mono-dark-gray/70 flex aspect-square items-center justify-center rounded-md border"
-                  >
-                    <ImageIcon className="size-4" />
-                  </div>
-                ))}
+        <div className="mt-5 space-y-5 px-5">
+          {sections.map((section) => (
+            <section key={section.title}>
+              <h2 className="text-mono-jet text-sm font-bold">
+                {section.title}
+              </h2>
+              <div className="mt-2">
+                <HomeSectionCarousel
+                  sectionTitle={section.title}
+                  showSkeleton={showHomeSkeleton}
+                  items={section.items}
+                />
               </div>
             </section>
           ))}
         </div>
       </main>
+
       <Modal
         open={isNicknameModalOpen}
         onOpenChange={setIsNicknameModalOpen}
@@ -226,6 +270,8 @@ export default function MainPage() {
         closeOnOverlayClick={false}
         showCancel={false}
       />
+
+      <BottomNav />
     </>
   );
 }
