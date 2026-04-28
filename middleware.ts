@@ -131,6 +131,12 @@ export async function middleware(request: NextRequest) {
     backendRes = await fetch(verifyUrl, {
       method: 'GET',
       signal: controller.signal,
+      headers: {
+        Origin: request.nextUrl.origin,
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'application/json, text/plain, */*',
+      },
     });
   } catch (error) {
     console.error('Backend verification failed:', error);
@@ -139,6 +145,7 @@ export async function middleware(request: NextRequest) {
       error !== null &&
       'name' in error &&
       (error as { name?: string }).name === 'AbortError';
+
     return NextResponse.redirect(
       new URL(`/verify?error=${isTimeout ? 'timeout' : 'config'}`, request.url),
     );
@@ -151,14 +158,6 @@ export async function middleware(request: NextRequest) {
       status: backendRes.status,
       verifyUrl,
     });
-
-    const consoleData = {
-      verifyUrl,
-      backedRes: backendRes,
-      requestUrl: request.url,
-    };
-
-    localStorage.setItem('consoleData', JSON.stringify(consoleData));
 
     return NextResponse.redirect(
       new URL(`/verify?error=invalid&status=${backendRes.status}`, request.url),
