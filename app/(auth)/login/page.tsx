@@ -107,7 +107,7 @@ function LoginContent() {
               {isPending || isCheckingSession ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  {isCheckingSession ? '세션 확인 중...' : '발송 중...'}
+                  {isCheckingSession ? '확인 중...' : '발송 중...'}
                 </span>
               ) : (
                 '로그인 하기'
@@ -146,7 +146,7 @@ export default function Home() {
     <Suspense
       fallback={
         <div className="flex min-h-screen flex-col items-center justify-center bg-white">
-          <p className="text-sm text-zinc-500">세션 확인 중...</p>
+          <p className="text-sm text-zinc-500">확인 중...</p>
         </div>
       }
     >

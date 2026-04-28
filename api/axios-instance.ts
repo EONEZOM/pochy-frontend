@@ -66,6 +66,12 @@ const extractAccessToken = (value: unknown): string | null => {
       return token.trim();
     }
   }
+
+  // 응답 구조가 중첩된 경우(result.tokenDto.accessToken 등)까지 탐색합니다.
+  for (const nestedValue of Object.values(candidate)) {
+    const nestedToken = extractAccessToken(nestedValue);
+    if (nestedToken) return nestedToken;
+  }
   return null;
 };
 
@@ -77,7 +83,7 @@ const requestReissue = async () => {
   );
   const nextAccessToken = tokenFromBody ?? tokenFromHeader;
   if (!nextAccessToken) {
-    console.warn('Token reissue succeeded but no token found in response');
+    throw new Error('Token reissue succeeded but no token found in response');
   }
   persistAccessToken(nextAccessToken);
 };
@@ -105,11 +111,12 @@ axiosInstance.interceptors.response.use(
       | RetryableAxiosRequestConfig
       | undefined;
     const requestUrl = originalRequest?.url ?? '';
+    const shouldRetryByStatus = status === 401 || status === 403;
 
     const shouldSkipReissue =
       !originalRequest ||
       originalRequest._retry ||
-      status !== 401 ||
+      !shouldRetryByStatus ||
       requestUrl.includes('/api/auth/reissue') ||
       requestUrl.includes('/api/auth/logout');
 

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Suspense } from 'react';
 import { AxiosError } from 'axios';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ImageIcon } from 'lucide-react';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -18,8 +18,6 @@ import {
 import type { ApiResponseDTO } from '@/api/model';
 import type { Detail } from '@/api/model';
 import mainLogo from '@/public/logo/main-logo.png';
-
-const NICKNAME_SETUP_DONE_KEY = 'nickname_setup_done_v1';
 
 function resolveNicknameFromResponse(data: ApiResponseDTO): string | null {
   return typeof data?.result === 'string' && data.result.trim().length > 0
@@ -46,8 +44,6 @@ function isNicknameLengthValid(nickname: string): boolean {
 
 function MainPageContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const shouldOpenSetupNickname = searchParams.get('setupNickname') === '1';
 
   const [isNicknameModalDismissed, setIsNicknameModalDismissed] =
     React.useState(false);
@@ -66,14 +62,8 @@ function MainPageContent() {
   } = useGetHomeData();
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
-  const isNicknameSetupDoneLocal =
-    typeof window !== 'undefined' &&
-    localStorage.getItem(NICKNAME_SETUP_DONE_KEY) === '1';
   const isNicknameModalOpen =
-    shouldOpenSetupNickname &&
-    !hasServerNickname &&
-    !isNicknameSetupDoneLocal &&
-    !isNicknameModalDismissed;
+    !isHomeLoading && !hasServerNickname && !isNicknameModalDismissed;
 
   const sections: Array<{ title: string; items: Detail[] }> = [
     { title: '위시', items: homeData?.wishList ?? [] },
@@ -83,18 +73,10 @@ function MainPageContent() {
 
   const showHomeSkeleton = isHomeLoading;
 
-  React.useEffect(() => {
-    if (!shouldOpenSetupNickname) return;
-    router.replace('/');
-  }, [router, shouldOpenSetupNickname]);
-
   const { mutate: updateNickname, isPending: isSavingNickname } =
     useUpdateNickname({
       mutation: {
         onSuccess: () => {
-          if (typeof window !== 'undefined') {
-            localStorage.setItem(NICKNAME_SETUP_DONE_KEY, '1');
-          }
           setIsNicknameModalDismissed(true);
           void refetchHomeData();
           setIsEmptyNickname(false);
