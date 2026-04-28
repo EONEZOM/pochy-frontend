@@ -4,7 +4,10 @@ const normalizeApiBase = (value?: string) => {
   if (!value) {
     return '';
   }
-  return value.replace(/\/$/, '').replace(/\/v3\/api-docs$/, '').replace(/\/api$/, '');
+  return value
+    .replace(/\/$/, '')
+    .replace(/\/v3\/api-docs$/, '')
+    .replace(/\/api$/, '');
 };
 
 const FALLBACK_API_BASE = 'http://43.200.208.148:8080';
@@ -25,7 +28,13 @@ const extractToken = (value: unknown): string | null => {
   }
 
   const record = value as Record<string, unknown>;
-  const candidateKeys = ['accessToken', 'refreshToken', 'access_token', 'refresh_token', 'token'];
+  const candidateKeys = [
+    'accessToken',
+    'refreshToken',
+    'access_token',
+    'refresh_token',
+    'token',
+  ];
   for (const key of candidateKeys) {
     const candidate = record[key];
     if (typeof candidate === 'string' && candidate.trim().length > 0) {
@@ -52,8 +61,8 @@ const extractToken = (value: unknown): string | null => {
 
 export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === '/') {
-    const hasSessionCookie = AUTH_COOKIE_KEYS.some(
-      (key) => Boolean(request.cookies.get(key)?.value),
+    const hasSessionCookie = AUTH_COOKIE_KEYS.some((key) =>
+      Boolean(request.cookies.get(key)?.value),
     );
     if (!hasSessionCookie) {
       return NextResponse.redirect(new URL('/login', request.url));
@@ -119,7 +128,10 @@ export async function middleware(request: NextRequest) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
-    backendRes = await fetch(verifyUrl, { method: 'GET', signal: controller.signal });
+    backendRes = await fetch(verifyUrl, {
+      method: 'GET',
+      signal: controller.signal,
+    });
   } catch (error) {
     console.error('Backend verification failed:', error);
     const isTimeout =
@@ -128,7 +140,10 @@ export async function middleware(request: NextRequest) {
       'name' in error &&
       (error as { name?: string }).name === 'AbortError';
     return NextResponse.redirect(
-      new URL(`/verify?error=${isTimeout ? 'timeout' : 'config'}`, request.url),
+      new URL(
+        `/verify?error=${isTimeout ? 'timeout' : 'config'}&verifyUrl=${encodeURIComponent(verifyUrl)}`,
+        request.url,
+      ),
     );
   } finally {
     clearTimeout(timeoutId);
