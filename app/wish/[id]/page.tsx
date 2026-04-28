@@ -38,8 +38,9 @@ export default function WishlistDetailPage() {
   const initialIndex = wishItems.findIndex(
     (v) => String(v.wishCosmeticsId) === String(wishId),
   );
+  const safeInitialIndex = initialIndex >= 0 ? initialIndex : 0;
   const [currentIndex, setCurrentIndex] = useState(
-    initialIndex !== -1 ? initialIndex : 0,
+    safeInitialIndex,
   );
 
   useEffect(() => {
@@ -138,14 +139,20 @@ export default function WishlistDetailPage() {
   useEffect(() => {
     if (!api) return;
 
-    api.on('select', () => {
+    const handleSelect = () => {
       const index = api.selectedScrollSnap();
       setCurrentIndex(index);
       const selectedId = wishItems[index]?.wishCosmeticsId;
       if (!selectedId) return;
       setSelectedWishId(selectedId);
       router.replace(`/wish/${selectedId}`, { scroll: false });
-    });
+    };
+
+    api.on('select', handleSelect);
+
+    return () => {
+      api.off('select', handleSelect);
+    };
   }, [api, wishItems, router]);
 
   if (isListLoading || isDetailLoading) {
@@ -179,7 +186,7 @@ export default function WishlistDetailPage() {
           <Carousel
             setApi={setApi}
             opts={{
-              startIndex: initialIndex,
+              startIndex: safeInitialIndex,
               align: 'center',
               loop: wishItems.length > 2,
               containScroll: false,
@@ -263,7 +270,7 @@ export default function WishlistDetailPage() {
                       <div className="mt-2 h-4 w-3/4 animate-pulse rounded bg-zinc-100" />
                     </CarouselItem>
                   ))
-                : youtubeData?.items?.map((video: any) => (
+                : youtubeData?.items?.map((video) => (
                     <CarouselItem
                       key={video.id.videoId}
                       className="basis-[38%] pl-4"

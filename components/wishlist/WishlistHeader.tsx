@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
 import { ExtraNav } from '@/components/common/ExtraNav';
@@ -15,10 +15,12 @@ export function WishlistHeader() {
     searchParams.get('q') || '',
   );
 
-  // URL params 바뀌면 동기화
-  useEffect(() => {
-    setLocalSearchQuery(searchParams.get('q') || '');
-  }, [searchParams]);
+  const replaceWithParams = (params: URLSearchParams) => {
+    const queryString = params.toString();
+    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+      scroll: false,
+    });
+  };
 
   const executeSearch = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -27,13 +29,13 @@ export function WishlistHeader() {
     } else {
       params.delete('q');
     }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    replaceWithParams(params);
   };
 
   const handleSort = (sort: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('sort', sort);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    replaceWithParams(params);
   };
 
   const filterTrigger = (
@@ -60,7 +62,6 @@ export function WishlistHeader() {
           value: localSearchQuery,
           onChange: (e) => setLocalSearchQuery(e.target.value),
           onKeyDown: (e) => {
-            if (e.key === 'Enter') executeSearch(localSearchQuery);
             if (e.key === 'Escape') handleClose();
           },
         }}
@@ -84,7 +85,15 @@ export function WishlistHeader() {
     <Header
       title="위시리스트"
       sticky
-      rightIcons={[{ kind: 'search', onClick: () => setIsSearchOpen(true) }]}
+      rightIcons={[
+        {
+          kind: 'search',
+          onClick: () => {
+            setLocalSearchQuery(searchParams.get('q') || '');
+            setIsSearchOpen(true);
+          },
+        },
+      ]}
       right={
         <ExtraNav
           side="bottom"

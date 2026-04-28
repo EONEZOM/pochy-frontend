@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   FILTER_CATEGORIES,
@@ -26,7 +26,7 @@ type WishListItem = {
 };
 
 const toWishListItem = (item: ReadListDto): WishListItem => ({
-  id: item.wishCosmeticsId ?? 0,
+  id: item.wishCosmeticsId as number,
   brand_name: item.brand ?? '',
   product_name: item.productName ?? '',
   main_category: item.category ?? '',
@@ -40,7 +40,6 @@ function WishlistPageContent() {
   const searchParams = useSearchParams();
 
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
 
   const searchQuery = searchParams.get('q') || '';
   const currentCategory =
@@ -52,20 +51,18 @@ function WishlistPageContent() {
     keyword: searchQuery || undefined,
     category: currentCategory !== 'All' ? currentCategory : undefined,
     subCategory: currentSub !== 'All' ? currentSub : undefined,
-    // 서버 정렬은 desc/asc를 지원하므로, price 정렬은 클라이언트 fallback으로 유지
+    // price 정렬은 API DTO에 가격 필드가 없어 서버 기본 정렬로 fallback
     sort: sortOrder === 'oldest' ? 'asc' : 'desc',
     size: 100,
   });
 
   const filteredItems = useMemo(() => {
-    const items = (data?.result?.content ?? []).map(toWishListItem);
-
-    if (sortOrder === 'price') {
-      return items;
-    }
-
-    return items;
-  }, [data?.result?.content, sortOrder]);
+    return (data?.result?.content ?? [])
+      .filter((item): item is ReadListDto & { wishCosmeticsId: number } =>
+        typeof item.wishCosmeticsId === 'number',
+      )
+      .map(toWishListItem);
+  }, [data?.result?.content]);
 
   const handleMainChange = (category: FilterMainCategory) => {
     const params = new URLSearchParams(searchParams);
@@ -88,18 +85,12 @@ function WishlistPageContent() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
   const activeSubCategories = useMemo(
     () =>
       FILTER_CATEGORIES.find((c) => c.value === currentCategory)
         ?.subCategories || [],
     [currentCategory],
   );
-
-  if (!isHydrated) return null;
 
   return (
     <div className="relative">
@@ -201,7 +192,6 @@ function WishlistPageContent() {
         </div>
       </div>
 
-      {/* 빌드 테스트용 주석 */}
       {/* 스캔 모달 */}
       <Modal
         open={isScanModalOpen}

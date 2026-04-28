@@ -1,5 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
 
+export type YoutubeVideoItem = {
+  id: { videoId: string }
+  snippet: {
+    title: string
+    channelTitle: string
+    thumbnails: {
+      high: { url: string }
+    }
+  }
+}
+
+export type YoutubeSearchResponse = {
+  items?: YoutubeVideoItem[]
+}
+
 /**
  * 유튜브 리뷰 영상을 가져오는 커스텀 훅
  * @param query - 검색할 제품명 (브랜드 + 제품명)
@@ -7,7 +22,7 @@ import { useQuery } from '@tanstack/react-query'
 export const useYoutubeReview = (query: string) => {
   const normalizedQuery = query.trim()
 
-  return useQuery({
+  return useQuery<YoutubeSearchResponse>({
     queryKey: ['youtube', normalizedQuery],
     queryFn: async ({ signal }) => {
       const res = await fetch(
