@@ -6,7 +6,6 @@ import { AxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ImageIcon } from 'lucide-react';
-import { BottomNav } from '@/components/layout/BottomNav';
 import { HomeSectionCarousel } from '@/components/main/HomeSectionCarousel';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/common/Modal';
