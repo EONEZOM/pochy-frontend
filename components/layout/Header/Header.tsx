@@ -62,6 +62,7 @@ type HeaderRightIconBase = {
   ariaLabel?: string;
   onClick?: () => void;
   className?: string;
+  text?: string;
 };
 
 export type HeaderRightIcons = HeaderRightIconBase[];
@@ -203,21 +204,29 @@ export default function Header({
       <div className="z-10 ml-auto flex min-h-10 shrink-0 items-center justify-end gap-1.5">
         {rightIcons?.map((item, index) => {
           const config = ICON_CONFIG[item.kind];
+          const isRegister = item.kind === 'register';
+          const content =
+            isRegister && item.text ? (
+              <span className="text-sm font-semibold">{item.text}</span>
+            ) : (
+              config.element
+            );
           return (
             <Button
               key={`${item.kind}-${index}`}
               type="button"
-              variant="ghost"
-              size="icon"
+              variant={isRegister ? 'default' : 'ghost'}
+              size={isRegister ? 'sm' : 'icon'}
               className={cn(
-                item.kind === 'register' && 'h-9 w-auto rounded-full px-4',
+                isRegister &&
+                  'h-9 w-auto rounded-full bg-zinc-900 px-4 text-white hover:bg-zinc-900/90',
                 item.kind === 'favorite' && 'rounded-full text-zinc-900',
                 item.className,
               )}
               aria-label={item.ariaLabel ?? config.label}
               onClick={item.onClick}
             >
-              {config.element}
+              {content}
             </Button>
           );
         })}

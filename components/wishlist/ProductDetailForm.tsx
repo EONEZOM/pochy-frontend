@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, AlertCircle, Search, Loader2, ChevronLeft } from 'lucide-react';
+import { Plus, AlertCircle, Search, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { COSMETIC_CATEGORIES } from '@/constants/category';
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import Input from '@/components/common/Input/Input';
+import Header from '@/components/layout/Header/Header';
 
 interface ProductDetailFormProps {
   initialData: any;
@@ -154,27 +155,22 @@ export default function ProductDetailForm({
   };
 
   return (
-    <div className="relative flex flex-col bg-white p-5">
-      {/* 임시 상단 버튼 영역 추후 공컴 헤더로 올려야함 */}
-      <div className="mb-4 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="-ml-2 p-1 text-zinc-400 hover:text-zinc-600"
-        >
-          <ChevronLeft size={28} />
-        </button>
+    <div className="flex min-h-full flex-col bg-white">
+      <Header
+        className="border-b border-zinc-100"
+        onBack={onBack}
+        title="상품 정보"
+        rightIcons={[
+          {
+            kind: 'register',
+            text: submitLabel,
+            ariaLabel: submitLabel,
+            onClick: () => onSubmit(formData),
+          },
+        ]}
+      />
 
-        <Button
-          onClick={() => onSubmit(formData)}
-          size="sm"
-          className="absolute top-5 right-5 z-50 rounded-full bg-zinc-900 px-5 font-bold text-white shadow-md active:scale-95"
-        >
-          {submitLabel}
-        </Button>
-      </div>
-
-      <main className="space-y-6">
+      <main className="flex-1 space-y-6 p-5">
         {/* 제품 이미지 섹션 */}
         <div
           onClick={handleImageClick}
@@ -364,15 +360,6 @@ export default function ProductDetailForm({
           </div>
         )}
       </main>
-
-      <footer className="mt-auto pt-10 pb-6">
-        <Button
-          onClick={() => onSubmit(formData)}
-          className="h-15 w-full rounded-2xl bg-zinc-900 text-lg font-bold text-white shadow-xl transition-transform active:scale-[0.98]"
-        >
-          {submitLabel}
-        </Button>
-      </footer>
     </div>
   );
 }

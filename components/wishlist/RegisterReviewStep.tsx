@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronLeft, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import ProductDetailForm from '@/components/wishlist/ProductDetailForm';
 import ResultCard from '@/components/wishlist/ResultCard';
+import Header from '@/components/layout/Header/Header';
 
 interface ReviewStepProps {
   results: any[];
@@ -48,15 +49,11 @@ export default function RegisterReviewStep({
   // 결과 그리드 뷰
   return (
     <div className="flex flex-col bg-white">
-      <header className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
-        <div className="font-bold">스캔 결과 확인</div>
-        <button
-          onClick={onSave}
-          className="bg-mono-jet rounded-full px-4 py-1.5 text-sm font-bold text-white transition-transform active:scale-95"
-        >
-          등록
-        </button>
-      </header>
+      <Header
+        title="스캔 결과 확인"
+        onBack={onCancel}
+        rightIcons={[{ kind: 'register', onClick: onSave }]}
+      />
 
       <main className="overflow-y-auto p-5">
         <div className="text-mono-jet mb-6 flex items-center gap-2 rounded-xl bg-zinc-50 p-4">

@@ -7,6 +7,7 @@ import { Share2, Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWishlistStore } from '@/store/wishlistStore';
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview';
+import Header from '@/components/layout/Header/Header';
 import {
   Carousel,
   CarouselContent,
@@ -46,6 +47,29 @@ export default function WishlistDetailPage() {
   const { data: youtubeData, isLoading: isYoutubeLoading } =
     useYoutubeReview(searchQuery);
 
+  const handleShare = async () => {
+    const shareUrl =
+      typeof window !== 'undefined' ? window.location.href : `/wish/${params.id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: currentItem?.product_name ?? '위시리스트',
+          text: currentItem?.brand_name ?? '',
+          url: shareUrl,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareUrl);
+      alert('링크가 복사되었습니다.');
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        alert('공유 링크를 복사하지 못했습니다.');
+      }
+    }
+  };
+
   // 캐러셀 움직임 감지하여 상태 업데이트
   useEffect(() => {
     if (!api) return;
@@ -64,6 +88,12 @@ export default function WishlistDetailPage() {
 
   return (
     <div className="relative max-w-120 py-5">
+      <Header
+        className="-mt-5 mb-5"
+        title="상세 보기"
+        rightIcons={[{ kind: 'share', onClick: handleShare }]}
+      />
+
       <div className="">
         {/* 제품 정보 헤더 */}
         <div className="text-center">

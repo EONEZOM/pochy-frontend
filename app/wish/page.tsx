@@ -13,6 +13,7 @@ import {
 import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea';
 import { ExtraNav } from '@/components/common/ExtraNav';
 import { Modal } from '@/components/common/Modal';
+import { WishlistHeader } from '@/components/wishlist/WishlistHeader';
 
 export default function WishlistPage() {
   const router = useRouter();
@@ -91,6 +92,8 @@ export default function WishlistPage() {
 
   return (
     <div className="relative">
+      <WishlistHeader />
+
       {/* 카테고리 필터링 영역 */}
       <CategoryFilterArea
         mainCategories={FILTER_CATEGORIES}
