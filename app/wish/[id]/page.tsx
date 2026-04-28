@@ -64,6 +64,10 @@ export default function WishlistDetailPage() {
     : '';
   const { data: youtubeData, isLoading: isYoutubeLoading } =
     useYoutubeReview(searchQuery);
+  const currentCaptureImageSrc =
+    currentItem?.captureImageUrl ??
+    currentItem?.productImageUrl ??
+    '/icons/imgplus.svg';
 
   const handleShare = async () => {
     const shareUrl =
@@ -85,6 +89,46 @@ export default function WishlistDetailPage() {
       if ((error as Error).name !== 'AbortError') {
         alert('공유 링크를 복사하지 못했습니다.');
       }
+    }
+  };
+
+  const handleCaptureShare = async () => {
+    if (!currentCaptureImageSrc) return;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${currentItem?.productName ?? '위시템'} 캡처`,
+          url: currentCaptureImageSrc,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(currentCaptureImageSrc);
+      alert('이미지 링크가 복사되었습니다.');
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        alert('공유에 실패했습니다.');
+      }
+    }
+  };
+
+  const handleCaptureDownload = async () => {
+    if (!currentCaptureImageSrc) return;
+
+    try {
+      const response = await fetch(currentCaptureImageSrc);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `wish-capture-${currentItem?.wishCosmeticsId ?? 'image'}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(currentCaptureImageSrc, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -266,14 +310,10 @@ export default function WishlistDetailPage() {
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="relative aspect-1/2 w-full"
+              className="relative aspect-1/2 w-full max-w-[480px]"
             >
               <Image
-                src={
-                  currentItem.captureImageUrl ??
-                  currentItem.productImageUrl ??
-                  '/icons/imgplus.svg'
-                }
+                src={currentCaptureImageSrc}
                 alt="원본 캡처 화면"
                 fill
                 className="object-contain"
@@ -281,13 +321,21 @@ export default function WishlistDetailPage() {
             </motion.div>
 
             <div className="absolute bottom-10 flex gap-6">
-              <button className="flex flex-col items-center gap-2 text-white">
+              <button
+                type="button"
+                onClick={() => void handleCaptureShare()}
+                className="flex flex-col items-center gap-2 text-white"
+              >
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black">
                   <Share2 size={20} />
                 </div>
                 <span className="text-xs">공유하기</span>
               </button>
-              <button className="flex flex-col items-center gap-2 text-white">
+              <button
+                type="button"
+                onClick={() => void handleCaptureDownload()}
+                className="flex flex-col items-center gap-2 text-white"
+              >
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black">
                   <Download size={20} />
                 </div>
