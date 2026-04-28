@@ -75,6 +75,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.pstatic.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+      },
     ],
   },
 

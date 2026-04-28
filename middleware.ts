@@ -5,7 +5,7 @@ const openApiBase = process.env.OPENAPI_BASE_URL?.replace(/\/$/, '');
 const normalizedOpenApiBase = openApiBase?.replace(/\/v3\/api-docs$/, '');
 
 const API_BASE = runtimeApiBase || normalizedOpenApiBase || '';
-const AUTH_COOKIE_KEYS = ['ACCESS_TOKEN', 'REFRESH_TOKEN'];
+const AUTH_COOKIE_KEYS = ['REFRESH_TOKEN'];
 
 /**
  * 메일의 매직 링크가 /api/auth/verify-magic-link?token=... 형태이면
