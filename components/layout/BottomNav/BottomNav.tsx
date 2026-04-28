@@ -85,15 +85,17 @@ export function BottomNav({ className }: { className?: string }) {
         <ul className="grid grid-cols-5">
           {BOTTOM_NAV_ITEMS.map((item) => {
             const active = isNavActive(pathname, item.href);
+            const isPreparingPath = PREPARING_PATHS.includes(item.href);
 
             return (
               <li key={item.href} className="min-w-0">
                 <Link
                   href={item.href}
+                  prefetch={!isPreparingPath}
                   className="flex min-h-14 flex-col items-center justify-center gap-1 py-1.5"
                   aria-current={active ? 'page' : undefined}
                   onClick={(event) => {
-                    if (PREPARING_PATHS.includes(item.href)) {
+                    if (isPreparingPath) {
                       event.preventDefault();
                       setIsPreparingModalOpen(true);
                     }

@@ -33,7 +33,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
+  if (request.method === 'HEAD') {
+    return NextResponse.next();
+  }
+
+  if (request.method !== 'GET') {
     return NextResponse.next();
   }
 

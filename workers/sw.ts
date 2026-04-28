@@ -1,5 +1,10 @@
 ﻿import { defaultCache } from "@serwist/next/worker";
-import { Serwist, type PrecacheEntry, type SerwistGlobalConfig } from "serwist";
+import {
+  NetworkOnly,
+  Serwist,
+  type PrecacheEntry,
+  type SerwistGlobalConfig,
+} from "serwist";
 
 declare global {
   interface ServiceWorkerGlobalScope extends SerwistGlobalConfig {
@@ -14,7 +19,33 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching: [
+    {
+      matcher: ({ url }) =>
+        url.origin === "https://vercel.live" &&
+        url.pathname === "/_next-live/feedback/feedback.js",
+      handler: new NetworkOnly({
+        plugins: [
+          {
+            handlerDidError: async () => {
+              return new Response("", { status: 204 });
+            },
+          },
+        ],
+      }),
+    },
+    ...defaultCache,
+  ],
+  fallbacks: {
+    entries: [
+      {
+        url: "/",
+        matcher: ({ request }) => {
+          return request.mode === "navigate";
+        },
+      },
+    ],
+  },
 });
 
 serwist.addEventListeners();
