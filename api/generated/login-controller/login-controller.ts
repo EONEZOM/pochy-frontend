@@ -26,6 +26,8 @@ import type {
 
 import type {
   ApiResponseDTO,
+  ApiResponseDTOMemberAuthResponse,
+  ApiResponseDTOTokenDto,
   RequestMagicLinkParams,
   VerifyMagicLinkParams
 } from '../../model';
@@ -43,7 +45,7 @@ export const reissue = (
 ) => {
 
 
-      return customInstance<ApiResponseDTO>(
+      return customInstance<ApiResponseDTOTokenDto>(
       {url: `/api/auth/reissue`, method: 'POST', signal
     },
       options);
@@ -209,7 +211,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 ) => {
 
 
-      return customInstance<ApiResponseDTO>(
+      return customInstance<ApiResponseDTOMemberAuthResponse>(
       {url: `/api/auth/verify-magic-link`, method: 'GET',
         params, signal
     },

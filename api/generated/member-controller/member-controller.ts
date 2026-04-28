@@ -25,7 +25,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  ApiResponseDTO,
+  ApiResponseDTOString,
   NicknameRequest
 } from '../../model';
 
@@ -42,7 +42,7 @@ export const updateNickname = (
 ) => {
 
 
-      return customInstance<ApiResponseDTO>(
+      return customInstance<ApiResponseDTOString>(
       {url: `/api/member/nickname`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
       data: nicknameRequest, signal
@@ -99,7 +99,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 ) => {
 
 
-      return customInstance<ApiResponseDTO>(
+      return customInstance<ApiResponseDTOString>(
       {url: `/api/member/nickname-auto`, method: 'GET', signal
     },
       options);
