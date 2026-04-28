@@ -11,6 +11,35 @@ const runtimeApiBase = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
 const openApiBase = normalizeApiBase(process.env.OPENAPI_BASE_URL);
 const API_BASE = runtimeApiBase || openApiBase || '';
 const AUTH_COOKIE_KEYS = ['REFRESH_TOKEN'];
+const ACCESS_TOKEN_COOKIE_KEY = 'ACCESS_TOKEN';
+const REFRESH_TOKEN_COOKIE_KEY = 'REFRESH_TOKEN';
+
+const extractToken = (value: unknown): string | null => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const candidateKeys = ['accessToken', 'refreshToken', 'access_token', 'refresh_token', 'token'];
+  for (const key of candidateKeys) {
+    const candidate = record[key];
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  for (const nestedValue of Object.values(record)) {
+    const nested = extractToken(nestedValue);
+    if (nested) {
+      return nested;
+    }
+  }
+
+  return null;
+};
 
 /**
  * 메일의 매직 링크가 /api/auth/verify-magic-link?token=... 형태이면
@@ -46,7 +75,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (request.method !== 'GET' && request.method !== 'HEAD') {
+  if (request.method === 'HEAD') {
+    return NextResponse.next();
+  }
+
+  if (request.method !== 'GET') {
     return NextResponse.next();
   }
 
@@ -105,12 +138,58 @@ export async function middleware(request: NextRequest) {
 
   // 개발용 진단: verify 성공(200)이어도 세션 쿠키가 없으면 로그인 상태를 만들 수 없음
   if (appendedCookieCount === 0) {
-    return NextResponse.redirect(
-      new URL(
-        `/verify?error=cookie_missing&status=${backendRes.status}`,
-        request.url,
-      ),
+    let payload: unknown = null;
+    try {
+      payload = await backendRes.clone().json();
+    } catch {
+      payload = null;
+    }
+
+    const payloadRecord =
+      typeof payload === 'object' && payload !== null
+        ? (payload as Record<string, unknown>)
+        : null;
+    const resultValue = payloadRecord?.result;
+
+    const accessToken = extractToken(
+      typeof resultValue === 'object' && resultValue !== null
+        ? (resultValue as Record<string, unknown>).accessToken
+        : null,
     );
+    const refreshToken = extractToken(
+      typeof resultValue === 'object' && resultValue !== null
+        ? (resultValue as Record<string, unknown>).refreshToken
+        : null,
+    );
+
+    if (!refreshToken) {
+      return NextResponse.redirect(
+        new URL(
+          `/verify?error=cookie_missing&status=${backendRes.status}`,
+          request.url,
+        ),
+      );
+    }
+
+    const isSecure = request.nextUrl.protocol === 'https:';
+    redirect.cookies.set({
+      name: REFRESH_TOKEN_COOKIE_KEY,
+      value: refreshToken,
+      path: '/',
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: isSecure,
+    });
+    if (accessToken) {
+      redirect.cookies.set({
+        name: ACCESS_TOKEN_COOKIE_KEY,
+        value: accessToken,
+        path: '/',
+        httpOnly: false,
+        sameSite: 'lax',
+        secure: isSecure,
+      });
+    }
   }
 
   return redirect;

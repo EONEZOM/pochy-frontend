@@ -68,7 +68,7 @@ function LoginContent() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-between bg-white p-5 pb-20">
+    <div className="flex h-full flex-col items-center justify-between overflow-hidden bg-white p-5 pb-6">
       <div className="flex flex-1 flex-col items-center justify-center space-y-4">
         <Image src={mainLogo} alt="main-logo" width={250} height={250} />
       </div>
