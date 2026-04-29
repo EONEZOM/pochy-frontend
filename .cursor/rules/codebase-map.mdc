@@ -1,0 +1,178 @@
+---
+description: 프로젝트 전체 구조·주요 파일·인증 흐름 요약 맵
+alwaysApply: true
+---
+
+# Pouchy Frontend — 코드베이스 맵
+
+## 기술 스택
+
+| 항목 | 선택 |
+|------|------|
+| 프레임워크 | Next.js 16 (App Router, Turbopack) |
+| 언어 | TypeScript 5 |
+| 스타일 | Tailwind CSS v4 (`@import 'tailwindcss'` in `styles/globals.css`) |
+| UI 라이브러리 | shadcn/ui (`components/ui/`) |
+| 서버 상태 | TanStack Query (`providers/query-provider.tsx`) |
+| HTTP | Axios (`api/axios-instance.ts`) |
+| API 생성 | Orval (`orval.config.js` → `api/generated/`) |
+| PWA | Serwist (`workers/sw.ts` → `public/sw.js`) |
+| 애니메이션 | Framer Motion |
+| 폼 | React Hook Form |
+| 패키지명 | `eonezom-frontend` (폴더명과 다름) |
+
+---
+
+## 디렉터리 구조
+
+```mermaid
+graph TD
+  Root["📁 pouchy-frontend/"]
+
+  Root --> App["📁 app/  (App Router)"]
+  Root --> Components["📁 components/"]
+  Root --> Api["📁 api/"]
+  Root --> Hooks["📁 hooks/"]
+  Root --> Types["📁 types/"]
+  Root --> Providers["📁 providers/"]
+  Root --> Workers["📁 workers/  (PWA SW)"]
+  Root --> Styles["📁 styles/"]
+  Root --> Public["📁 public/"]
+  Root --> Config["⚙️ 설정 파일들"]
+
+  App --> AuthGroup["📁 (auth)/  login·verify·success"]
+  App --> MainGroup["📁 (main)/  홈 /"]
+  App --> Wish["📁 wish/  위시리스트"]
+  App --> MyCosmetics["📁 my-cosmetics/  내 화장품"]
+  App --> Profile["📁 profile/"]
+  App --> ApiRoutes["📁 api/  Route Handlers (BFF)"]
+
+  Components --> Layout["📁 layout/  BottomNav·Header"]
+  Components --> Common["📁 common/  Button·Modal·BottomSheet 등"]
+  Components --> UI["📁 ui/  shadcn 자동생성"]
+  Components --> Domain["📁 main·wishlist·buy-or-bye 등"]
+
+  Api --> AxiosInst["axios-instance.ts  ← 핵심"]
+  Api --> Generated["📁 generated/  Orval 생성 (수정 금지)"]
+  Api --> Model["📁 model/  OpenAPI 타입"]
+  Api --> Manual["wish-cosmetics.ts  (멀티파트 수동 래퍼)"]
+
+  Config --> NextConf["next.config.mjs"]
+  Config --> Middleware["middleware.ts  ← 인증 게이트"]
+  Config --> Orval["orval.config.js"]
+  Config --> Serwist["serwist.config.mjs"]
+```
+
+---
+
+## 라우팅 구조
+
+```mermaid
+graph LR
+  MW["middleware.ts\nRefreshToken 쿠키 검사"] -->|없음| Login["/login"]
+  MW -->|있음| Home["/  (main)"]
+
+  Home --> Wish["/wish"]
+  Home --> MyC["/my-cosmetics"]
+  Home --> Profile["/profile"]
+
+  Wish --> WishId["/wish/[id]"]
+  Wish --> WishReg["/wish/register/*"]
+
+  MyC --> MyCDetail["/my-cosmetics/[id]"]
+  MyC --> MyCReg["/my-cosmetics/register"]
+
+  Login --> Sent["/login/sent"]
+  Sent --> Verify["/verify  (매직링크 처리)"]
+  Verify --> Success["/success"]
+  Success --> Home
+
+  subgraph BFF["API Route Handlers (BFF)"]
+    YT["/api/youtube"]
+    NV["/api/naver/search"]
+    VIS["/api/vision/extract"]
+  end
+```
+
+---
+
+## 인증 흐름
+
+```mermaid
+sequenceDiagram
+  participant U as 사용자
+  participant MW as middleware.ts
+  participant FE as 클라이언트
+  participant AX as axios-instance
+  participant BE as 백엔드 API
+
+  U->>MW: GET /
+  MW->>MW: REFRESH_TOKEN 쿠키 확인
+  alt 쿠키 없음
+    MW-->>U: redirect /login
+  else 쿠키 있음
+    MW-->>U: 통과
+  end
+
+  Note over FE,AX: 일반 API 요청
+  FE->>AX: API 요청
+  AX->>AX: Authorization: Bearer {ACCESS_TOKEN}
+  AX->>BE: 요청 전달
+  alt 401/403
+    AX->>BE: POST /api/auth/reissue (쿠키)
+    BE-->>AX: 새 accessToken
+    AX->>BE: 원 요청 재시도
+    alt reissue 실패
+      AX-->>FE: /login 리다이렉트
+    end
+  end
+
+  Note over U,BE: 매직링크 로그인
+  U->>FE: 이메일 입력 → /login/sent
+  FE->>BE: POST /api/auth/magic-link
+  BE-->>U: 이메일 발송
+  U->>MW: 이메일 링크 클릭 → /api/auth/verify-magic-link
+  MW->>BE: 토큰 검증 fetch
+  BE-->>MW: Set-Cookie (REFRESH_TOKEN)
+  MW-->>U: redirect /success + 쿠키 전달
+```
+
+---
+
+## 핵심 파일 레퍼런스
+
+| 파일 | 역할 |
+|------|------|
+| `middleware.ts` | 루트 접근 제어 + 매직링크 처리 (Edge Runtime) |
+| `api/axios-instance.ts` | Bearer 토큰 주입 + 401 자동 재발급 인터셉터 |
+| `app/layout.tsx` | QueryProvider, BottomNav, PWA 등록 |
+| `providers/query-provider.tsx` | QueryClient (staleTime 60s, 401/403 retry 차단) |
+| `workers/sw.ts` | Serwist 서비스 워커 소스 |
+| `styles/globals.css` | Tailwind v4 진입점 + CSS 디자인 토큰 |
+| `components.json` | shadcn/ui 설정 |
+| `orval.config.js` | API 클라이언트 생성 규칙 |
+| `next.config.mjs` | `/api/:path*` → 백엔드 프록시, COOP/COEP 헤더, 이미지 도메인 |
+
+---
+
+## 환경 변수
+
+| 변수 | 사용처 |
+|------|--------|
+| `NEXT_PUBLIC_API_URL` | `axios-instance.ts`, `next.config.mjs` |
+| `OPENAPI_BASE_URL` | `next.config.mjs`, `orval.config.js` |
+| `OPENAI_API_KEY` | `app/api/vision/extract/route.ts` |
+| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | `app/api/naver/search/route.ts` |
+| `YOUTUBE_API_KEY` | `app/api/youtube/route.ts` |
+
+> `.env*`는 `.gitignore`에 포함되어 있어 `.env.example`이 없음. 신규 환경 구성 시 위 표 참고.
+
+---
+
+## 주의사항
+
+- `api/generated/**` 파일은 **직접 수정 금지** — `npm run api:gen` 으로 재생성.
+- Tailwind v4: `tailwind.config.ts` 없음. 커스텀 토큰은 `styles/globals.css` `:root`에 CSS 변수로 추가.
+- `middleware.ts` Edge Runtime: `fs`, `Buffer` 등 Node API 사용 불가.
+- `middleware.ts` 내 `API_BASE` 하드코딩(`http://43.200.208.148:8080`) — env 복구 후 제거 TODO 주석 있음.
+- Zustand가 의존성에 있으나 현재 `store/` 폴더 없음 — 전역 클라이언트 상태 필요 시 신설 가능.
