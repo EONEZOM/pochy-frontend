@@ -14,13 +14,27 @@ const API_BASE =
   normalizeApiBase(process.env.OPENAPI_BASE_URL) ||
   FALLBACK_API_BASE;
 
-const forwardHeaders = (request: NextRequest): HeadersInit => {
-  const headers: Record<string, string> = {};
+const forwardHeaders = (request: NextRequest): Headers => {
+  const headers = new Headers();
   const authorization = request.headers.get('Authorization');
   if (authorization) {
-    headers['Authorization'] = authorization;
+    headers.set('Authorization', authorization);
   }
   return headers;
+};
+
+const parseResponse = async (response: Response): Promise<NextResponse> => {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (contentType.includes('application/json')) {
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  }
+  const text = await response.text();
+  console.error('[wish-cosmetics/[id]] backend non-json response:', text.slice(0, 300));
+  return NextResponse.json(
+    { error: 'Backend non-json response', detail: text.slice(0, 300) },
+    { status: response.status },
+  );
 };
 
 type RouteParams = { params: Promise<{ wishCosmeticsId: string }> };
@@ -34,9 +48,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       method: 'GET',
       headers: forwardHeaders(request),
     });
-
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    return parseResponse(response);
   } catch (error) {
     console.error('[wish-cosmetics/[id]][GET] proxy error:', error);
     return NextResponse.json({ error: 'Proxy request failed' }, { status: 502 });
@@ -52,9 +64,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       method: 'DELETE',
       headers: forwardHeaders(request),
     });
-
-    const data = await response.json().catch(() => null);
-    return NextResponse.json(data ?? {}, { status: response.status });
+    return parseResponse(response);
   } catch (error) {
     console.error('[wish-cosmetics/[id]][DELETE] proxy error:', error);
     return NextResponse.json({ error: 'Proxy request failed' }, { status: 502 });

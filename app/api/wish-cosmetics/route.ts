@@ -16,15 +16,35 @@ const API_BASE =
 
 const BACKEND_URL = `${API_BASE}/api/wish-cosmetics`;
 
-const forwardHeaders = (request: NextRequest): HeadersInit => {
-  const headers: Record<string, string> = {};
+const forwardHeaders = (request: NextRequest, includeContentType = false): Headers => {
+  const headers = new Headers();
   const authorization = request.headers.get('Authorization');
   if (authorization) {
-    headers['Authorization'] = authorization;
+    headers.set('Authorization', authorization);
   }
-  // Content-Type은 명시하지 않습니다.
-  // multipart/form-data boundary는 브라우저(fetch)가 body와 함께 자동 설정합니다.
+  if (includeContentType) {
+    // 서버→백엔드 구간에서 ReadableStream body를 그대로 전달할 때는
+    // boundary가 포함된 Content-Type을 반드시 명시해야 Spring @RequestPart가 파싱할 수 있습니다.
+    const contentType = request.headers.get('Content-Type');
+    if (contentType) {
+      headers.set('Content-Type', contentType);
+    }
+  }
   return headers;
+};
+
+const parseResponse = async (response: Response): Promise<NextResponse> => {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (contentType.includes('application/json')) {
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  }
+  const text = await response.text();
+  console.error('[wish-cosmetics] backend non-json response:', text.slice(0, 300));
+  return NextResponse.json(
+    { error: 'Backend non-json response', detail: text.slice(0, 300) },
+    { status: response.status },
+  );
 };
 
 export async function GET(request: NextRequest) {
@@ -37,9 +57,7 @@ export async function GET(request: NextRequest) {
       method: 'GET',
       headers: forwardHeaders(request),
     });
-
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    return parseResponse(response);
   } catch (error) {
     console.error('[wish-cosmetics][GET] proxy error:', error);
     return NextResponse.json({ error: 'Proxy request failed' }, { status: 502 });
@@ -50,16 +68,14 @@ export async function POST(request: NextRequest) {
   try {
     const response = await fetch(BACKEND_URL, {
       method: 'POST',
-      headers: forwardHeaders(request),
-      // ReadableStream을 그대로 전달해 multipart boundary를 보존합니다.
+      // boundary가 포함된 Content-Type을 백엔드에 그대로 전달합니다.
+      headers: forwardHeaders(request, true),
       body: request.body,
-      // Node.js 18+ / Next.js 15+ 에서 스트리밍 body 전달 시 필요합니다.
+      // Node.js 18+ 에서 스트리밍 body 전달 시 필요합니다.
       // @ts-expect-error duplex는 타입 정의에 없지만 런타임에 필요합니다.
       duplex: 'half',
     });
-
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    return parseResponse(response);
   } catch (error) {
     console.error('[wish-cosmetics][POST] proxy error:', error);
     return NextResponse.json({ error: 'Proxy request failed' }, { status: 502 });
@@ -77,9 +93,7 @@ export async function DELETE(request: NextRequest) {
       method: 'DELETE',
       headers: forwardHeaders(request),
     });
-
-    const data = await response.json().catch(() => null);
-    return NextResponse.json(data ?? {}, { status: response.status });
+    return parseResponse(response);
   } catch (error) {
     console.error('[wish-cosmetics][DELETE] proxy error:', error);
     return NextResponse.json({ error: 'Proxy request failed' }, { status: 502 });
