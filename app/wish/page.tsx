@@ -58,8 +58,9 @@ function WishlistPageContent() {
 
   const filteredItems = useMemo(() => {
     return (data?.result?.content ?? [])
-      .filter((item): item is ReadListDto & { wishCosmeticsId: number } =>
-        typeof item.wishCosmeticsId === 'number',
+      .filter(
+        (item): item is ReadListDto & { wishCosmeticsId: number } =>
+          typeof item.wishCosmeticsId === 'number',
       )
       .map(toWishListItem);
   }, [data?.result?.content]);
@@ -71,7 +72,7 @@ function WishlistPageContent() {
     } else {
       params.set('category', category);
     }
-    params.delete('sub'); // 대분류가 바뀌면 소분류 필터는 제거
+    params.delete('sub');
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -123,31 +124,38 @@ function WishlistPageContent() {
             </div>
           </div>
         ) : (
-          <div className="flex gap-3 pb-4">
+          <div className="flex w-full gap-3 pb-4">
             {/* 짝수/홀수 인덱스로 열을 직접 분배해 정렬 순서(최신순 등)가
                 왼→오 읽기 순서와 일치하도록 합니다. */}
             {[0, 1].map((colIndex) => (
-              <div key={colIndex} className="flex flex-1 flex-col gap-3">
+              <div
+                key={colIndex}
+                className="flex min-w-0 flex-1 flex-col gap-3"
+              >
                 {filteredItems
                   .filter((_, i) => i % 2 === colIndex)
                   .map((item) => (
                     <Link
                       key={item.id}
                       href={`/wish/${item.id}`}
-                      className="group border-mono-bright-gray block overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md"
+                      className="group border-mono-bright-gray block w-full min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md"
                     >
-                      {/* 이미지 영역 */}
                       <div className="bg-mono-bright-gray relative w-full">
                         {item.official_image ? (
                           <Image
                             src={item.official_image}
                             alt={item.product_name}
-                            width={500}
-                            height={700}
-                            className="w-full object-cover"
+                            // 필수 속성이나 0을 할당하여 CSS에서 제어하도록 함
+                            width={0}
+                            height={0}
+                            // 반응형 이미지를 위해 전체 너비 할당 정보 제공
+                            sizes="100vw"
+                            // CSS를 통해 실제 렌더링 너비와 높이 비율 제어
+                            style={{ width: '100%', height: 'auto' }}
+                            className="block object-contain"
                           />
                         ) : (
-                          <div className="flex aspect-3/4 w-full items-center justify-center">
+                          <div className="flex aspect-[3/4] w-full items-center justify-center">
                             <Image
                               src="/icons/imgplus.svg"
                               alt=""
@@ -160,8 +168,8 @@ function WishlistPageContent() {
                         )}
                       </div>
 
-                      {/* 텍스트 영역 */}
-                      <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                      {/* 텍스트 영역: 여기에도 min-w-0이 있어야 truncate가 정상 작동함 */}
+                      <div className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
                         <span className="text-mono-dark-gray w-full truncate text-center text-sm">
                           {item.brand_name}
                         </span>
