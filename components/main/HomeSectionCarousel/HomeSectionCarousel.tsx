@@ -13,6 +13,28 @@ type HomeSectionCarouselProps = {
   items: Detail[];
 };
 
+const isValidImageUrl = (value?: string): boolean => {
+  if (!value) {
+    return false;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (trimmed.startsWith('/')) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 export function HomeSectionCarousel({
   sectionTitle,
   showSkeleton,
@@ -51,14 +73,13 @@ export function HomeSectionCarousel({
       )}
     >
       {items.map((item, index) =>
-        item.imageUrl ? (
+        isValidImageUrl(item.imageUrl) ? (
           <Image
             key={`${sectionTitle}-${item.id ?? item.imageUrl}-${index}`}
-            src={item.imageUrl}
+            src={item.imageUrl as string}
             alt={`${sectionTitle} item`}
             width={120}
             height={120}
-            unoptimized
             className="border-mono-dark-gray/70 bg-mono-white aspect-square min-w-[calc((100%-1.25rem)/3)] shrink-0 snap-start rounded-md border object-cover"
           />
         ) : (
