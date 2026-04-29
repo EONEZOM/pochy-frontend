@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/common/Modal';
 import { Header } from '@/components/layout/Header';
 import type { CreateDetailDto } from '@/api/model';
-import { createWishCosmeticsMultipart } from '@/api/wish-cosmetics';
+import { createWishCosmeticsMultipart } from '@/lib/wish-cosmetics';
 
 type AnalysisResult = Record<string, unknown>;
 
