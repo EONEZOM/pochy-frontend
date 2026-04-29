@@ -45,6 +45,7 @@ export default function WishlistRegisterPage() {
   const [isTipModalOpen, setIsTipModalOpen] = useState(true);
   const [images, setImages] = useState<ImageFileData[]>([]);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
+  const [resizedFiles, setResizedFiles] = useState<File[]>([]);
   const [isReviewStep, setIsReviewStep] = useState(false);
   const [isCreatePending, setIsCreatePending] = useState(false);
 
@@ -71,6 +72,7 @@ export default function WishlistRegisterPage() {
     analyze(fileArray, {
       onSuccess: (data) => {
         setAnalysisResults(data.results);
+        setResizedFiles(data.resizedFiles);
         setIsReviewStep(true);
       },
       onError: (err) => alert('분석 중 오류 발생: ' + err.message),
@@ -98,8 +100,12 @@ export default function WishlistRegisterPage() {
 
     setIsCreatePending(true);
     try {
+      // 분석 시 리사이징된 파일을 재사용합니다.
+      // resizedFiles가 없으면 원본 파일로 fallback합니다.
+      const sourceFiles =
+        resizedFiles.length > 0 ? resizedFiles : images.map((img) => img.file);
       const normalizedCaptureImages = buildCaptureImagesForRequest(
-        images.map((img) => img.file),
+        sourceFiles,
         request.length,
       );
 
@@ -109,7 +115,8 @@ export default function WishlistRegisterPage() {
       });
       alert('위시리스트에 등록되었습니다.');
       router.push('/wish');
-    } catch {
+    } catch (error) {
+      console.error('[WishRegister/scan] 등록 실패:', error);
       alert('위시리스트 등록 중 오류가 발생했습니다.');
     } finally {
       setIsCreatePending(false);
