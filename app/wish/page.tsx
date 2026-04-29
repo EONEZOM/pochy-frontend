@@ -123,48 +123,55 @@ function WishlistPageContent() {
             </div>
           </div>
         ) : (
-          <div className="columns-2 gap-3 space-y-3 pb-4">
-            {filteredItems.map((item) => (
-              <Link
-                key={item.id}
-                href={`/wish/${item.id}`}
-                className="group border-mono-bright-gray block overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md"
-              >
-                {/* 이미지 영역 */}
-                <div className="bg-mono-bright-gray relative w-full">
-                  {item.official_image ? (
-                    <Image
-                      src={item.official_image}
-                      alt={item.product_name}
-                      width={500}
-                      height={700}
-                      className="w-full object-cover"
-                    />
-                  ) : (
-                    // 이미지 없을 때 placeholder
-                    <div className="flex aspect-3/4 w-full items-center justify-center">
-                      <Image
-                        src="/icons/imgplus.svg"
-                        alt=""
-                        width={32}
-                        height={32}
-                        unoptimized
-                        className="opacity-30"
-                      />
-                    </div>
-                  )}
-                </div>
+          <div className="flex gap-3 pb-4">
+            {/* 짝수/홀수 인덱스로 열을 직접 분배해 정렬 순서(최신순 등)가
+                왼→오 읽기 순서와 일치하도록 합니다. */}
+            {[0, 1].map((colIndex) => (
+              <div key={colIndex} className="flex flex-1 flex-col gap-3">
+                {filteredItems
+                  .filter((_, i) => i % 2 === colIndex)
+                  .map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/wish/${item.id}`}
+                      className="group border-mono-bright-gray block overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md"
+                    >
+                      {/* 이미지 영역 */}
+                      <div className="bg-mono-bright-gray relative w-full">
+                        {item.official_image ? (
+                          <Image
+                            src={item.official_image}
+                            alt={item.product_name}
+                            width={500}
+                            height={700}
+                            className="w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex aspect-3/4 w-full items-center justify-center">
+                            <Image
+                              src="/icons/imgplus.svg"
+                              alt=""
+                              width={32}
+                              height={32}
+                              unoptimized
+                              className="opacity-30"
+                            />
+                          </div>
+                        )}
+                      </div>
 
-                {/* 텍스트 영역 */}
-                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
-                  <span className="text-mono-dark-gray w-full truncate text-center text-sm">
-                    {item.brand_name}
-                  </span>
-                  <span className="text-mono-jet w-full truncate text-center text-sm font-semibold">
-                    {item.product_name}
-                  </span>
-                </div>
-              </Link>
+                      {/* 텍스트 영역 */}
+                      <div className="flex flex-col items-center gap-0.5 px-2 py-3">
+                        <span className="text-mono-dark-gray w-full truncate text-center text-sm">
+                          {item.brand_name}
+                        </span>
+                        <span className="text-mono-jet w-full truncate text-center text-sm font-semibold">
+                          {item.product_name}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+              </div>
             ))}
           </div>
         )}
