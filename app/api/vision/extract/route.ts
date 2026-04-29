@@ -1,24 +1,29 @@
-import { CATEGORY_SPECS } from '@/constants/category'
-import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import { CATEGORY_SPECS } from '@/constants/category';
+import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-})
+});
 
 export async function POST(req: Request) {
   try {
-    const { images } = await req.json()
-    const MAX_IMAGES_PER_REQUEST = 8
+    const { images } = await req.json();
+    const MAX_IMAGES_PER_REQUEST = 9;
 
     if (!images || !Array.isArray(images) || images.length === 0) {
-      return NextResponse.json({ error: '이미지가 없습니다.' }, { status: 400 })
+      return NextResponse.json(
+        { error: '이미지가 없습니다.' },
+        { status: 400 },
+      );
     }
     if (images.length > MAX_IMAGES_PER_REQUEST) {
       return NextResponse.json(
-        { error: `이미지는 최대 ${MAX_IMAGES_PER_REQUEST}장까지 분석할 수 있습니다.` },
+        {
+          error: `이미지는 최대 ${MAX_IMAGES_PER_REQUEST}장까지 분석할 수 있습니다.`,
+        },
         { status: 400 },
-      )
+      );
     }
 
     const response = await openai.chat.completions.create({
@@ -59,6 +64,7 @@ export async function POST(req: Request) {
                     [분석 가이드라인]
                     - 이미지 내 모든 실물 제품을 식별하세요.
                     - 배경 광고 문구는 제외하고 제품 용기에 적힌 정보에 집중하세요.
+                    - 제품 용기의 문구가 명확하지 않은 경우, 이미지 내에서 제품명 혹은 제품에 관련된 정보를 찾아 분석에 사용하세요.
                     - 제품 용도에 가장 적합한 소분류를 먼저 정하고, 그에 맞는 대분류를 매칭하세요.
                     - 분류가 모호한 경우, 'Etc' 대분류와 'Other' 소분류를 사용하세요
                     - 제공된 소분류(SubCategory) 목록에 제품의 용도가 정확히 일치하는 항목이 없을 경우, 대분류와 상관없이 무조건 main_category: 'Etc', sub_category: 'Other'로 분류하세요. 절대 소분류를 임의로 추측하지 마세요.`,
@@ -70,7 +76,7 @@ export async function POST(req: Request) {
             ...images.map((img: string) => {
               const imageUrl = img.startsWith('data:')
                 ? img
-                : `data:image/jpeg;base64,${img}`
+                : `data:image/jpeg;base64,${img}`;
 
               return {
                 type: 'image_url',
@@ -78,41 +84,41 @@ export async function POST(req: Request) {
                   url: imageUrl,
                   detail: 'high',
                 },
-              }
+              };
             }),
           ] as any,
         },
       ],
       response_format: { type: 'json_object' },
       temperature: 0.1,
-    })
+    });
 
     // --- 토큰 소모량 로깅 ---
-    const usage = response.usage
+    const usage = response.usage;
     if (usage) {
-      console.log('\n--- 🤖 OpenAI Token Usage Report ---')
-      console.log(`Prompt Tokens:     ${usage.prompt_tokens}`)
-      console.log(`Completion Tokens: ${usage.completion_tokens}`)
-      console.log(`Total Tokens:      ${usage.total_tokens}`)
-      console.log('-------------------------------------\n')
+      console.log('\n--- 🤖 OpenAI Token Usage Report ---');
+      console.log(`Prompt Tokens:     ${usage.prompt_tokens}`);
+      console.log(`Completion Tokens: ${usage.completion_tokens}`);
+      console.log(`Total Tokens:      ${usage.total_tokens}`);
+      console.log('-------------------------------------\n');
     }
 
-    const content = response.choices[0].message.content
-    if (!content) throw new Error('GPT 응답이 비어 있습니다.')
+    const content = response.choices[0].message.content;
+    if (!content) throw new Error('GPT 응답이 비어 있습니다.');
 
-    const parsedData = JSON.parse(content)
+    const parsedData = JSON.parse(content);
 
     if (!parsedData.results) {
-      return NextResponse.json({ results: [parsedData] })
+      return NextResponse.json({ results: [parsedData] });
     }
 
-    return NextResponse.json(parsedData)
+    return NextResponse.json(parsedData);
   } catch (error: unknown) {
-    console.error('\n--- ❌ Vision API Error ---')
-    console.error(error)
+    console.error('\n--- ❌ Vision API Error ---');
+    console.error(error);
     return NextResponse.json(
       { error: '이미지 분석 중 서버 오류가 발생했습니다.' },
       { status: 500 },
-    )
+    );
   }
 }
