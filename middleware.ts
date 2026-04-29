@@ -4,7 +4,10 @@ const normalizeApiBase = (value?: string) => {
   if (!value) {
     return '';
   }
-  return value.replace(/\/$/, '').replace(/\/v3\/api-docs$/, '').replace(/\/api$/, '');
+  return value
+    .replace(/\/$/, '')
+    .replace(/\/v3\/api-docs$/, '')
+    .replace(/\/api$/, '');
 };
 
 const FALLBACK_API_BASE = 'http://43.200.208.148:8080';
@@ -25,7 +28,13 @@ const extractToken = (value: unknown): string | null => {
   }
 
   const record = value as Record<string, unknown>;
-  const candidateKeys = ['accessToken', 'refreshToken', 'access_token', 'refresh_token', 'token'];
+  const candidateKeys = [
+    'accessToken',
+    'refreshToken',
+    'access_token',
+    'refresh_token',
+    'token',
+  ];
   for (const key of candidateKeys) {
     const candidate = record[key];
     if (typeof candidate === 'string' && candidate.trim().length > 0) {
@@ -52,8 +61,8 @@ const extractToken = (value: unknown): string | null => {
 
 export async function middleware(request: NextRequest) {
   if (request.nextUrl.pathname === '/') {
-    const hasSessionCookie = AUTH_COOKIE_KEYS.some(
-      (key) => Boolean(request.cookies.get(key)?.value),
+    const hasSessionCookie = AUTH_COOKIE_KEYS.some((key) =>
+      Boolean(request.cookies.get(key)?.value),
     );
     if (!hasSessionCookie) {
       return NextResponse.redirect(new URL('/login', request.url));
@@ -99,8 +108,7 @@ export async function middleware(request: NextRequest) {
   }
 
   const isConfirmed = request.nextUrl.searchParams.get('confirm') === '1';
-  const isDirectUserNavigation = request.headers.get('sec-fetch-user') === '?1';
-  if (!isConfirmed && !isDirectUserNavigation) {
+  if (!isConfirmed) {
     const verifyPageUrl = new URL('/verify', request.url);
     verifyPageUrl.searchParams.set('token', token);
     return NextResponse.redirect(verifyPageUrl);
@@ -111,7 +119,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/verify?error=config', request.url));
   }
 
-  const verifyUrl = `${API_BASE}/api/auth/verify-magic-link?token=${encodeURIComponent(token)}`;
+  const verifyUrl = `http://43.200.208.148.nip.io:8080/api/auth/verify-magic-link?token=${token}`;
   console.info('[middleware][verify] start', {
     verifyUrl,
     tokenLength: token.length,
@@ -120,7 +128,17 @@ export async function middleware(request: NextRequest) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
-    backendRes = await fetch(verifyUrl, { method: 'GET', signal: controller.signal });
+    backendRes = await fetch(verifyUrl, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        Origin: request.nextUrl.origin,
+        Referer: request.url,
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'application/json, text/plain, */*',
+      },
+    });
   } catch (error) {
     console.error('Backend verification failed:', error);
     const isTimeout =
@@ -128,6 +146,7 @@ export async function middleware(request: NextRequest) {
       error !== null &&
       'name' in error &&
       (error as { name?: string }).name === 'AbortError';
+
     return NextResponse.redirect(
       new URL(`/verify?error=${isTimeout ? 'timeout' : 'config'}`, request.url),
     );
@@ -136,10 +155,20 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!backendRes.ok) {
+    const errorBody = await backendRes.text().catch(() => 'No body');
+    const responseHeaders = Object.fromEntries(backendRes.headers.entries());
+    console.warn('[middleware][verify] backend non-2xx - 403', {
+      status: backendRes.status,
+      verifyUrl,
+      errorBody,
+      responseHeaders,
+    });
+
     console.warn('[middleware][verify] backend non-2xx', {
       status: backendRes.status,
       verifyUrl,
     });
+
     return NextResponse.redirect(
       new URL(`/verify?error=invalid&status=${backendRes.status}`, request.url),
     );
