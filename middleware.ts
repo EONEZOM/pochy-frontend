@@ -106,19 +106,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/verify?error=missing', request.url));
   }
 
-  const isConfirmed = request.nextUrl.searchParams.get('confirm') === '1';
-  if (!isConfirmed) {
-    const verifyPageUrl = new URL('/verify', request.url);
-    verifyPageUrl.searchParams.set('token', token);
-    return NextResponse.redirect(verifyPageUrl);
-  }
-
   if (!API_BASE) {
     console.error('[middleware][verify] API_BASE missing');
     return NextResponse.redirect(new URL('/verify?error=config', request.url));
   }
 
-  const verifyUrl = `${API_BASE}/api/auth/verify-magic-link?token=${token}`;
+  const verifyUrl = `${API_BASE}/api/auth/verify-magic-link?token=${encodeURIComponent(token)}`;
   console.info('[middleware][verify] start', {
     verifyUrl,
     tokenLength: token.length,
