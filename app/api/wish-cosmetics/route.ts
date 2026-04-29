@@ -16,19 +16,11 @@ const API_BASE =
 
 const BACKEND_URL = `${API_BASE}/api/wish-cosmetics`;
 
-const forwardHeaders = (request: NextRequest, includeContentType = false): Headers => {
+const forwardHeaders = (request: NextRequest): Headers => {
   const headers = new Headers();
   const authorization = request.headers.get('Authorization');
   if (authorization) {
     headers.set('Authorization', authorization);
-  }
-  if (includeContentType) {
-    // 서버→백엔드 구간에서 ReadableStream body를 그대로 전달할 때는
-    // boundary가 포함된 Content-Type을 반드시 명시해야 Spring @RequestPart가 파싱할 수 있습니다.
-    const contentType = request.headers.get('Content-Type');
-    if (contentType) {
-      headers.set('Content-Type', contentType);
-    }
   }
   return headers;
 };
@@ -65,20 +57,54 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('[wish-cosmetics][POST] ▶ 요청 시작');
+  console.log('[wish-cosmetics][POST] Content-Type:', request.headers.get('Content-Type'));
+  console.log('[wish-cosmetics][POST] Authorization:', request.headers.get('Authorization') ? '있음' : '없음 ⚠️');
+  console.log('[wish-cosmetics][POST] 백엔드 URL:', BACKEND_URL);
+
   try {
+    // Step 1: 브라우저에서 보낸 FormData를 서버에서 파싱합니다.
+    console.log('[wish-cosmetics][POST] Step 1: formData() 파싱 시작');
+    const incomingFormData = await request.formData();
+    console.log('[wish-cosmetics][POST] Step 1: formData() 파싱 완료. 키 목록:', [...incomingFormData.keys()]);
+
+    // Step 2: 백엔드로 보낼 새 FormData 객체를 조립합니다.
+    // fetch(FormData)는 Content-Type + boundary를 자동 생성하므로 직접 설정하지 않습니다.
+    console.log('[wish-cosmetics][POST] Step 2: 새 FormData 조립 시작');
+    const outgoingFormData = new FormData();
+    incomingFormData.forEach((value, key) => {
+      outgoingFormData.append(key, value);
+      if (value instanceof File) {
+        console.log(`  - [File] key="${key}" name="${value.name}" size=${value.size} type="${value.type}"`);
+      } else {
+        console.log(`  - [Field] key="${key}" value="${String(value).slice(0, 100)}"`);
+      }
+    });
+    console.log('[wish-cosmetics][POST] Step 2: 조립 완료');
+
+    // Step 3: 백엔드로 전송합니다.
+    console.log('[wish-cosmetics][POST] Step 3: 백엔드 fetch 시작');
+    const authorization = request.headers.get('Authorization');
     const response = await fetch(BACKEND_URL, {
       method: 'POST',
-      // boundary가 포함된 Content-Type을 백엔드에 그대로 전달합니다.
-      headers: forwardHeaders(request, true),
-      body: request.body,
-      // Node.js 18+ 에서 스트리밍 body 전달 시 필요합니다.
-      // @ts-expect-error duplex는 타입 정의에 없지만 런타임에 필요합니다.
-      duplex: 'half',
+      headers: {
+        ...(authorization ? { Authorization: authorization } : {}),
+        // Content-Type은 fetch가 FormData body를 보고 자동 설정합니다.
+      },
+      body: outgoingFormData,
     });
+    console.log('[wish-cosmetics][POST] Step 3: 백엔드 응답 수신. status:', response.status);
+    console.log('[wish-cosmetics][POST] Step 3: 응답 Content-Type:', response.headers.get('content-type'));
+
     return parseResponse(response);
   } catch (error) {
-    console.error('[wish-cosmetics][POST] proxy error:', error);
-    return NextResponse.json({ error: 'Proxy request failed' }, { status: 502 });
+    console.error('[wish-cosmetics][POST] ❌ 에러 발생:', error);
+    console.error('[wish-cosmetics][POST] 에러 메시지:', error instanceof Error ? error.message : String(error));
+    console.error('[wish-cosmetics][POST] 에러 스택:', error instanceof Error ? error.stack : '없음');
+    return NextResponse.json(
+      { error: 'Proxy request failed', detail: error instanceof Error ? error.message : String(error) },
+      { status: 502 },
+    );
   }
 }
 
