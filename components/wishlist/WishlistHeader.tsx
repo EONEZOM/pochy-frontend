@@ -73,7 +73,8 @@ export function WishlistHeader() {
             items={[
               { label: '최신순', onClick: () => handleSort('latest') },
               { label: '오래된순', onClick: () => handleSort('oldest') },
-              { label: '가격순', onClick: () => handleSort('price') },
+              { label: '가격 높은순', onClick: () => handleSort('price-desc') },
+              { label: '가격 낮은순', onClick: () => handleSort('price-asc') },
             ]}
           />
         }
@@ -102,7 +103,8 @@ export function WishlistHeader() {
           items={[
             { label: '최신순', onClick: () => handleSort('latest') },
             { label: '오래된순', onClick: () => handleSort('oldest') },
-            { label: '가격순', onClick: () => handleSort('price') },
+            { label: '가격 높은순', onClick: () => handleSort('price-desc') },
+            { label: '가격 낮은순', onClick: () => handleSort('price-asc') },
           ]}
         />
       }

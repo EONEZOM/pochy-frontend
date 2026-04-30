@@ -69,8 +69,11 @@ function WishlistPageContent() {
       )
       .map(toWishListItem);
 
-    if (sortOrder === 'price') {
+    if (sortOrder === 'price-desc') {
       return [...items].sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+    }
+    if (sortOrder === 'price-asc') {
+      return [...items].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
     }
     return items;
   }, [data?.result?.content, sortOrder]);
