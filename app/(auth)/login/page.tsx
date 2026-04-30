@@ -9,6 +9,7 @@ import {
   reissue,
   useRequestMagicLink,
 } from '@/api/generated/login-controller/login-controller';
+import { getState } from '@/api/generated/oauth/oauth';
 import Image from 'next/image';
 import mainLogo from '@/public/logo/main-logo.png';
 
@@ -19,6 +20,7 @@ function LoginContent() {
   const [email, setEmail] = useState('');
   const [isCheckingSession, setIsCheckingSession] = useState(!isFromLogout);
   const [submittedEmail, setSubmittedEmail] = useState('');
+  const [isNaverLoginPending, setIsNaverLoginPending] = useState(false);
 
   useEffect(() => {
     if (isFromLogout) return;
@@ -65,6 +67,28 @@ function LoginContent() {
     requestMagicLink({
       params: { email: trimmedEmail },
     });
+  };
+
+  const handleNaverLogin = async () => {
+    if (isNaverLoginPending || isCheckingSession) {
+      return;
+    }
+
+    setIsNaverLoginPending(true);
+    try {
+      const response = await getState();
+      const loginUrl = response?.result?.url?.trim();
+      if (!loginUrl) {
+        alert('네이버 로그인 URL을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+
+      window.location.assign(loginUrl);
+    } catch {
+      alert('네이버 로그인 연결에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setIsNaverLoginPending(false);
+    }
   };
 
   return (
@@ -120,11 +144,10 @@ function LoginContent() {
         <Button
           variant="outline"
           className="h-14 cursor-pointer rounded-2xl border-zinc-200 font-bold hover:bg-zinc-50"
-          onClick={() => {
-            console.log('네이버로 로그인');
-          }}
+          onClick={handleNaverLogin}
+          disabled={isNaverLoginPending || isCheckingSession}
         >
-          네이버로 로그인하기
+          {isNaverLoginPending ? '네이버 연결 중...' : '네이버로 로그인하기'}
         </Button>
 
         <Button
