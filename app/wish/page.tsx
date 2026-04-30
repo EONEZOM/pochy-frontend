@@ -23,8 +23,8 @@ type WishListItem = {
   main_category: string;
   sub_category: string;
   official_image: string;
-  // 백엔드가 ReadListDto에 captureImageUrl을 추가하면 자동으로 활성화됩니다.
   capture_image: string;
+  price: number;
 };
 
 const toWishListItem = (item: ReadListDto): WishListItem => ({
@@ -34,7 +34,8 @@ const toWishListItem = (item: ReadListDto): WishListItem => ({
   main_category: item.category ?? '',
   sub_category: item.subCategory ?? '',
   official_image: item.productImageUrl ?? '',
-  capture_image: (item as ReadListDto & { captureImageUrl?: string }).captureImageUrl ?? '',
+  capture_image: item.captureImageUrl ?? '',
+  price: item.price ?? 0,
 });
 
 
@@ -55,19 +56,24 @@ function WishlistPageContent() {
     keyword: searchQuery || undefined,
     category: currentCategory !== 'All' ? currentCategory : undefined,
     subCategory: currentSub !== 'All' ? currentSub : undefined,
-    // price 정렬은 API DTO에 가격 필드가 없어 서버 기본 정렬로 fallback
+    // 가격순은 클라이언트 정렬이므로 서버에는 최신순(desc)으로 전체를 받아옵니다.
     sort: sortOrder === 'oldest' ? 'asc' : 'desc',
     size: 100,
   });
 
   const filteredItems = useMemo(() => {
-    return (data?.result?.content ?? [])
+    const items = (data?.result?.content ?? [])
       .filter(
         (item): item is ReadListDto & { wishCosmeticsId: number } =>
           typeof item.wishCosmeticsId === 'number',
       )
       .map(toWishListItem);
-  }, [data?.result?.content]);
+
+    if (sortOrder === 'price') {
+      return [...items].sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+    }
+    return items;
+  }, [data?.result?.content, sortOrder]);
 
   const handleMainChange = (category: FilterMainCategory) => {
     const params = new URLSearchParams(searchParams);

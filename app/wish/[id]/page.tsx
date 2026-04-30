@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { WishCardImage } from '@/components/wishlist/WishCardImage';
 import { Share2, Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview';
@@ -208,11 +209,11 @@ export default function WishlistDetailPage() {
                     )}
                   >
                     <div className="absolute inset-0 overflow-hidden rounded-3xl">
-                      <Image
-                        src={item.productImageUrl ?? '/icons/imgplus.svg'}
-                        alt={item.productName ?? ''}
+                      <WishCardImage
+                        officialImage={item.productImageUrl ?? ''}
+                        captureImage={item.captureImageUrl ?? ''}
+                        productName={item.productName ?? ''}
                         fill
-                        className="object-cover"
                       />
                     </div>
                   </div>
