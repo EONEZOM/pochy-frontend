@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
@@ -10,6 +11,7 @@ import { PipelineLog } from '@/components/my-cosmetics/PipelineLog';
 import { NukkiResultCard, NukkiResultEmpty } from '@/components/my-cosmetics/NukkiResultCard';
 import type { NukkiResult } from '@/components/my-cosmetics/NukkiResultCard';
 import { detectWithYolo, cropBox } from '@/utils/yolo-detect';
+import { useRegister } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 
 interface PreviewImage {
   file: File;
@@ -25,13 +27,27 @@ const loadImageElement = (src: string): Promise<HTMLImageElement> =>
     img.src = src;
   });
 
+const base64ToBlob = (base64: string): Blob => {
+  const parts = base64.split(',');
+  const mime = parts[0].match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+  const binary = atob(parts[1]);
+  const buffer = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    buffer[i] = binary.charCodeAt(i);
+  }
+  return new Blob([buffer], { type: mime });
+};
+
 export default function MyCosmeticsRegisterPage() {
+  const router = useRouter();
   const [images, setImages] = useState<PreviewImage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
   const [results, setResults] = useState<NukkiResult[]>([]);
   const [hasRun, setHasRun] = useState(false);
+
+  const { mutate: register, isPending: isSaving } = useRegister();
 
   const addLog = (msg: string) => {
     setLogs((prev) => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
@@ -82,13 +98,12 @@ export default function MyCosmeticsRegisterPage() {
         const boxes = await detectWithYolo(imgElement);
 
         if (boxes.length > 0) {
-          addLog(`  └ ${boxes.length}개 객체 감지됨 (score: ${boxes.map((b) => b.score.toFixed(2)).join(', ')})`);
+          addLog(`  └ ${boxes.length}개 객체 감지됨`);
           boxes.forEach((box) => {
             allCrops.push(cropBox(imgElement, box));
           });
           totalDetected += boxes.length;
         } else {
-          // 탐지 실패 시 전체 이미지를 그대로 사용
           addLog(`  └ 탐지된 객체 없음 → 전체 이미지 사용`);
           const canvas = document.createElement('canvas');
           canvas.width = imgElement.naturalWidth;
@@ -165,6 +180,7 @@ export default function MyCosmeticsRegisterPage() {
           {
             id: idx,
             src: nukkiSrc,
+            cropBase64: crop,
             brand: item.brand,
             product_name: item.product_name,
             product_type: item.product_type,
@@ -174,7 +190,7 @@ export default function MyCosmeticsRegisterPage() {
         ]);
       }
 
-      addLog('🎉 모든 작업 완료!');
+      addLog('🎉 모든 작업 완료! 아래에서 확인 후 저장해주세요.');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : '알 수 없는 오류';
       addLog(`❌ 에러: ${message}`);
@@ -182,6 +198,31 @@ export default function MyCosmeticsRegisterPage() {
       setCurrentStep('');
       setIsLoading(false);
     }
+  };
+
+  const handleSave = () => {
+    if (results.length === 0) return;
+
+    const captureImages = results.map((r) => base64ToBlob(r.cropBase64));
+    const data = results.map((r) => ({
+      name: r.product_name,
+      brand: r.brand,
+      category: r.product_type,
+      feature: r.key_features.join(', '),
+    }));
+
+    register(
+      { data: { captureImages, data } },
+      {
+        onSuccess: () => {
+          alert('내 화장품 파우치에 저장되었습니다!');
+          router.push('/my-cosmetics');
+        },
+        onError: (err) => {
+          alert('저장 중 오류가 발생했습니다: ' + (err as Error).message);
+        },
+      },
+    );
   };
 
   return (
@@ -206,24 +247,10 @@ export default function MyCosmeticsRegisterPage() {
             </div>
           ))}
 
-          {/* 이미지 추가 버튼 */}
           <label className="border-mono-gray hover:bg-mono-bright-gray flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed transition-colors">
-            <Image
-              src="/icons/imgplus.svg"
-              alt=""
-              width={24}
-              height={24}
-              unoptimized
-              className="opacity-40"
-            />
+            <Image src="/icons/imgplus.svg" alt="" width={24} height={24} unoptimized className="opacity-40" />
             <span className="text-mono-dark-gray text-[10px] font-bold">사진 추가</span>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={handleFileChange}
-            />
+            <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
           </label>
         </div>
 
@@ -233,11 +260,7 @@ export default function MyCosmeticsRegisterPage() {
           disabled={isLoading || images.length === 0}
           className="bg-mono-jet text-mono-white h-11 w-full rounded-full text-sm font-bold disabled:opacity-30"
         >
-          {isLoading
-            ? 'AI 분석 중...'
-            : images.length === 0
-              ? '화장품 사진을 추가해주세요'
-              : `${images.length}장 스캔 시작`}
+          {isLoading ? 'AI 분석 중...' : images.length === 0 ? '화장품 사진을 추가해주세요' : `${images.length}장 스캔 시작`}
         </Button>
 
         {/* ── 파이프라인 로그 ──────────────────────────────────────────── */}
@@ -247,8 +270,8 @@ export default function MyCosmeticsRegisterPage() {
 
         {/* ── 결과 그리드 ─────────────────────────────────────────────── */}
         {hasRun && (
-          <div>
-            <p className="text-mono-jet mb-3 text-sm font-black">
+          <div className="space-y-3">
+            <p className="text-mono-jet text-sm font-black">
               분석 결과{results.length > 0 ? ` (${results.length}개)` : ''}
             </p>
             <div className="grid grid-cols-2 gap-3">
@@ -260,6 +283,17 @@ export default function MyCosmeticsRegisterPage() {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* ── 저장 버튼 ─────────────────────────────────────────── */}
+            {results.length > 0 && !isLoading && (
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-mono-jet text-mono-white h-11 w-full rounded-full text-sm font-bold disabled:opacity-50"
+              >
+                {isSaving ? '저장 중...' : `내 화장품 파우치에 저장 (${results.length}개)`}
+              </Button>
+            )}
           </div>
         )}
       </div>

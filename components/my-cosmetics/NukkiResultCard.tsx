@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 export interface NukkiResult {
   id: number;
   src: string;
+  /** 백엔드 등록 시 captureImages로 전송할 원본 크롭 base64 */
+  cropBase64: string;
   brand: string;
   product_name: string;
   product_type: string;
