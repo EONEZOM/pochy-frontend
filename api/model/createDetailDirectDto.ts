@@ -6,7 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface CreateDetailDto {
+/**
+ * 네이버 이미지 url은 여기에 담아주세요
+ */
+export interface CreateDetailDirectDto {
   name?: string;
   brand?: string;
   category?: string;
@@ -14,5 +17,5 @@ export interface CreateDetailDto {
   price?: number;
   feature?: string;
   memo?: string;
-  productImageUrl?: string;
+  naverImageUrl?: string;
 }

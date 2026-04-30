@@ -5,8 +5,9 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
+import type { ProductImage } from './productImage';
 
-export interface CreateDetailDto {
+export interface CreateDetailDtoV2 {
   name?: string;
   brand?: string;
   category?: string;
@@ -14,5 +15,6 @@ export interface CreateDetailDto {
   price?: number;
   feature?: string;
   memo?: string;
-  productImageUrl?: string;
+  captureImageIndex: number;
+  productImage: ProductImage;
 }
