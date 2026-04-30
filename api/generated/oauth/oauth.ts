@@ -21,8 +21,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ApiResponseDTOMemberAuthResponse,
   ApiResponseDTONaverLoginUrl,
   ApiResponseDTOTokenDto,
+  KakaoLoginParams,
   NaverLoginParams
 } from '../../model';
 
@@ -209,6 +211,100 @@ export function useGetState<TData = Awaited<ReturnType<typeof getState>>, TError
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetStateQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+/**
+ * 카카오 인가 코드를 받아 로그인을 진행합니다.
+ * @summary 카카오 로그인 API
+ */
+export const kakaoLogin = (
+    params: KakaoLoginParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ApiResponseDTOMemberAuthResponse>(
+      {url: `/api/login/oauth2/kakao`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getKakaoLoginQueryKey = (params?: KakaoLoginParams,) => {
+    return [
+    `/api/login/oauth2/kakao`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getKakaoLoginQueryOptions = <TData = Awaited<ReturnType<typeof kakaoLogin>>, TError = unknown>(params: KakaoLoginParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof kakaoLogin>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getKakaoLoginQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof kakaoLogin>>> = ({ signal }) => kakaoLogin(params, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof kakaoLogin>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type KakaoLoginQueryResult = NonNullable<Awaited<ReturnType<typeof kakaoLogin>>>
+export type KakaoLoginQueryError = unknown
+
+
+export function useKakaoLogin<TData = Awaited<ReturnType<typeof kakaoLogin>>, TError = unknown>(
+ params: KakaoLoginParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof kakaoLogin>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof kakaoLogin>>,
+          TError,
+          Awaited<ReturnType<typeof kakaoLogin>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useKakaoLogin<TData = Awaited<ReturnType<typeof kakaoLogin>>, TError = unknown>(
+ params: KakaoLoginParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof kakaoLogin>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof kakaoLogin>>,
+          TError,
+          Awaited<ReturnType<typeof kakaoLogin>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useKakaoLogin<TData = Awaited<ReturnType<typeof kakaoLogin>>, TError = unknown>(
+ params: KakaoLoginParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof kakaoLogin>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary 카카오 로그인 API
+ */
+
+export function useKakaoLogin<TData = Awaited<ReturnType<typeof kakaoLogin>>, TError = unknown>(
+ params: KakaoLoginParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof kakaoLogin>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getKakaoLoginQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

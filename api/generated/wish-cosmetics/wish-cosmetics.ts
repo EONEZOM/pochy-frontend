@@ -29,10 +29,12 @@ import type {
   ApiResponseDTOListCreateDetailDto,
   ApiResponseDTOReadDetailDto,
   ApiResponseDTOSliceReadListDto,
+  ApiResponseDTOUpdateDto,
   CreateWishCosmeticsBody,
   CreateWishCosmeticsDirectBody,
   CreateWishCosmeticsV2Body,
-  ReadWishCosmeticsListParams
+  ReadWishCosmeticsListParams,
+  UpdateWishCosmeticsBody
 } from '../../model';
 
 import { customInstance } from '../../axios-instance';
@@ -421,3 +423,61 @@ export function useReadWishCosmeticsDetail<TData = Awaited<ReturnType<typeof rea
 
 
 
+export const updateWishCosmetics = (
+    wishCosmeticsId: number,
+    updateWishCosmeticsBody?: UpdateWishCosmeticsBody,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ApiResponseDTOUpdateDto>(
+      {url: `/api/wish-cosmetics/${wishCosmeticsId}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateWishCosmeticsBody, signal
+    },
+      options);
+    }
+
+
+
+export const getUpdateWishCosmeticsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWishCosmetics>>, TError,{wishCosmeticsId: number;data?: UpdateWishCosmeticsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWishCosmetics>>, TError,{wishCosmeticsId: number;data?: UpdateWishCosmeticsBody}, TContext> => {
+
+const mutationKey = ['updateWishCosmetics'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWishCosmetics>>, {wishCosmeticsId: number;data?: UpdateWishCosmeticsBody}> = (props) => {
+          const {wishCosmeticsId,data} = props ?? {};
+
+          return  updateWishCosmetics(wishCosmeticsId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWishCosmeticsMutationResult = NonNullable<Awaited<ReturnType<typeof updateWishCosmetics>>>
+    export type UpdateWishCosmeticsMutationBody = UpdateWishCosmeticsBody | undefined
+    export type UpdateWishCosmeticsMutationError = unknown
+
+    export const useUpdateWishCosmetics = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWishCosmetics>>, TError,{wishCosmeticsId: number;data?: UpdateWishCosmeticsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateWishCosmetics>>,
+        TError,
+        {wishCosmeticsId: number;data?: UpdateWishCosmeticsBody},
+        TContext
+      > => {
+      return useMutation(getUpdateWishCosmeticsMutationOptions(options), queryClient);
+    }
