@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Suspense, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -15,6 +14,7 @@ import { Modal } from '@/components/common/Modal';
 import { WishlistHeader } from '@/components/wishlist/WishlistHeader';
 import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import type { ReadListDto } from '@/api/model';
+import { WishCardImage } from '@/components/wishlist/WishCardImage';
 
 type WishListItem = {
   id: number;
@@ -23,6 +23,8 @@ type WishListItem = {
   main_category: string;
   sub_category: string;
   official_image: string;
+  // 백엔드가 ReadListDto에 captureImageUrl을 추가하면 자동으로 활성화됩니다.
+  capture_image: string;
 };
 
 const toWishListItem = (item: ReadListDto): WishListItem => ({
@@ -32,7 +34,9 @@ const toWishListItem = (item: ReadListDto): WishListItem => ({
   main_category: item.category ?? '',
   sub_category: item.subCategory ?? '',
   official_image: item.productImageUrl ?? '',
+  capture_image: (item as ReadListDto & { captureImageUrl?: string }).captureImageUrl ?? '',
 });
+
 
 function WishlistPageContent() {
   const router = useRouter();
@@ -141,31 +145,11 @@ function WishlistPageContent() {
                       className="group border-mono-bright-gray block w-full min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md"
                     >
                       <div className="bg-mono-bright-gray relative w-full">
-                        {item.official_image ? (
-                          <Image
-                            src={item.official_image}
-                            alt={item.product_name}
-                            // 필수 속성이나 0을 할당하여 CSS에서 제어하도록 함
-                            width={0}
-                            height={0}
-                            // 반응형 이미지를 위해 전체 너비 할당 정보 제공
-                            sizes="100vw"
-                            // CSS를 통해 실제 렌더링 너비와 높이 비율 제어
-                            style={{ width: '100%', height: 'auto' }}
-                            className="block object-contain"
-                          />
-                        ) : (
-                          <div className="flex aspect-[3/4] w-full items-center justify-center">
-                            <Image
-                              src="/icons/imgplus.svg"
-                              alt=""
-                              width={32}
-                              height={32}
-                              unoptimized
-                              className="opacity-30"
-                            />
-                          </div>
-                        )}
+                        <WishCardImage
+                          officialImage={item.official_image}
+                          captureImage={item.capture_image}
+                          productName={item.product_name}
+                        />
                       </div>
 
                       {/* 텍스트 영역: 여기에도 min-w-0이 있어야 truncate가 정상 작동함 */}
