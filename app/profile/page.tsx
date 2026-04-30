@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { AxiosError } from 'axios';
+import { useMutation } from '@tanstack/react-query';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ImageIcon } from 'lucide-react';
@@ -10,9 +11,7 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useGetHomeData } from '@/api/generated/home/home';
-
-// 회원탈퇴 기능 추가 시 사용
-// import { useDeleteMember } from '@/api/generated/member-controller/member-controller';
+import { deleteMember } from '@/api/member';
 
 import {
   autoNickname,
@@ -59,17 +58,6 @@ export default function MyPage() {
     },
   });
 
-  // const { mutate: deleteAccount, isPending: isDeleting } = useDeleteMember({
-  //   mutation: {
-  //     onSuccess: () => {
-  //       alert('회원탈퇴가 완료되었습니다.');
-  //     },
-  //     onError: () => {
-  //       alert('회원탈퇴에 실패했습니다.');
-  //     },
-  //   },
-  // });
-
   const { mutate: logout, isPending: isLoggingOut } = useLogout({
     mutation: {
       onSuccess: () => {
@@ -78,6 +66,24 @@ export default function MyPage() {
       onError: () => {
         alert('로그아웃 처리에 실패했어요. 다시 시도해 주세요.');
       },
+    },
+  });
+
+  const { mutate: withdraw, isPending: isDeleting } = useMutation({
+    mutationFn: deleteMember,
+    onSuccess: () => {
+      window.localStorage.removeItem('ACCESS_TOKEN');
+      alert('회원탈퇴가 완료되었습니다.');
+      router.replace('/login?fromLogout=1');
+    },
+    onError: (error) => {
+      if (error instanceof AxiosError && error.response?.status === 404) {
+        alert(
+          '회원탈퇴 API가 아직 서버에 배포되지 않았어요. 백엔드 배포 후 다시 시도해 주세요.',
+        );
+        return;
+      }
+      alert('회원탈퇴에 실패했습니다. 잠시 후 다시 시도해 주세요.');
     },
   });
 
@@ -183,15 +189,22 @@ export default function MyPage() {
           {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
         </Button>
 
-        {/* 회원탈퇴 기능 추가 시 사용 */}
-        {/* <Button
-          variant="destructive"
-          className="mt-8 w-full"
-          onClick={() => deleteAccount()}
+        <Button
+          variant="outline"
+          className="mt-4 w-full"
+          onClick={() => {
+            const confirmed = window.confirm(
+              '정말 탈퇴하시겠어요? 탈퇴하면 계정을 복구할 수 없어요.',
+            );
+            if (!confirmed) {
+              return;
+            }
+            withdraw();
+          }}
           disabled={isDeleting}
         >
           {isDeleting ? '삭제 중...' : '회원탈퇴'}
-        </Button> */}
+        </Button>
       </main>
       <BottomNav />
     </>
