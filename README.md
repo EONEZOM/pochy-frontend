@@ -1,6 +1,6 @@
-# Eonezom Frontend
+# pochy Frontend
 
-Eonezom 프론트엔드 프로젝트입니다.
+pochy 프론트엔드 프로젝트입니다.
 
 ## 시작하기
 
@@ -25,7 +25,7 @@ npm run build:sw
 ## 폴더 구조
 
 ```text
-eonezom-frontend/
+pochy-frontend/
 ├── app/                       # App Router 엔트리
 │   ├── layout.tsx             # 루트 레이아웃
 │   ├── (auth)/                # 인증 라우트 그룹
@@ -60,22 +60,22 @@ eonezom-frontend/
 
 ## 네이밍 컨벤션
 
-| 대상 | 컨벤션 | 예시 |
-| --- | --- | --- |
-| 컴포넌트 | PascalCase | `ProductCard`, `AnalysisResult` |
-| 변수 / 함수 | camelCase | `isAnalysing`, `fetchProductData()` |
-| 상수 | UPPER_CASE | `MAX_IMAGE_SIZE`, `API_ENDPOINT` |
-| 이미지 / CSS / 파일 | kebab-case | `main-logo.png`, `global-style.css` |
-| Hooks | use + Pascal | `useAnalysis`, `useIntersectionObserver` |
+| 대상                | 컨벤션       | 예시                                     |
+| ------------------- | ------------ | ---------------------------------------- |
+| 컴포넌트            | PascalCase   | `ProductCard`, `AnalysisResult`          |
+| 변수 / 함수         | camelCase    | `isAnalysing`, `fetchProductData()`      |
+| 상수                | UPPER_CASE   | `MAX_IMAGE_SIZE`, `API_ENDPOINT`         |
+| 이미지 / CSS / 파일 | kebab-case   | `main-logo.png`, `global-style.css`      |
+| Hooks               | use + Pascal | `useAnalysis`, `useIntersectionObserver` |
 
 ## 함수 및 로직 컨벤션
 
-| 대상 | 컨벤션 | 예시 |
-| --- | --- | --- |
-| 이벤트 핸들러 | 내부 로직 `handle___` / Props 전달 `on___` | 부모 `onDetailClick={handleDetailClick}`<br />자식 `function ExampleCard({ onDetailClick })` |
-| 데이터 Fetch | 조회 `get___` / 생성 `post___` / 수정 `update___` / 삭제 `delete___` | `getProductList`, `postScanAnalysis`, `updateUserNickname`, `deleteHistoryItem` |
-| Boolean 변수 | `is___` / `has___` / `should___` 접두사 사용 | `isAnalysing`, `isModalOpen`, `hasScanHistory`, `hasError`, `shouldShowGuide`, `shouldRefetch` |
-| 정규표현식 | `___Regex` 접미사 사용 | `emailRegex`, `productCodeRegex`, `imageExtensionRegex` |
+| 대상          | 컨벤션                                                               | 예시                                                                                           |
+| ------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 이벤트 핸들러 | 내부 로직 `handle___` / Props 전달 `on___`                           | 부모 `onDetailClick={handleDetailClick}`<br />자식 `function ExampleCard({ onDetailClick })`   |
+| 데이터 Fetch  | 조회 `get___` / 생성 `post___` / 수정 `update___` / 삭제 `delete___` | `getProductList`, `postScanAnalysis`, `updateUserNickname`, `deleteHistoryItem`                |
+| Boolean 변수  | `is___` / `has___` / `should___` 접두사 사용                         | `isAnalysing`, `isModalOpen`, `hasScanHistory`, `hasError`, `shouldShowGuide`, `shouldRefetch` |
+| 정규표현식    | `___Regex` 접미사 사용                                               | `emailRegex`, `productCodeRegex`, `imageExtensionRegex`                                        |
 
 ## 브랜치 전략 및 PR 컨벤션
 
@@ -94,15 +94,15 @@ PR 제목 형식:
 
 ## 커밋 메시지 컨벤션
 
-| 유형 | 의미 |
-| --- | --- |
-| Feat | 새로운 기능 추가 |
-| Fix | 버그 수정 |
-| Style | UI 디자인 및 CSS 수정 |
-| Refactor | 코드 리팩토링 |
-| Docs | 문서 수정(README 등) |
-| Perf | 성능 향상 |
-| Chore | 패키지 설치 및 프로젝트 설정 변경 |
+| 유형     | 의미                              |
+| -------- | --------------------------------- |
+| Feat     | 새로운 기능 추가                  |
+| Fix      | 버그 수정                         |
+| Style    | UI 디자인 및 CSS 수정             |
+| Refactor | 코드 리팩토링                     |
+| Docs     | 문서 수정(README 등)              |
+| Perf     | 성능 향상                         |
+| Chore    | 패키지 설치 및 프로젝트 설정 변경 |
 
 ## 코드 스타일
 

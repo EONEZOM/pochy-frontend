@@ -7,19 +7,19 @@ alwaysApply: true
 
 ## 기술 스택
 
-| 항목 | 선택 |
-|------|------|
-| 프레임워크 | Next.js 16 (App Router, Turbopack) |
-| 언어 | TypeScript 5 |
-| 스타일 | Tailwind CSS v4 (`@import 'tailwindcss'` in `styles/globals.css`) |
-| UI 라이브러리 | shadcn/ui (`components/ui/`) |
-| 서버 상태 | TanStack Query (`providers/query-provider.tsx`) |
-| HTTP | Axios (`api/axios-instance.ts`) |
-| API 생성 | Orval (`orval.config.js` → `api/generated/`) |
-| PWA | Serwist (`workers/sw.ts` → `public/sw.js`) |
-| 애니메이션 | Framer Motion |
-| 폼 | React Hook Form |
-| 패키지명 | `eonezom-frontend` (폴더명과 다름) |
+| 항목          | 선택                                                              |
+| ------------- | ----------------------------------------------------------------- |
+| 프레임워크    | Next.js 16 (App Router, Turbopack)                                |
+| 언어          | TypeScript 5                                                      |
+| 스타일        | Tailwind CSS v4 (`@import 'tailwindcss'` in `styles/globals.css`) |
+| UI 라이브러리 | shadcn/ui (`components/ui/`)                                      |
+| 서버 상태     | TanStack Query (`providers/query-provider.tsx`)                   |
+| HTTP          | Axios (`api/axios-instance.ts`)                                   |
+| API 생성      | Orval (`orval.config.js` → `api/generated/`)                      |
+| PWA           | Serwist (`workers/sw.ts` → `public/sw.js`)                        |
+| 애니메이션    | Framer Motion                                                     |
+| 폼            | React Hook Form                                                   |
+| 패키지명      | `pochy-frontend` (폴더명과 다름)                                  |
 
 ---
 
@@ -141,29 +141,29 @@ sequenceDiagram
 
 ## 핵심 파일 레퍼런스
 
-| 파일 | 역할 |
-|------|------|
-| `middleware.ts` | 루트 접근 제어 + 매직링크 처리 (Edge Runtime) |
-| `api/axios-instance.ts` | Bearer 토큰 주입 + 401 자동 재발급 인터셉터 |
-| `app/layout.tsx` | QueryProvider, BottomNav, PWA 등록 |
-| `providers/query-provider.tsx` | QueryClient (staleTime 60s, 401/403 retry 차단) |
-| `workers/sw.ts` | Serwist 서비스 워커 소스 |
-| `styles/globals.css` | Tailwind v4 진입점 + CSS 디자인 토큰 |
-| `components.json` | shadcn/ui 설정 |
-| `orval.config.js` | API 클라이언트 생성 규칙 |
-| `next.config.mjs` | `/api/:path*` → 백엔드 프록시, COOP/COEP 헤더, 이미지 도메인 |
+| 파일                           | 역할                                                         |
+| ------------------------------ | ------------------------------------------------------------ |
+| `middleware.ts`                | 루트 접근 제어 + 매직링크 처리 (Edge Runtime)                |
+| `api/axios-instance.ts`        | Bearer 토큰 주입 + 401 자동 재발급 인터셉터                  |
+| `app/layout.tsx`               | QueryProvider, BottomNav, PWA 등록                           |
+| `providers/query-provider.tsx` | QueryClient (staleTime 60s, 401/403 retry 차단)              |
+| `workers/sw.ts`                | Serwist 서비스 워커 소스                                     |
+| `styles/globals.css`           | Tailwind v4 진입점 + CSS 디자인 토큰                         |
+| `components.json`              | shadcn/ui 설정                                               |
+| `orval.config.js`              | API 클라이언트 생성 규칙                                     |
+| `next.config.mjs`              | `/api/:path*` → 백엔드 프록시, COOP/COEP 헤더, 이미지 도메인 |
 
 ---
 
 ## 환경 변수
 
-| 변수 | 사용처 |
-|------|--------|
-| `NEXT_PUBLIC_API_URL` | `axios-instance.ts`, `next.config.mjs` |
-| `OPENAPI_BASE_URL` | `next.config.mjs`, `orval.config.js` |
-| `OPENAI_API_KEY` | `app/api/vision/extract/route.ts` |
-| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | `app/api/naver/search/route.ts` |
-| `YOUTUBE_API_KEY` | `app/api/youtube/route.ts` |
+| 변수                                      | 사용처                                 |
+| ----------------------------------------- | -------------------------------------- |
+| `NEXT_PUBLIC_API_URL`                     | `axios-instance.ts`, `next.config.mjs` |
+| `OPENAPI_BASE_URL`                        | `next.config.mjs`, `orval.config.js`   |
+| `OPENAI_API_KEY`                          | `app/api/vision/extract/route.ts`      |
+| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | `app/api/naver/search/route.ts`        |
+| `YOUTUBE_API_KEY`                         | `app/api/youtube/route.ts`             |
 
 > `.env*`는 `.gitignore`에 포함되어 있어 `.env.example`이 없음. 신규 환경 구성 시 위 표 참고.
 

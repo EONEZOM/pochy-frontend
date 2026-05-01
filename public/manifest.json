@@ -1,7 +1,7 @@
 ﻿{
-  "name": "Eonezom App",
-  "short_name": "Eonezom",
-  "description": "Eonezom Frontend PWA",
+  "name": "pochy App",
+  "short_name": "pochy",
+  "description": "pochy Frontend PWA",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
