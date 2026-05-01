@@ -27,7 +27,7 @@ const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
   },
   {
     href: '/my',
-    label: '내 정보',
+    label: '나의 화장품',
     iconPath: '/icons/BottomNav/my.svg',
     iconActivePath: '/icons/BottomNav/my-af.svg',
   },
@@ -53,7 +53,7 @@ const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
 
 const ICON_PX = 24;
 const BOTTOM_NAV_HIDDEN_PATHS = ['/login', '/verify', '/success'];
-const PREPARING_PATHS = ['/my', '/feed'];
+const PREPARING_PATHS = ['/my'];
 
 function isNavActive(pathname: string, href: string) {
   if (href === '/') return pathname === '/';
