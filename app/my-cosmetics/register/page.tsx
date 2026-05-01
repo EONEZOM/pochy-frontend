@@ -3,20 +3,30 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
-import { PipelineLog } from '@/components/my-cosmetics/PipelineLog';
-import { NukkiResultCard, NukkiResultEmpty } from '@/components/my-cosmetics/NukkiResultCard';
+import MyCosmeticsReviewStep from '@/components/my-cosmetics/MyCosmeticsReviewStep';
 import type { NukkiResult } from '@/components/my-cosmetics/NukkiResultCard';
 import { detectWithYolo, cropBox } from '@/utils/yolo-detect';
-import { useRegister } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
+import { registerMyCosmeticsMultipart } from '@/lib/my-cosmetics-register';
 
 interface PreviewImage {
   file: File;
   previewUrl: string;
 }
+
+const base64ToFile = (base64: string, index: number): File => {
+  const parts = base64.split(',');
+  const mime = parts[0].match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+  const ext = mime.split('/')[1] ?? 'jpg';
+  const binary = atob(parts[1]);
+  const buffer = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    buffer[i] = binary.charCodeAt(i);
+  }
+  return new File([buffer], `capture-${index}.${ext}`, { type: mime });
+};
 
 const loadImageElement = (src: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
@@ -27,31 +37,14 @@ const loadImageElement = (src: string): Promise<HTMLImageElement> =>
     img.src = src;
   });
 
-const base64ToBlob = (base64: string): Blob => {
-  const parts = base64.split(',');
-  const mime = parts[0].match(/:(.*?);/)?.[1] ?? 'image/jpeg';
-  const binary = atob(parts[1]);
-  const buffer = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    buffer[i] = binary.charCodeAt(i);
-  }
-  return new Blob([buffer], { type: mime });
-};
-
 export default function MyCosmeticsRegisterPage() {
   const router = useRouter();
   const [images, setImages] = useState<PreviewImage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState('');
-  const [logs, setLogs] = useState<string[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanStep, setScanStep] = useState('');
   const [results, setResults] = useState<NukkiResult[]>([]);
-  const [hasRun, setHasRun] = useState(false);
-
-  const { mutate: register, isPending: isSaving } = useRegister();
-
-  const addLog = (msg: string) => {
-    setLogs((prev) => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
-  };
+  const [isReviewStep, setIsReviewStep] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -69,56 +62,34 @@ export default function MyCosmeticsRegisterPage() {
     setImages(images.filter((_, i) => i !== index));
   };
 
-  const startPipeline = async () => {
-    if (images.length === 0) {
-      alert('이미지를 선택해주세요.');
-      return;
-    }
+  const startScan = async () => {
+    if (images.length === 0) return;
 
-    setIsLoading(true);
-    setResults([]);
-    setLogs([]);
-    setHasRun(true);
-    addLog(`🚀 파이프라인 시작 (총 ${images.length}장)`);
+    setIsScanning(true);
+    setScanStep('객체 인식 중...');
 
     try {
-      // ─── Step 1: YOLO 객체 탐지 ───────────────────────────────────────
-      setCurrentStep('1단계: YOLO 엔진 초기화 중...');
-      addLog('🔍 YOLO 모델 로드 중...');
-
+      // ─── Step 1: YOLO ─────────────────────────────────────────────
       const allCrops: string[] = [];
-      let totalDetected = 0;
 
-      for (let imgIdx = 0; imgIdx < images.length; imgIdx++) {
-        const { previewUrl } = images[imgIdx];
-        setCurrentStep(`1단계: 이미지 ${imgIdx + 1}/${images.length} YOLO 탐지 중...`);
-        addLog(`🔎 이미지 ${imgIdx + 1} 탐지 중...`);
-
-        const imgElement = await loadImageElement(previewUrl);
+      for (let i = 0; i < images.length; i++) {
+        setScanStep(`이미지 ${i + 1}/${images.length} 분석 중...`);
+        const imgElement = await loadImageElement(images[i].previewUrl);
         const boxes = await detectWithYolo(imgElement);
 
         if (boxes.length > 0) {
-          addLog(`  └ ${boxes.length}개 객체 감지됨`);
-          boxes.forEach((box) => {
-            allCrops.push(cropBox(imgElement, box));
-          });
-          totalDetected += boxes.length;
+          boxes.forEach((box) => allCrops.push(cropBox(imgElement, box)));
         } else {
-          addLog(`  └ 탐지된 객체 없음 → 전체 이미지 사용`);
           const canvas = document.createElement('canvas');
           canvas.width = imgElement.naturalWidth;
           canvas.height = imgElement.naturalHeight;
           canvas.getContext('2d')?.drawImage(imgElement, 0, 0);
           allCrops.push(canvas.toDataURL('image/jpeg', 0.9));
-          totalDetected += 1;
         }
       }
 
-      addLog(`✂️ 총 ${totalDetected}개 크롭 추출 완료`);
-
-      // ─── Step 2: GPT Vision 분석 ──────────────────────────────────────
-      setCurrentStep('2단계: GPT가 화장품을 분석하는 중...');
-      addLog(`🤖 GPT Vision에 ${allCrops.length}개 이미지 전송 중...`);
+      // ─── Step 2: GPT Vision ───────────────────────────────────────
+      setScanStep('AI가 화장품을 분석 중...');
 
       const visionRes = await fetch('/api/my-cosmetics/vision', {
         method: 'POST',
@@ -140,70 +111,59 @@ export default function MyCosmeticsRegisterPage() {
         confidence_score: number;
       }> = visionData.results ?? [];
 
-      addLog(`✅ GPT 분석 완료 (${visionData.duration}초)`);
-
       const cosmeticItems = gptResults
         .map((item, i) => ({ item, crop: allCrops[i], idx: i }))
         .filter(({ item }) => item.is_cosmetic);
 
-      addLog(`🧪 화장품 인식: ${cosmeticItems.length}개 / 전체 ${gptResults.length}개`);
-
       if (cosmeticItems.length === 0) {
-        addLog('⚠️ 화장품으로 인식된 항목이 없습니다.');
-        setCurrentStep('');
-        setIsLoading(false);
+        alert('화장품으로 인식된 항목이 없습니다. 다시 시도해주세요.');
         return;
       }
 
-      // ─── Step 3: 누끼 작업 ────────────────────────────────────────────
-      setCurrentStep('3단계: 배경 제거(누끼) 작업 중...');
-      addLog('✨ 배경 제거 모델 로드 중...');
+      // ─── Step 3: 누끼 ─────────────────────────────────────────────
+      setScanStep('배경 제거 중...');
 
       const { removeBackground } = await import('@imgly/background-removal');
+      const nukkiResults: NukkiResult[] = [];
 
       for (let i = 0; i < cosmeticItems.length; i++) {
         const { item, crop, idx } = cosmeticItems[i];
-        setCurrentStep(`3단계: 누끼 작업 중... (${i + 1}/${cosmeticItems.length})`);
-        addLog(`🧼 [${i + 1}] "${item.product_name}" 누끼 작업 중...`);
+        setScanStep(`배경 제거 중... (${i + 1}/${cosmeticItems.length})`);
 
         let nukkiSrc = crop;
         try {
           const blob = await removeBackground(crop, { model: 'isnet_quint8' });
           nukkiSrc = URL.createObjectURL(blob);
-          addLog(`  └ 완료!`);
         } catch {
-          addLog(`  └ ⚠️ 누끼 실패, 원본 크롭 사용`);
+          // 누끼 실패 시 원본 크롭 사용
         }
 
-        setResults((prev) => [
-          ...prev,
-          {
-            id: idx,
-            src: nukkiSrc,
-            cropBase64: crop,
-            brand: item.brand,
-            product_name: item.product_name,
-            product_type: item.product_type,
-            key_features: item.key_features,
-            confidence_score: item.confidence_score,
-          },
-        ]);
+        nukkiResults.push({
+          id: idx,
+          src: nukkiSrc,
+          cropBase64: crop,
+          brand: item.brand,
+          product_name: item.product_name,
+          product_type: item.product_type,
+          key_features: item.key_features,
+          confidence_score: item.confidence_score,
+        });
       }
 
-      addLog('🎉 모든 작업 완료! 아래에서 확인 후 저장해주세요.');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '알 수 없는 오류';
-      addLog(`❌ 에러: ${message}`);
+      setResults(nukkiResults);
+      setIsReviewStep(true);
+    } catch (err) {
+      alert('분석 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : '알 수 없는 오류'));
     } finally {
-      setCurrentStep('');
-      setIsLoading(false);
+      setIsScanning(false);
+      setScanStep('');
     }
   };
 
-  const handleSave = () => {
-    if (results.length === 0) return;
+  const handleSave = async () => {
+    if (results.length === 0 || isSaving) return;
 
-    const captureImages = results.map((r) => base64ToBlob(r.cropBase64));
+    const captureImages = results.map((r, i) => base64ToFile(r.cropBase64, i));
     const data = results.map((r) => ({
       name: r.product_name,
       brand: r.brand,
@@ -211,92 +171,119 @@ export default function MyCosmeticsRegisterPage() {
       feature: r.key_features.join(', '),
     }));
 
-    register(
-      { data: { captureImages, data } },
-      {
-        onSuccess: () => {
-          alert('내 화장품 파우치에 저장되었습니다!');
-          router.push('/my-cosmetics');
-        },
-        onError: (err) => {
-          alert('저장 중 오류가 발생했습니다: ' + (err as Error).message);
-        },
-      },
-    );
+    setIsSaving(true);
+    try {
+      await registerMyCosmeticsMultipart({ captureImages, data });
+      alert('내 화장품 파우치에 저장되었습니다!');
+      router.push('/my-cosmetics');
+    } catch (err) {
+      alert('저장 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : '알 수 없는 오류'));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
+  // ─── 리뷰 스텝 ──────────────────────────────────────────────────────
+  if (isReviewStep) {
+    return (
+      <MyCosmeticsReviewStep
+        results={results}
+        setResults={setResults}
+        onSave={handleSave}
+        onCancel={() => {
+          if (confirm('스캔 결과가 사라집니다. 처음으로 돌아갈까요?')) {
+            setIsReviewStep(false);
+            setResults([]);
+          }
+        }}
+        isSaving={isSaving}
+      />
+    );
+  }
+
+  // ─── 업로드 스텝 ────────────────────────────────────────────────────
   return (
     <div className="flex h-full flex-col">
       <Header title="화장품 스캔 등록" />
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
-        {/* ── 이미지 업로드 그리드 ─────────────────────────────────────── */}
-        <div className="grid grid-cols-3 gap-3">
-          {images.map((img, idx) => (
-            <div
-              key={idx}
-              className="border-mono-bright-gray bg-mono-bright-gray relative aspect-square overflow-hidden rounded-2xl border"
-            >
-              <Image src={img.previewUrl} alt="preview" fill className="object-cover" />
-              <button
-                onClick={() => removeImage(idx)}
-                className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-black/50 text-white"
-              >
-                <X size={12} />
-              </button>
+      <div className="flex flex-1 flex-col items-center justify-between p-5">
+        <div className="w-full">
+          {images.length === 0 ? (
+            <label className="border-mono-gray hover:bg-mono-bright-gray flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border-2 border-dashed py-8 transition-colors">
+              <Image
+                src="/icons/imgplus.svg"
+                alt=""
+                width={32}
+                height={32}
+                unoptimized
+                className="opacity-50"
+              />
+              <span className="text-mono-dark-gray text-sm font-bold">
+                화장품 사진 등록하기
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </label>
+          ) : (
+            <div className="grid w-full grid-cols-3 gap-3">
+              {images.map((img, idx) => (
+                <div
+                  key={idx}
+                  className="border-mono-bright-gray bg-mono-bright-gray relative aspect-square overflow-hidden rounded-2xl border"
+                >
+                  <Image src={img.previewUrl} alt="preview" fill className="object-cover" />
+                  <button
+                    onClick={() => removeImage(idx)}
+                    className="absolute right-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-black/50 text-white"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <label className="border-mono-gray hover:bg-mono-bright-gray flex aspect-square cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors">
+                <Image
+                  src="/icons/imgplus.svg"
+                  alt=""
+                  width={24}
+                  height={24}
+                  unoptimized
+                  className="opacity-40"
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </label>
             </div>
-          ))}
-
-          <label className="border-mono-gray hover:bg-mono-bright-gray flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed transition-colors">
-            <Image src="/icons/imgplus.svg" alt="" width={24} height={24} unoptimized className="opacity-40" />
-            <span className="text-mono-dark-gray text-[10px] font-bold">사진 추가</span>
-            <input type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
-          </label>
+          )}
         </div>
 
-        {/* ── 분석 시작 버튼 ──────────────────────────────────────────── */}
         <Button
-          onClick={startPipeline}
-          disabled={isLoading || images.length === 0}
-          className="bg-mono-jet text-mono-white h-11 w-full rounded-full text-sm font-bold disabled:opacity-30"
+          onClick={startScan}
+          disabled={isScanning || images.length === 0}
+          className="bg-mono-jet text-mono-white h-11 rounded-full px-5 py-3 text-sm font-bold transition-opacity disabled:opacity-30"
         >
-          {isLoading ? 'AI 분석 중...' : images.length === 0 ? '화장품 사진을 추가해주세요' : `${images.length}장 스캔 시작`}
+          {isScanning ? 'AI 분석 중...' : `${images.length}개의 이미지 스캔하기`}
         </Button>
-
-        {/* ── 파이프라인 로그 ──────────────────────────────────────────── */}
-        {(isLoading || logs.length > 0) && (
-          <PipelineLog logs={logs} currentStep={isLoading ? currentStep : undefined} />
-        )}
-
-        {/* ── 결과 그리드 ─────────────────────────────────────────────── */}
-        {hasRun && (
-          <div className="space-y-3">
-            <p className="text-mono-jet text-sm font-black">
-              분석 결과{results.length > 0 ? ` (${results.length}개)` : ''}
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <AnimatePresence>
-                {results.length > 0 ? (
-                  results.map((item) => <NukkiResultCard key={item.id} item={item} />)
-                ) : (
-                  !isLoading && <NukkiResultEmpty key="empty" />
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* ── 저장 버튼 ─────────────────────────────────────────── */}
-            {results.length > 0 && !isLoading && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-mono-jet text-mono-white h-11 w-full rounded-full text-sm font-bold disabled:opacity-50"
-              >
-                {isSaving ? '저장 중...' : `내 화장품 파우치에 저장 (${results.length}개)`}
-              </Button>
-            )}
-          </div>
-        )}
       </div>
+
+      {/* 로딩 오버레이 */}
+      {isScanning && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/50 backdrop-blur-sm">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-white border-t-transparent" />
+          <p className="text-sm font-bold text-white">
+            {scanStep || 'AI가 화장품을 분석 중입니다...'}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

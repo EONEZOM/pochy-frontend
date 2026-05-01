@@ -2,34 +2,21 @@
 
 import { Suspense, useMemo } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useSearchMyCosmetics } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import type { MyCosmeticsResponseDTO } from '@/api/model';
 import { WishCardImage } from '@/components/wishlist/WishCardImage';
-import { Header } from '@/components/layout/Header';
-import { ExtraNav } from '@/components/common/ExtraNav';
+import { MyCosmeticsHeader } from '@/components/my-cosmetics/MyCosmeticsHeader';
 import Image from 'next/image';
 
 function MyCosmeticsListContent() {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const sortOrder = searchParams.get('sort') ?? 'latest';
-
-  const handleSort = (sort: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('sort', sort);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  };
-
-  const filterTrigger = (
-    <button type="button">
-      <img src="/icons/filter.svg" alt="필터" width={24} height={24} />
-    </button>
-  );
+  const searchQuery = searchParams.get('q') ?? '';
 
   const { data, isLoading, isError } = useSearchMyCosmetics({
+    keyword: searchQuery || undefined,
     sort: sortOrder === 'oldest' ? 'asc' : 'desc',
     size: 100,
   });
@@ -41,21 +28,7 @@ function MyCosmeticsListContent() {
 
   return (
     <div className="relative">
-      <Header
-        title="내 화장품"
-        sticky
-        right={
-          <ExtraNav
-            side="bottom"
-            align="end"
-            trigger={filterTrigger}
-            items={[
-              { label: '최신순', onClick: () => handleSort('latest') },
-              { label: '오래된순', onClick: () => handleSort('oldest') },
-            ]}
-          />
-        }
-      />
+      <MyCosmeticsHeader />
 
       <main className="p-4">
         {isLoading ? (
