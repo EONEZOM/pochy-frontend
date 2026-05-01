@@ -154,6 +154,7 @@ export default function ProductDetailForm({
 
   // 스캔 결과 뷰에서 열렸고 official_image가 없으면 마운트 즉시 자동 재검색합니다.
   // 수동으로 버튼을 누르지 않아도 누락된 네이버 정보를 채웁니다.
+  // showScanWarning이 true인 경우에만 동작하므로 직접 등록 폼에서는 실행되지 않습니다.
   useEffect(() => {
     if (!showScanWarning) return;
     if (initialData?.official_image) return;

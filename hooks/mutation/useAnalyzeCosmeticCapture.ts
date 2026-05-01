@@ -1,3 +1,17 @@
+/**
+ * 위시리스트 스캔 등록용 GPT 분석 + 네이버 보강 뮤테이션 훅
+ *
+ * 처리 흐름:
+ *   File[] → 리사이징(1280px, quality 0.85) → Base64 변환
+ *     → /api/vision/extract (GPT-4o, BFF)
+ *     → 화장품 필터링 (is_cosmetic=true)
+ *     → 네이버 쇼핑 API 순차 검색 (병렬 시 레이트 리밋 위험)
+ *     → 결과 반환 + resizedFiles 함께 반환 (백엔드 등록 시 재사용)
+ *
+ * 리사이즈 파일을 GPT와 백엔드 등록 양쪽에 재사용하는 이유:
+ *   원본 파일은 해상도가 너무 높아 Vercel 4.5MB body 제한과
+ *   OpenAI 업로드 한도를 초과할 수 있습니다.
+ */
 import { useMutation } from '@tanstack/react-query'
 import { convertBlobToBase64, resizeImageFile } from '@/utils/image-utils'
 

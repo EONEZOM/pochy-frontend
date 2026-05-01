@@ -1,5 +1,25 @@
 'use client';
 
+/**
+ * 내 화장품 스캔 등록 페이지
+ *
+ * 3단계 AI 파이프라인:
+ *   1. YOLO 객체 인식: 이미지에서 화장품 위치를 감지하고 크롭합니다.
+ *      탐지 실패 시 전체 이미지를 그대로 사용합니다.
+ *   2. GPT Vision 분석 (/api/my-cosmetics/vision BFF):
+ *      크롭 이미지를 GPT-4o에 전달해 브랜드/제품명/카테고리/특징을 추출합니다.
+ *      is_cosmetic=false인 항목은 자동으로 필터링합니다.
+ *   3. @imgly/background-removal 배경 제거:
+ *      화장품으로 인식된 크롭에 대해 누끼를 딥니다.
+ *      실패 시 원본 크롭을 대신 사용합니다(소리 없이 넘어감).
+ *
+ * 단계 완료 후 MyCosmeticsReviewStep으로 전환되어
+ * 사용자가 결과를 확인·수정하고 최종 저장합니다.
+ *
+ * 저장: lib/my-cosmetics-register.ts의 registerMyCosmeticsMultipart 사용.
+ * Orval 생성 훅이 아닌 수동 래퍼를 쓰는 이유는 해당 파일 주석 참고.
+ */
+
 import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';

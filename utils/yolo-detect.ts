@@ -1,3 +1,18 @@
+/**
+ * YOLO v8 기반 온디바이스 화장품 객체 인식 유틸리티
+ *
+ * 모델: /public/models/yolo26n.onnx (커스텀 학습된 경량 모델)
+ * 런타임: ONNX Runtime Web (WASM 백엔드)
+ *
+ * 흐름:
+ *   HTMLImageElement → 640×640 텐서 변환 → ONNX 추론 → 바운딩 박스 파싱 → 크롭
+ *
+ * WASM 파일을 CDN에서 불러오는 이유:
+ *   ONNX Runtime WASM 파일들(.wasm, .mjs)은 수 MB에 달해
+ *   Next.js 번들에 포함하면 초기 로드가 크게 늦어집니다.
+ *   jsdelivr CDN을 쓰면 별도 빌드 설정 없이 버전 고정 로드가 가능합니다.
+ */
+
 // @ts-expect-error onnxruntime-web 타입 정의 이슈
 import * as ort from 'onnxruntime-web';
 

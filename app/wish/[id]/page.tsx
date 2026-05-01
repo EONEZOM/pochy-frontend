@@ -22,6 +22,19 @@ import {
 import { getCategoryLabels } from '@/utils/category';
 import { cn } from '@/lib/utils';
 
+/**
+ * 위시리스트 상세 페이지
+ *
+ * 캐러셀 + URL 동기화 패턴:
+ *   목록 전체(100개)를 한 번에 로드하고, 현재 id를 startIndex 삼아 캐러셀을 초기화합니다.
+ *   슬라이드를 넘길 때 router.replace 대신 window.history.replaceState를 씁니다.
+ *   이유: Next.js App Router에서 동적 세그먼트([id]) 전환은 router.replace 호출 시
+ *   컴포넌트 remount가 일어나 전체 화면이 깜빡입니다. History API는 리렌더 없이
+ *   주소만 바꿔주므로 부드러운 슬라이드 UX를 구현할 수 있습니다.
+ *
+ *   슬라이드 전환 시 이전 데이터를 유지하기 위해 keepPreviousData를 사용합니다.
+ *   이를 통해 새 항목 데이터 로딩 중에도 이전 내용이 희미하게 표시됩니다.
+ */
 export default function WishlistDetailPage() {
   const params = useParams();
   const [showCapture, setShowCapture] = useState(false);

@@ -1,5 +1,17 @@
 'use client';
 
+/**
+ * 위시리스트 헤더 컴포넌트
+ *
+ * 검색 UX 패턴:
+ *   isSearchOpen 상태로 타이틀 헤더 ↔ 검색 헤더를 토글합니다.
+ *   검색어는 URL searchParams(?q=)에 동기화되어,
+ *   useReadWishCosmeticsList의 keyword 파라미터로 서버 검색이 수행됩니다.
+ *   검색창을 닫으면 q 파라미터를 삭제해 자동으로 전체 목록이 복원됩니다.
+ *
+ * 내 화장품의 MyCosmeticsHeader도 동일한 패턴을 따릅니다.
+ */
+
 import { useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
