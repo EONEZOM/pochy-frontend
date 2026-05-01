@@ -7,6 +7,7 @@
  */
 
 export * from './apiResponseDTO';
+export * from './apiResponseDTOCreateDetailDto';
 export * from './apiResponseDTOGetHomeData';
 export * from './apiResponseDTOListCreateDetailDto';
 export * from './apiResponseDTOListLong';
@@ -18,8 +19,13 @@ export * from './apiResponseDTOSliceMyCosmeticsResponseDTO';
 export * from './apiResponseDTOSliceReadListDto';
 export * from './apiResponseDTOString';
 export * from './apiResponseDTOTokenDto';
+export * from './apiResponseDTOUpdateDto';
+export * from './createDetailDirectDto';
 export * from './createDetailDto';
+export * from './createDetailDtoV2';
 export * from './createWishCosmeticsBody';
+export * from './createWishCosmeticsDirectBody';
+export * from './createWishCosmeticsV2Body';
 export * from './detail';
 export * from './getHomeData';
 export * from './memberAuthResponse';
@@ -29,6 +35,8 @@ export * from './naverLoginParams';
 export * from './naverLoginUrl';
 export * from './nicknameRequest';
 export * from './pageableObject';
+export * from './productImage';
+export * from './productImageType';
 export * from './readDetailDto';
 export * from './readListDto';
 export * from './readWishCosmeticsListParams';
@@ -39,4 +47,6 @@ export * from './sliceMyCosmeticsResponseDTO';
 export * from './sliceReadListDto';
 export * from './sortObject';
 export * from './tokenDto';
+export * from './updateDto';
+export * from './updateWishCosmeticsBody';
 export * from './verifyMagicLinkParams';

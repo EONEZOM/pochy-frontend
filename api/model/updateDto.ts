@@ -6,13 +6,13 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface ReadListDto {
-  wishCosmeticsId?: number;
+export interface UpdateDto {
+  name?: string;
   brand?: string;
-  productName?: string;
   category?: string;
   subCategory?: string;
-  productImageUrl?: string;
-  captureImageUrl?: string;
   price?: number;
+  feature?: string;
+  memo?: string;
+  naverImageUrl?: string;
 }

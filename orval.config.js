@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
-dotenv.config();
+dotenv.config({ path: '.env.local' });
+dotenv.config(); // .env fallback
 
 const OPENAPI_BASE_URL = process.env.OPENAPI_BASE_URL;
 if (!OPENAPI_BASE_URL) {

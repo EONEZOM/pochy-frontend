@@ -5,7 +5,10 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
-import { useMutation, useQuery } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -18,446 +21,463 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
+  UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  ApiResponseDTOCreateDetailDto,
   ApiResponseDTOListCreateDetailDto,
   ApiResponseDTOReadDetailDto,
   ApiResponseDTOSliceReadListDto,
+  ApiResponseDTOUpdateDto,
   CreateWishCosmeticsBody,
+  CreateWishCosmeticsDirectBody,
+  CreateWishCosmeticsV2Body,
   ReadWishCosmeticsListParams,
+  UpdateWishCosmeticsBody
 } from '../../model';
 
 import { customInstance } from '../../axios-instance';
 
+
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
 
 /**
  * 검색, 카테고리, 가격 필터링을 통해 위시 화장품 목록을 조회합니다. 아무 조건이 없으면 전체 목록이 조회됩니다.
  * @summary 위시 화장품 목록 조회
  */
 export const readWishCosmeticsList = (
-  params?: ReadWishCosmeticsListParams,
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
+    params?: ReadWishCosmeticsListParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
-  return customInstance<ApiResponseDTOSliceReadListDto>(
-    { url: `/api/wish-cosmetics`, method: 'GET', params, signal },
-    options,
-  );
-};
 
-export const getReadWishCosmeticsListQueryKey = (
-  params?: ReadWishCosmeticsListParams,
+
+      return customInstance<ApiResponseDTOSliceReadListDto>(
+      {url: `/api/wish-cosmetics`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getReadWishCosmeticsListQueryKey = (params?: ReadWishCosmeticsListParams,) => {
+    return [
+    `/api/wish-cosmetics`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getReadWishCosmeticsListQueryOptions = <TData = Awaited<ReturnType<typeof readWishCosmeticsList>>, TError = unknown>(params?: ReadWishCosmeticsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
-  return [`/api/wish-cosmetics`, ...(params ? [params] : [])] as const;
-};
 
-export const getReadWishCosmeticsListQueryOptions = <
-  TData = Awaited<ReturnType<typeof readWishCosmeticsList>>,
-  TError = unknown,
->(
-  params?: ReadWishCosmeticsListParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof readWishCosmeticsList>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getReadWishCosmeticsListQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getReadWishCosmeticsListQueryKey(params);
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof readWishCosmeticsList>>
-  > = ({ signal }) => readWishCosmeticsList(params, requestOptions, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof readWishCosmeticsList>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type ReadWishCosmeticsListQueryResult = NonNullable<
-  Awaited<ReturnType<typeof readWishCosmeticsList>>
->;
-export type ReadWishCosmeticsListQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof readWishCosmeticsList>>> = ({ signal }) => readWishCosmeticsList(params, requestOptions, signal);
 
-export function useReadWishCosmeticsList<
-  TData = Awaited<ReturnType<typeof readWishCosmeticsList>>,
-  TError = unknown,
->(
-  params: undefined | ReadWishCosmeticsListParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof readWishCosmeticsList>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReadWishCosmeticsListQueryResult = NonNullable<Awaited<ReturnType<typeof readWishCosmeticsList>>>
+export type ReadWishCosmeticsListQueryError = unknown
+
+
+export function useReadWishCosmeticsList<TData = Awaited<ReturnType<typeof readWishCosmeticsList>>, TError = unknown>(
+ params: undefined |  ReadWishCosmeticsListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsList>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof readWishCosmeticsList>>,
           TError,
           Awaited<ReturnType<typeof readWishCosmeticsList>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReadWishCosmeticsList<
-  TData = Awaited<ReturnType<typeof readWishCosmeticsList>>,
-  TError = unknown,
->(
-  params?: ReadWishCosmeticsListParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof readWishCosmeticsList>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReadWishCosmeticsList<TData = Awaited<ReturnType<typeof readWishCosmeticsList>>, TError = unknown>(
+ params?: ReadWishCosmeticsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsList>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof readWishCosmeticsList>>,
           TError,
           Awaited<ReturnType<typeof readWishCosmeticsList>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReadWishCosmeticsList<
-  TData = Awaited<ReturnType<typeof readWishCosmeticsList>>,
-  TError = unknown,
->(
-  params?: ReadWishCosmeticsListParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof readWishCosmeticsList>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReadWishCosmeticsList<TData = Awaited<ReturnType<typeof readWishCosmeticsList>>, TError = unknown>(
+ params?: ReadWishCosmeticsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary 위시 화장품 목록 조회
  */
 
-export function useReadWishCosmeticsList<
-  TData = Awaited<ReturnType<typeof readWishCosmeticsList>>,
-  TError = unknown,
->(
-  params?: ReadWishCosmeticsListParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof readWishCosmeticsList>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getReadWishCosmeticsListQueryOptions(params, options);
+export function useReadWishCosmeticsList<TData = Awaited<ReturnType<typeof readWishCosmeticsList>>, TError = unknown>(
+ params?: ReadWishCosmeticsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getReadWishCosmeticsListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
 
+
+
+
+
+
 /**
- * 여러 개의 위시 화장품과 캡처 이미지를 저장합니다.
- * @summary 위시 화장품 저장
+ * 스캔한 여러 개의 위시 화장품과 캡처 이미지를 저장합니다.
+ * @summary 위시 화장품 스캔 등록
  */
 export const createWishCosmetics = (
-  createWishCosmeticsBody?: CreateWishCosmeticsBody,
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
+    createWishCosmeticsBody?: CreateWishCosmeticsBody,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
-  return customInstance<ApiResponseDTOListCreateDetailDto>(
-    {
-      url: `/api/wish-cosmetics`,
-      method: 'POST',
-      // 헤더 파싱 관련 Vercel 서버리스 함수 문제인지 테스트하기위해 주석 처리
-      // headers: {'Content-Type': 'application/json', },
-      data: createWishCosmeticsBody,
-      signal,
+
+
+      return customInstance<ApiResponseDTOListCreateDetailDto>(
+      {url: `/api/wish-cosmetics`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createWishCosmeticsBody, signal
     },
-    options,
-  );
-};
+      options);
+    }
 
-export const getCreateWishCosmeticsMutationOptions = <
-  TError = unknown,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createWishCosmetics>>,
-    TError,
-    { data?: CreateWishCosmeticsBody },
-    TContext
-  >;
-  request?: SecondParameter<typeof customInstance>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof createWishCosmetics>>,
-  TError,
-  { data?: CreateWishCosmeticsBody },
-  TContext
-> => {
-  const mutationKey = ['createWishCosmetics'];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation &&
-      'mutationKey' in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof createWishCosmetics>>,
-    { data?: CreateWishCosmeticsBody }
-  > = (props) => {
-    const { data } = props ?? {};
 
-    return createWishCosmetics(data, requestOptions);
-  };
+export const getCreateWishCosmeticsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWishCosmetics>>, TError,{data?: CreateWishCosmeticsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWishCosmetics>>, TError,{data?: CreateWishCosmeticsBody}, TContext> => {
 
-  return { mutationFn, ...mutationOptions };
-};
+const mutationKey = ['createWishCosmetics'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
-export type CreateWishCosmeticsMutationResult = NonNullable<
-  Awaited<ReturnType<typeof createWishCosmetics>>
->;
-export type CreateWishCosmeticsMutationBody =
-  | CreateWishCosmeticsBody
-  | undefined;
-export type CreateWishCosmeticsMutationError = unknown;
 
-/**
- * @summary 위시 화장품 저장
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWishCosmetics>>, {data?: CreateWishCosmeticsBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWishCosmetics(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWishCosmeticsMutationResult = NonNullable<Awaited<ReturnType<typeof createWishCosmetics>>>
+    export type CreateWishCosmeticsMutationBody = CreateWishCosmeticsBody | undefined
+    export type CreateWishCosmeticsMutationError = unknown
+
+    /**
+ * @summary 위시 화장품 스캔 등록
  */
-export const useCreateWishCosmetics = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof createWishCosmetics>>,
-      TError,
-      { data?: CreateWishCosmeticsBody },
-      TContext
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<
-  Awaited<ReturnType<typeof createWishCosmetics>>,
-  TError,
-  { data?: CreateWishCosmeticsBody },
-  TContext
-> => {
-  return useMutation(
-    getCreateWishCosmeticsMutationOptions(options),
-    queryClient,
-  );
-};
-/**
+export const useCreateWishCosmetics = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWishCosmetics>>, TError,{data?: CreateWishCosmeticsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createWishCosmetics>>,
+        TError,
+        {data?: CreateWishCosmeticsBody},
+        TContext
+      > => {
+      return useMutation(getCreateWishCosmeticsMutationOptions(options), queryClient);
+    }
+    /**
+ * 스캔한 여러 개의 위시 화장품과 캡처 이미지를 저장합니다. 이미지 하나에 여러 화장품 스캔 등록과 상품 사진 직접 등록이 가능한 버전입니다.
+ * @summary 위시 화장품 스캔 등록 - 수정한 버전
+ */
+export const createWishCosmeticsV2 = (
+    createWishCosmeticsV2Body?: CreateWishCosmeticsV2Body,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ApiResponseDTOListCreateDetailDto>(
+      {url: `/api/wish-cosmetics/v2`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createWishCosmeticsV2Body, signal
+    },
+      options);
+    }
+
+
+
+export const getCreateWishCosmeticsV2MutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWishCosmeticsV2>>, TError,{data?: CreateWishCosmeticsV2Body}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWishCosmeticsV2>>, TError,{data?: CreateWishCosmeticsV2Body}, TContext> => {
+
+const mutationKey = ['createWishCosmeticsV2'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWishCosmeticsV2>>, {data?: CreateWishCosmeticsV2Body}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWishCosmeticsV2(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWishCosmeticsV2MutationResult = NonNullable<Awaited<ReturnType<typeof createWishCosmeticsV2>>>
+    export type CreateWishCosmeticsV2MutationBody = CreateWishCosmeticsV2Body | undefined
+    export type CreateWishCosmeticsV2MutationError = unknown
+
+    /**
+ * @summary 위시 화장품 스캔 등록 - 수정한 버전
+ */
+export const useCreateWishCosmeticsV2 = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWishCosmeticsV2>>, TError,{data?: CreateWishCosmeticsV2Body}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createWishCosmeticsV2>>,
+        TError,
+        {data?: CreateWishCosmeticsV2Body},
+        TContext
+      > => {
+      return useMutation(getCreateWishCosmeticsV2MutationOptions(options), queryClient);
+    }
+    /**
+ * 위시 화장품을 직접 등록합니다.
+ * @summary 위시 화장품 직접 등록
+ */
+export const createWishCosmeticsDirect = (
+    createWishCosmeticsDirectBody?: CreateWishCosmeticsDirectBody,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ApiResponseDTOCreateDetailDto>(
+      {url: `/api/wish-cosmetics/direct`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createWishCosmeticsDirectBody, signal
+    },
+      options);
+    }
+
+
+
+export const getCreateWishCosmeticsDirectMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWishCosmeticsDirect>>, TError,{data?: CreateWishCosmeticsDirectBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWishCosmeticsDirect>>, TError,{data?: CreateWishCosmeticsDirectBody}, TContext> => {
+
+const mutationKey = ['createWishCosmeticsDirect'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWishCosmeticsDirect>>, {data?: CreateWishCosmeticsDirectBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWishCosmeticsDirect(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWishCosmeticsDirectMutationResult = NonNullable<Awaited<ReturnType<typeof createWishCosmeticsDirect>>>
+    export type CreateWishCosmeticsDirectMutationBody = CreateWishCosmeticsDirectBody | undefined
+    export type CreateWishCosmeticsDirectMutationError = unknown
+
+    /**
+ * @summary 위시 화장품 직접 등록
+ */
+export const useCreateWishCosmeticsDirect = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWishCosmeticsDirect>>, TError,{data?: CreateWishCosmeticsDirectBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createWishCosmeticsDirect>>,
+        TError,
+        {data?: CreateWishCosmeticsDirectBody},
+        TContext
+      > => {
+      return useMutation(getCreateWishCosmeticsDirectMutationOptions(options), queryClient);
+    }
+    /**
  * 특정 위시 화장품의 상세 정보를 조회합니다.
  * @summary 위시 화장품 상세 조회
  */
 export const readWishCosmeticsDetail = (
-  wishCosmeticsId: number,
-  options?: SecondParameter<typeof customInstance>,
-  signal?: AbortSignal,
+    wishCosmeticsId: number,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
-  return customInstance<ApiResponseDTOReadDetailDto>(
-    { url: `/api/wish-cosmetics/${wishCosmeticsId}`, method: 'GET', signal },
-    options,
-  );
-};
 
-export const getReadWishCosmeticsDetailQueryKey = (wishCosmeticsId: number) => {
-  return [`/api/wish-cosmetics/${wishCosmeticsId}`] as const;
-};
 
-export const getReadWishCosmeticsDetailQueryOptions = <
-  TData = Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-  TError = unknown,
->(
-  wishCosmeticsId: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
+      return customInstance<ApiResponseDTOReadDetailDto>(
+      {url: `/api/wish-cosmetics/${wishCosmeticsId}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getReadWishCosmeticsDetailQueryKey = (wishCosmeticsId: number,) => {
+    return [
+    `/api/wish-cosmetics/${wishCosmeticsId}`
+    ] as const;
+    }
+
+
+export const getReadWishCosmeticsDetailQueryOptions = <TData = Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError = unknown>(wishCosmeticsId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getReadWishCosmeticsDetailQueryKey(wishCosmeticsId);
+const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof readWishCosmeticsDetail>>
-  > = ({ signal }) =>
-    readWishCosmeticsDetail(wishCosmeticsId, requestOptions, signal);
+  const queryKey =  queryOptions?.queryKey ?? getReadWishCosmeticsDetailQueryKey(wishCosmeticsId);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: !!wishCosmeticsId,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
 
-export type ReadWishCosmeticsDetailQueryResult = NonNullable<
-  Awaited<ReturnType<typeof readWishCosmeticsDetail>>
->;
-export type ReadWishCosmeticsDetailQueryError = unknown;
 
-export function useReadWishCosmeticsDetail<
-  TData = Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-  TError = unknown,
->(
-  wishCosmeticsId: number,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof readWishCosmeticsDetail>>> = ({ signal }) => readWishCosmeticsDetail(wishCosmeticsId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(wishCosmeticsId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReadWishCosmeticsDetailQueryResult = NonNullable<Awaited<ReturnType<typeof readWishCosmeticsDetail>>>
+export type ReadWishCosmeticsDetailQueryError = unknown
+
+
+export function useReadWishCosmeticsDetail<TData = Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError = unknown>(
+ wishCosmeticsId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
           TError,
           Awaited<ReturnType<typeof readWishCosmeticsDetail>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReadWishCosmeticsDetail<
-  TData = Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-  TError = unknown,
->(
-  wishCosmeticsId: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReadWishCosmeticsDetail<TData = Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError = unknown>(
+ wishCosmeticsId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
           TError,
           Awaited<ReturnType<typeof readWishCosmeticsDetail>>
-        >,
-        'initialData'
-      >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useReadWishCosmeticsDetail<
-  TData = Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-  TError = unknown,
->(
-  wishCosmeticsId: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReadWishCosmeticsDetail<TData = Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError = unknown>(
+ wishCosmeticsId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary 위시 화장품 상세 조회
  */
 
-export function useReadWishCosmeticsDetail<
-  TData = Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-  TError = unknown,
->(
-  wishCosmeticsId: number,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof readWishCosmeticsDetail>>,
-        TError,
-        TData
-      >
-    >;
-    request?: SecondParameter<typeof customInstance>;
-  },
-  queryClient?: QueryClient,
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getReadWishCosmeticsDetailQueryOptions(
-    wishCosmeticsId,
-    options,
-  );
+export function useReadWishCosmeticsDetail<TData = Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError = unknown>(
+ wishCosmeticsId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readWishCosmeticsDetail>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getReadWishCosmeticsDetailQueryOptions(wishCosmeticsId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+
+
+
+
+
+export const updateWishCosmetics = (
+    wishCosmeticsId: number,
+    updateWishCosmeticsBody?: UpdateWishCosmeticsBody,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ApiResponseDTOUpdateDto>(
+      {url: `/api/wish-cosmetics/${wishCosmeticsId}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateWishCosmeticsBody, signal
+    },
+      options);
+    }
+
+
+
+export const getUpdateWishCosmeticsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWishCosmetics>>, TError,{wishCosmeticsId: number;data?: UpdateWishCosmeticsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWishCosmetics>>, TError,{wishCosmeticsId: number;data?: UpdateWishCosmeticsBody}, TContext> => {
+
+const mutationKey = ['updateWishCosmetics'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWishCosmetics>>, {wishCosmeticsId: number;data?: UpdateWishCosmeticsBody}> = (props) => {
+          const {wishCosmeticsId,data} = props ?? {};
+
+          return  updateWishCosmetics(wishCosmeticsId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWishCosmeticsMutationResult = NonNullable<Awaited<ReturnType<typeof updateWishCosmetics>>>
+    export type UpdateWishCosmeticsMutationBody = UpdateWishCosmeticsBody | undefined
+    export type UpdateWishCosmeticsMutationError = unknown
+
+    export const useUpdateWishCosmetics = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWishCosmetics>>, TError,{wishCosmeticsId: number;data?: UpdateWishCosmeticsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateWishCosmetics>>,
+        TError,
+        {wishCosmeticsId: number;data?: UpdateWishCosmeticsBody},
+        TContext
+      > => {
+      return useMutation(getUpdateWishCosmeticsMutationOptions(options), queryClient);
+    }
