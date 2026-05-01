@@ -26,8 +26,8 @@ const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
     iconActivePath: '/icons/BottomNav/home-af.svg',
   },
   {
-    href: '/my',
-    label: '내 정보',
+    href: '/my-cosmetics',
+    label: '내 화장품',
     iconPath: '/icons/BottomNav/my.svg',
     iconActivePath: '/icons/BottomNav/my-af.svg',
   },
