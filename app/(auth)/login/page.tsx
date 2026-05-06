@@ -9,6 +9,7 @@ import {
   reissue,
   useRequestMagicLink,
 } from '@/api/generated/login-controller/login-controller';
+import { getState } from '@/api/generated/oauth/oauth';
 import Image from 'next/image';
 import mainLogo from '@/public/logo/main-logo.png';
 
@@ -20,6 +21,8 @@ function LoginContent() {
   const [isCheckingSession, setIsCheckingSession] = useState(!isFromLogout);
   const [isCheckingAutoLogin, setIsCheckingAutoLogin] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
+  const [isNaverLoginPending, setIsNaverLoginPending] = useState(false);
+  const [isKakaoLoginPending, setIsKakaoLoginPending] = useState(false);
 
   useEffect(() => {
     if (isFromLogout) return;
@@ -80,6 +83,54 @@ function LoginContent() {
     });
   };
 
+  const handleNaverLogin = async () => {
+    if (isNaverLoginPending || isCheckingSession) {
+      return;
+    }
+
+    setIsNaverLoginPending(true);
+    try {
+      const response = await getState();
+      const loginUrl = response?.result?.url?.trim();
+      if (!loginUrl) {
+        alert('네이버 로그인 URL을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.');
+        return;
+      }
+
+      window.location.assign(loginUrl);
+    } catch {
+      alert('네이버 로그인 연결에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setIsNaverLoginPending(false);
+    }
+  };
+
+  const handleKakaoLogin = () => {
+    if (isKakaoLoginPending || isCheckingSession) {
+      return;
+    }
+
+    const kakaoClientId =
+      process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY ??
+      process.env.NEXT_PUBLIC_KAKAO_CLIENT_ID;
+    const kakaoRedirectUri =
+      process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI ??
+      `${window.location.origin}/auth/kakao/callback`;
+
+    if (!kakaoClientId) {
+      alert('카카오 클라이언트 설정이 없어요. 환경 변수를 확인해 주세요.');
+      return;
+    }
+
+    const authUrl = new URL('https://kauth.kakao.com/oauth/authorize');
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('client_id', kakaoClientId);
+    authUrl.searchParams.set('redirect_uri', kakaoRedirectUri);
+
+    setIsKakaoLoginPending(true);
+    window.location.assign(authUrl.toString());
+  };
+
   return (
     <div className="flex h-full flex-col items-center justify-between overflow-hidden bg-white p-5 pb-6">
       <div className="flex flex-1 flex-col items-center justify-center space-y-4">
@@ -135,21 +186,19 @@ function LoginContent() {
         <Button
           variant="outline"
           className="h-14 cursor-pointer rounded-2xl border-zinc-200 font-bold hover:bg-zinc-50"
-          onClick={() => {
-            console.log('네이버로 로그인');
-          }}
+          onClick={handleNaverLogin}
+          disabled={isNaverLoginPending || isCheckingSession}
         >
-          네이버로 로그인하기
+          {isNaverLoginPending ? '네이버 연결 중...' : '네이버로 로그인하기'}
         </Button>
 
         <Button
           variant="outline"
           className="h-14 cursor-pointer rounded-2xl border-zinc-200 font-bold hover:bg-zinc-50"
-          onClick={() => {
-            console.log('카카오로 로그인');
-          }}
+          onClick={handleKakaoLogin}
+          disabled={isKakaoLoginPending || isCheckingSession}
         >
-          카카오로 로그인하기
+          {isKakaoLoginPending ? '카카오 연결 중...' : '카카오로 로그인하기'}
         </Button>
       </div>
     </div>

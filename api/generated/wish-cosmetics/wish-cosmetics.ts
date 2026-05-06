@@ -29,10 +29,12 @@ import type {
   ApiResponseDTOListCreateDetailDto,
   ApiResponseDTOReadDetailDto,
   ApiResponseDTOSliceReadListDto,
+  ApiResponseDTOString,
   ApiResponseDTOUpdateDto,
   CreateWishCosmeticsBody,
   CreateWishCosmeticsDirectBody,
   CreateWishCosmeticsV2Body,
+  DeleteDto,
   ReadWishCosmeticsListParams,
   UpdateWishCosmeticsBody
 } from '../../model';
@@ -201,6 +203,70 @@ export const useCreateWishCosmetics = <TError = unknown,
         TContext
       > => {
       return useMutation(getCreateWishCosmeticsMutationOptions(options), queryClient);
+    }
+    /**
+ * 위시 화장품을 다중 삭제합니다.
+ * @summary 위시 화장품 삭제
+ */
+export const deleteWishCosmetics = (
+    deleteDto: DeleteDto,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ApiResponseDTOString>(
+      {url: `/api/wish-cosmetics`, method: 'DELETE',
+      headers: {'Content-Type': 'application/json', },
+      data: deleteDto, signal
+    },
+      options);
+    }
+
+
+
+export const getDeleteWishCosmeticsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWishCosmetics>>, TError,{data: DeleteDto}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWishCosmetics>>, TError,{data: DeleteDto}, TContext> => {
+
+const mutationKey = ['deleteWishCosmetics'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWishCosmetics>>, {data: DeleteDto}> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteWishCosmetics(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWishCosmeticsMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWishCosmetics>>>
+    export type DeleteWishCosmeticsMutationBody = DeleteDto
+    export type DeleteWishCosmeticsMutationError = unknown
+
+    /**
+ * @summary 위시 화장품 삭제
+ */
+export const useDeleteWishCosmetics = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWishCosmetics>>, TError,{data: DeleteDto}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWishCosmetics>>,
+        TError,
+        {data: DeleteDto},
+        TContext
+      > => {
+      return useMutation(getDeleteWishCosmeticsMutationOptions(options), queryClient);
     }
     /**
  * 스캔한 여러 개의 위시 화장품과 캡처 이미지를 저장합니다. 이미지 하나에 여러 화장품 스캔 등록과 상품 사진 직접 등록이 가능한 버전입니다.
@@ -423,6 +489,10 @@ export function useReadWishCosmeticsDetail<TData = Awaited<ReturnType<typeof rea
 
 
 
+/**
+ * 특정 위시 화장품의 상세 정보를 수정합니다.
+ * @summary 위시 화장품 수정
+ */
 export const updateWishCosmetics = (
     wishCosmeticsId: number,
     updateWishCosmeticsBody?: UpdateWishCosmeticsBody,
@@ -471,7 +541,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateWishCosmeticsMutationBody = UpdateWishCosmeticsBody | undefined
     export type UpdateWishCosmeticsMutationError = unknown
 
-    export const useUpdateWishCosmetics = <TError = unknown,
+    /**
+ * @summary 위시 화장품 수정
+ */
+export const useUpdateWishCosmetics = <TError = unknown,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWishCosmetics>>, TError,{wishCosmeticsId: number;data?: UpdateWishCosmeticsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateWishCosmetics>>,

@@ -7,8 +7,8 @@
  */
 import type { MyCosmeticsListRequestDtoV2 } from './myCosmeticsListRequestDtoV2';
 
-export type RegisterBody = {
+export type RegisterV2Body = {
   captureImages: Blob[];
   directImages?: Blob[];
-  request: MyCosmeticsListRequestDtoV2;
+  data: MyCosmeticsListRequestDtoV2;
 };

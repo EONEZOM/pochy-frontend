@@ -135,8 +135,11 @@ export const register = (
 if(registerBody?.captureImages !== undefined) {
  registerBody?.captureImages.forEach(value => formData.append(`captureImages`, value));
  }
-if(registerBody?.data !== undefined) {
- registerBody?.data.forEach(value => formData.append(`data`, JSON.stringify(value)));
+if(registerBody?.directImages !== undefined) {
+ registerBody?.directImages.forEach(value => formData.append(`directImages`, value));
+ }
+if(registerBody?.request !== undefined) {
+ formData.append(`request`, JSON.stringify(registerBody.request));
  }
 
       return customInstance<ApiResponseDTOListLong>(

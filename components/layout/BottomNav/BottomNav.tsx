@@ -52,7 +52,7 @@ const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
 ];
 
 const ICON_PX = 24;
-const BOTTOM_NAV_HIDDEN_PATHS = ['/login', '/verify', '/success'];
+const BOTTOM_NAV_HIDDEN_PATHS = ['/login', '/verify', '/success', '/auth'];
 const PREPARING_PATHS = ['/my', '/feed'];
 
 function isNavActive(pathname: string, href: string) {

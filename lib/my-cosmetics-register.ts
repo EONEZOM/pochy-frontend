@@ -8,7 +8,7 @@
  * @see lib/wish-cosmetics.ts - 동일 패턴 적용 예시 및 상세 설명
  */
 import { customInstance } from '@/api/axios-instance';
-import type { MyCosmeticsRequestDTO } from '@/api/model';
+import type { MyCosmeticsRequestDTO } from '@/api/model/myCosmeticsRequestDTO';
 
 type RegisterMyCosmeticsPayload = {
   captureImages: File[];

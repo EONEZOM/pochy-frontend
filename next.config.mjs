@@ -33,6 +33,9 @@ const nextConfig = {
 
   // 2) Security headers for SharedArrayBuffer-enabled workloads.
   async headers() {
+    if (process.env.NODE_ENV !== 'production') {
+      return [];
+    }
     return [
       {
         source: '/(.*)',
