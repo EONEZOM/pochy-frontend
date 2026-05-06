@@ -5,9 +5,9 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
-import type { MyCosmeticsRequestDTO } from './myCosmeticsRequestDTO';
+import type { MyCosmeticsListRequestDTO } from './myCosmeticsListRequestDTO';
 
 export type RegisterBody = {
   captureImages: Blob[];
-  data: MyCosmeticsRequestDTO[];
+  data: MyCosmeticsListRequestDTO;
 };

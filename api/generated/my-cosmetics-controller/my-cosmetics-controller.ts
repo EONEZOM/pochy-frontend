@@ -29,6 +29,7 @@ import type {
   ApiResponseDTOListLong,
   ApiResponseDTOSliceMyCosmeticsResponseDTO,
   RegisterBody,
+  RegisterV2Body,
   SearchMyCosmeticsParams
 } from '../../model';
 
@@ -136,7 +137,7 @@ if(registerBody?.captureImages !== undefined) {
  registerBody?.captureImages.forEach(value => formData.append(`captureImages`, value));
  }
 if(registerBody?.data !== undefined) {
- registerBody?.data.forEach(value => formData.append(`data`, JSON.stringify(value)));
+ formData.append(`data`, JSON.stringify(registerBody.data));
  }
 
       return customInstance<ApiResponseDTOListLong>(
@@ -189,6 +190,73 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getRegisterMutationOptions(options), queryClient);
+    }
+    export const registerV2 = (
+    registerV2Body?: RegisterV2Body,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+      const formData = new FormData();
+if(registerV2Body?.captureImages !== undefined) {
+ registerV2Body?.captureImages.forEach(value => formData.append(`captureImages`, value));
+ }
+if(registerV2Body?.directImages !== undefined) {
+ registerV2Body?.directImages.forEach(value => formData.append(`directImages`, value));
+ }
+if(registerV2Body?.data !== undefined) {
+ formData.append(`data`, JSON.stringify(registerV2Body.data));
+ }
+
+      return customInstance<ApiResponseDTOListLong>(
+      {url: `/api/my-cosmetics/v2`, method: 'POST',
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
+    },
+      options);
+    }
+
+
+
+export const getRegisterV2MutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerV2>>, TError,{data?: RegisterV2Body}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerV2>>, TError,{data?: RegisterV2Body}, TContext> => {
+
+const mutationKey = ['registerV2'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerV2>>, {data?: RegisterV2Body}> = (props) => {
+          const {data} = props ?? {};
+
+          return  registerV2(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterV2MutationResult = NonNullable<Awaited<ReturnType<typeof registerV2>>>
+    export type RegisterV2MutationBody = RegisterV2Body | undefined
+    export type RegisterV2MutationError = unknown
+
+    export const useRegisterV2 = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerV2>>, TError,{data?: RegisterV2Body}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof registerV2>>,
+        TError,
+        {data?: RegisterV2Body},
+        TContext
+      > => {
+      return useMutation(getRegisterV2MutationOptions(options), queryClient);
     }
     export const getCosmeticDetail = (
     cosmeticId: number,
