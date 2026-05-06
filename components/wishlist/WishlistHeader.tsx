@@ -54,6 +54,7 @@ export function WishlistHeader() {
       <Header
         variant="search"
         sticky
+        showBack
         onSearch={() => executeSearch(localSearchQuery)}
         onBack={handleClose}
         searchProps={{

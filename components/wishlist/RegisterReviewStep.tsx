@@ -51,6 +51,7 @@ export default function RegisterReviewStep({
     <div className="flex flex-col bg-white">
       <Header
         title="스캔 결과 확인"
+        showBack
         onBack={onCancel}
         rightIcons={[{ kind: 'register', onClick: onSave }]}
       />

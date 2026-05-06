@@ -79,7 +79,8 @@ const ICON_CONFIG = {
 type HeaderRightIconKind = keyof typeof ICON_CONFIG;
 
 type HeaderRightIconBase = {
-  kind: HeaderRightIconKind;
+  kind: HeaderRightIconKind | 'custom';
+  icon?: React.ReactNode;
   ariaLabel?: string;
   onClick?: () => void;
   className?: string;
@@ -186,9 +187,7 @@ export default function Header({
       <div
         className={cn(
           'pointer-events-none absolute inset-0 flex items-center',
-          variant === 'search'
-            ? 'px-12'
-            : 'justify-center px-14',
+          variant === 'search' ? 'px-12' : 'justify-center px-14',
         )}
       >
         {variant === 'title' ? (
@@ -229,14 +228,18 @@ export default function Header({
       {/* 우측: 스택 순서상 중앙 레이어보다 위(z-10) — 탭 영역은 여기 */}
       <div className="z-10 ml-auto flex min-h-10 shrink-0 items-center justify-end gap-1.5">
         {rightIcons?.map((item, index) => {
-          const config = ICON_CONFIG[item.kind];
+          // custom인 경우 직접 아이콘 렌더링, 아니면 config 사용
+          const config = item.kind !== 'custom' ? ICON_CONFIG[item.kind] : null;
           const isRegister = item.kind === 'register';
+
           const content =
-            isRegister && item.text ? (
+            item.icon ||
+            (isRegister && item.text ? (
               <span className="text-sm font-semibold">{item.text}</span>
             ) : (
-              config.element
-            );
+              config?.element
+            ));
+
           return (
             <Button
               key={`${item.kind}-${index}`}
@@ -249,7 +252,7 @@ export default function Header({
                 item.kind === 'favorite' && 'rounded-full text-zinc-900',
                 item.className,
               )}
-              aria-label={item.ariaLabel ?? config.label}
+              aria-label={item.ariaLabel ?? config?.label ?? ''}
               onClick={item.onClick}
             >
               {content}

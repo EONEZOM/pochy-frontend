@@ -221,6 +221,7 @@ export default function ProductDetailForm({
     <div className="flex min-h-full flex-col bg-white">
       <Header
         className="border-b border-zinc-100"
+        showBack
         onBack={onBack}
         title="상품 정보"
         rightIcons={[
