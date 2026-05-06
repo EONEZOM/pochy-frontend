@@ -171,7 +171,7 @@ function WishlistPageContent() {
         }
       />
 
-      <main className="p-4">
+      <main className="px-5 pb-4">
         {isLoading ? (
           <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-500">
             위시리스트를 불러오는 중...
@@ -188,13 +188,13 @@ function WishlistPageContent() {
             </div>
           </div>
         ) : (
-          <div className="flex w-full gap-3 pb-4">
+          <div className="flex w-full gap-4 pb-4">
             {/* 짝수/홀수 인덱스로 열을 직접 분배해 정렬 순서(최신순 등)가
                 왼→오 읽기 순서와 일치하도록 합니다. */}
             {[0, 1].map((colIndex) => (
               <div
                 key={colIndex}
-                className="flex min-w-0 flex-1 flex-col gap-3"
+                className="flex min-w-0 flex-1 flex-col gap-7"
               >
                 {filteredItems
                   .filter((_, i) => i % 2 === colIndex)
@@ -202,22 +202,23 @@ function WishlistPageContent() {
                     <Link
                       key={item.id}
                       href={`/wish/${item.id}`}
-                      className="group border-mono-bright-gray block w-full min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md"
+                      className="group flex w-full min-w-0 flex-col"
                     >
-                      <div className="bg-mono-bright-gray relative w-full">
+                      <div className="relative aspect-square w-full shrink-0 overflow-hidden">
                         <WishCardImage
+                          fill
                           officialImage={item.official_image}
                           captureImage={item.capture_image}
                           productName={item.product_name}
+                          className="object-contain"
                         />
                       </div>
 
-                      {/* 텍스트 영역: 여기에도 min-w-0이 있어야 truncate가 정상 작동함 */}
-                      <div className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
-                        <span className="text-mono-dark-gray w-full truncate text-center text-sm">
+                      <div className="flex h-14 min-h-14 shrink-0 min-w-0 flex-col gap-0.5 pt-2">
+                        <span className="text-mono-dark-gray w-full truncate text-xs">
                           {item.brand_name}
                         </span>
-                        <span className="text-mono-jet w-full truncate text-center text-sm font-semibold">
+                        <span className="text-mono-jet line-clamp-2 w-full text-sm leading-5 font-semibold">
                           {item.product_name}
                         </span>
                       </div>

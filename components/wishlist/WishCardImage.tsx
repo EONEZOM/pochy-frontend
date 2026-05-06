@@ -51,7 +51,7 @@ export function WishCardImage({
       );
     }
     return (
-      <div className="flex aspect-3/4 w-full items-center justify-center">
+      <div className="flex aspect-square w-full items-center justify-center">
         <Image
           src="/icons/imgplus.svg"
           alt=""
