@@ -92,6 +92,18 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'i.ytimg.com', // 유튜브 썸네일 도메인
       },
+      // 백엔드 상품 이미지 URL 도메인
+      {
+        protocol: 'http',
+        hostname: 'pochy.shop',
+        port: '8080',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'pochy.shop',
+        pathname: '/**',
+      },
       // 포치 백엔드 이미지 버켓 주소
       {
         protocol: 'https',

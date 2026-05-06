@@ -1,5 +1,23 @@
 'use client';
 
+/**
+ * 위시리스트 스캔 등록 페이지
+ *
+ * 2단계 AI 파이프라인:
+ *   1. GPT Vision 분석 (useAnalyzeCosmeticCapture 훅):
+ *      이미지를 1280px로 리사이징 후 /api/vision/extract BFF를 통해 GPT-4o에 전달.
+ *      화장품 정보 추출 후 네이버 쇼핑 API로 공식 이미지/가격 정보를 보강합니다.
+ *      → resizedFiles도 함께 반환되어 백엔드 등록 시 재사용됩니다.
+ *   2. RegisterReviewStep으로 전환:
+ *      사용자가 카드를 클릭해 개별 항목 수정이 가능합니다.
+ *      수정 폼(ProductDetailForm)에서 네이버 재검색 버튼으로 정보를 새로 채울 수 있습니다.
+ *
+ * 내 화장품 스캔(YOLO 포함)과 달리 위시리스트는 사용자가 직접 촬영한 사진이 아닌
+ * 온라인 캡처 이미지를 주로 등록하므로 YOLO 객체 인식 단계가 없습니다.
+ *
+ * 저장: lib/wish-cosmetics.ts의 createWishCosmeticsMultipart 사용.
+ */
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { extractImageFileData } from '@/utils/image-utils';
@@ -12,7 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/common/Modal';
 import { Header } from '@/components/layout/Header';
 import type { CreateDetailDto } from '@/api/model';
-import { createWishCosmeticsMultipart } from '@/api/wish-cosmetics';
+import { createWishCosmeticsMultipart } from '@/lib/wish-cosmetics';
 
 type AnalysisResult = Record<string, unknown>;
 
@@ -45,6 +63,7 @@ export default function WishlistRegisterPage() {
   const [isTipModalOpen, setIsTipModalOpen] = useState(true);
   const [images, setImages] = useState<ImageFileData[]>([]);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
+  const [resizedFiles, setResizedFiles] = useState<File[]>([]);
   const [isReviewStep, setIsReviewStep] = useState(false);
   const [isCreatePending, setIsCreatePending] = useState(false);
 
@@ -71,6 +90,7 @@ export default function WishlistRegisterPage() {
     analyze(fileArray, {
       onSuccess: (data) => {
         setAnalysisResults(data.results);
+        setResizedFiles(data.resizedFiles);
         setIsReviewStep(true);
       },
       onError: (err) => alert('분석 중 오류 발생: ' + err.message),
@@ -98,8 +118,12 @@ export default function WishlistRegisterPage() {
 
     setIsCreatePending(true);
     try {
+      // 분석 시 리사이징된 파일을 재사용합니다.
+      // resizedFiles가 없으면 원본 파일로 fallback합니다.
+      const sourceFiles =
+        resizedFiles.length > 0 ? resizedFiles : images.map((img) => img.file);
       const normalizedCaptureImages = buildCaptureImagesForRequest(
-        images.map((img) => img.file),
+        sourceFiles,
         request.length,
       );
 
@@ -109,7 +133,8 @@ export default function WishlistRegisterPage() {
       });
       alert('위시리스트에 등록되었습니다.');
       router.push('/wish');
-    } catch {
+    } catch (error) {
+      console.error('[WishRegister/scan] 등록 실패:', error);
       alert('위시리스트 등록 중 오류가 발생했습니다.');
     } finally {
       setIsCreatePending(false);

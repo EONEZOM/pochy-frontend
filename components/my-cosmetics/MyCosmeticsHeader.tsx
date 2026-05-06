@@ -1,23 +1,11 @@
 'use client';
 
-/**
- * 위시리스트 헤더 컴포넌트
- *
- * 검색 UX 패턴:
- *   isSearchOpen 상태로 타이틀 헤더 ↔ 검색 헤더를 토글합니다.
- *   검색어는 URL searchParams(?q=)에 동기화되어,
- *   useReadWishCosmeticsList의 keyword 파라미터로 서버 검색이 수행됩니다.
- *   검색창을 닫으면 q 파라미터를 삭제해 자동으로 전체 목록이 복원됩니다.
- *
- * 내 화장품의 MyCosmeticsHeader도 동일한 패턴을 따릅니다.
- */
-
 import { useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
 import { ExtraNav } from '@/components/common/ExtraNav';
 
-export function WishlistHeader() {
+export function MyCosmeticsHeader() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -50,16 +38,16 @@ export function WishlistHeader() {
     replaceWithParams(params);
   };
 
+  const handleClose = () => {
+    setIsSearchOpen(false);
+    executeSearch('');
+  };
+
   const filterTrigger = (
     <button type="button">
       <img src="/icons/filter.svg" alt="필터" width={24} height={24} />
     </button>
   );
-
-  const handleClose = () => {
-    setIsSearchOpen(false);
-    executeSearch('');
-  };
 
   if (isSearchOpen) {
     return (
@@ -85,8 +73,6 @@ export function WishlistHeader() {
             items={[
               { label: '최신순', onClick: () => handleSort('latest') },
               { label: '오래된순', onClick: () => handleSort('oldest') },
-              { label: '가격 높은순', onClick: () => handleSort('price-desc') },
-              { label: '가격 낮은순', onClick: () => handleSort('price-asc') },
             ]}
           />
         }
@@ -96,7 +82,7 @@ export function WishlistHeader() {
 
   return (
     <Header
-      title="위시리스트"
+      title="내 화장품"
       sticky
       rightIcons={[
         {
@@ -115,8 +101,6 @@ export function WishlistHeader() {
           items={[
             { label: '최신순', onClick: () => handleSort('latest') },
             { label: '오래된순', onClick: () => handleSort('oldest') },
-            { label: '가격 높은순', onClick: () => handleSort('price-desc') },
-            { label: '가격 낮은순', onClick: () => handleSort('price-asc') },
           ]}
         />
       }

@@ -10,6 +10,7 @@ import { HomeSectionCarousel } from '@/components/main/HomeSectionCarousel';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/common/Modal';
 import { useGetHomeData } from '@/api/generated/home/home';
+import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import {
   autoNickname,
   useUpdateNickname,
@@ -59,18 +60,33 @@ function MainPageContent() {
     isLoading: isHomeLoading,
     refetch: refetchHomeData,
   } = useGetHomeData();
+  const { data: wishListResponse, isLoading: isWishListLoading } =
+    useReadWishCosmeticsList({
+      sort: 'desc',
+      size: 100,
+    });
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
   const isNicknameModalOpen =
     !isHomeLoading && !hasServerNickname && !isNicknameModalDismissed;
 
+  const wishItems: Detail[] = (wishListResponse?.result?.content ?? [])
+    .filter(
+      (item): item is { wishCosmeticsId: number; productImageUrl?: string } =>
+        typeof item.wishCosmeticsId === 'number',
+    )
+    .map((item) => ({
+      id: item.wishCosmeticsId,
+      imageUrl: item.productImageUrl,
+    }));
+
   const sections: Array<{ title: string; items: Detail[] }> = [
-    { title: '위시', items: homeData?.wishList ?? [] },
+    { title: '위시', items: wishItems },
     { title: '마이', items: homeData?.myList ?? [] },
     { title: '피드', items: homeData?.feed ?? [] },
   ];
 
-  const showHomeSkeleton = isHomeLoading;
+  const showHomeSkeleton = isHomeLoading || isWishListLoading;
 
   const { mutate: updateNickname, isPending: isSavingNickname } =
     useUpdateNickname({

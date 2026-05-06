@@ -1,8 +1,9 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
+import { WishCardImage } from '@/components/wishlist/WishCardImage';
 import { Share2, Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview';
@@ -11,6 +12,7 @@ import {
   useReadWishCosmeticsDetail,
   useReadWishCosmeticsList,
 } from '@/api/generated/wish-cosmetics/wish-cosmetics';
+import { keepPreviousData } from '@tanstack/react-query';
 import {
   Carousel,
   CarouselContent,
@@ -20,9 +22,21 @@ import {
 import { getCategoryLabels } from '@/utils/category';
 import { cn } from '@/lib/utils';
 
+/**
+ * 위시리스트 상세 페이지
+ *
+ * 캐러셀 + URL 동기화 패턴:
+ *   목록 전체(100개)를 한 번에 로드하고, 현재 id를 startIndex 삼아 캐러셀을 초기화합니다.
+ *   슬라이드를 넘길 때 router.replace 대신 window.history.replaceState를 씁니다.
+ *   이유: Next.js App Router에서 동적 세그먼트([id]) 전환은 router.replace 호출 시
+ *   컴포넌트 remount가 일어나 전체 화면이 깜빡입니다. History API는 리렌더 없이
+ *   주소만 바꿔주므로 부드러운 슬라이드 UX를 구현할 수 있습니다.
+ *
+ *   슬라이드 전환 시 이전 데이터를 유지하기 위해 keepPreviousData를 사용합니다.
+ *   이를 통해 새 항목 데이터 로딩 중에도 이전 내용이 희미하게 표시됩니다.
+ */
 export default function WishlistDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const [showCapture, setShowCapture] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
   const wishId = Number(params.id);
@@ -53,9 +67,13 @@ export default function WishlistDetailPage() {
     setSelectedWishId(wishId);
   }, [wishId]);
 
-  const { data: detailData, isLoading: isDetailLoading } =
+  const { data: detailData, isFetching: isDetailFetching } =
     useReadWishCosmeticsDetail(selectedWishId, {
-      query: { enabled: !!selectedWishId && isValidWishId },
+      query: {
+        enabled: !!selectedWishId && isValidWishId,
+        // 슬라이드 전환 시 이전 데이터를 유지해 전체 로딩 화면을 방지합니다.
+        placeholderData: keepPreviousData,
+      },
     });
   const currentItem = detailData?.result;
 
@@ -145,7 +163,9 @@ export default function WishlistDetailPage() {
       const selectedId = wishItems[index]?.wishCosmeticsId;
       if (!selectedId) return;
       setSelectedWishId(selectedId);
-      router.replace(`/wish/${selectedId}`, { scroll: false });
+      // router.replace 대신 History API를 직접 사용합니다.
+      // router.replace는 [id] 동적 라우트 전환 시 페이지를 remount시켜 깜빡임이 발생합니다.
+      window.history.replaceState(null, '', `/wish/${selectedId}`);
     };
 
     api.on('select', handleSelect);
@@ -153,20 +173,16 @@ export default function WishlistDetailPage() {
     return () => {
       api.off('select', handleSelect);
     };
-  }, [api, wishItems, router]);
+  }, [api, wishItems]);
 
-  if (isListLoading || isDetailLoading) {
+  // 목록 최초 로드 또는 데이터가 아직 없을 때만 전체 화면 블로킹
+  if (isListLoading || !currentItem) {
     return (
-      <div className="flex items-center justify-center">
+      <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-400">
         위시 상세를 불러오는 중...
       </div>
     );
   }
-
-  if (!currentItem)
-    return (
-      <div className="flex items-center justify-center">아이템이 없습니다.</div>
-    );
 
   return (
     <div className="relative max-w-120 py-5">
@@ -177,7 +193,7 @@ export default function WishlistDetailPage() {
       />
 
       <div className="">
-        <div className="text-center">
+        <div className={cn('text-center transition-opacity duration-200', isDetailFetching && 'opacity-40')}>
           <p className="text-sm font-medium text-zinc-500">{currentItem.brand}</p>
           <h2 className="text-xl font-bold">{currentItem.productName}</h2>
         </div>
@@ -208,11 +224,11 @@ export default function WishlistDetailPage() {
                     )}
                   >
                     <div className="absolute inset-0 overflow-hidden rounded-3xl">
-                      <Image
-                        src={item.productImageUrl ?? '/icons/imgplus.svg'}
-                        alt={item.productName ?? ''}
+                      <WishCardImage
+                        officialImage={item.productImageUrl ?? ''}
+                        captureImage={item.captureImageUrl ?? ''}
+                        productName={item.productName ?? ''}
                         fill
-                        className="object-cover"
                       />
                     </div>
                   </div>
@@ -222,24 +238,26 @@ export default function WishlistDetailPage() {
           </Carousel>
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentItem.wishCosmeticsId}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4"
-          >
-            <DetailRow
-              label="카테고리"
-              value={`${categoryLabels.main} / ${categoryLabels.sub}`}
-            />
-            <DetailRow label="특징" value={currentItem.feature ?? '-'} />
-            <DetailRow label="가격" value={String(currentItem.price ?? '-')} />
-            <DetailRow label="메모" value={currentItem.memo || '-'} />
-          </motion.div>
-        </AnimatePresence>
+        <div className={cn('transition-opacity duration-200', isDetailFetching && 'opacity-40')}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentItem.wishCosmeticsId}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
+              <DetailRow
+                label="카테고리"
+                value={`${categoryLabels.main} / ${categoryLabels.sub}`}
+              />
+              <DetailRow label="특징" value={currentItem.feature ?? '-'} />
+              <DetailRow label="가격" value={String(currentItem.price ?? '-')} />
+              <DetailRow label="메모" value={currentItem.memo || '-'} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
         <div className="mt-8 flex justify-center">
           <button

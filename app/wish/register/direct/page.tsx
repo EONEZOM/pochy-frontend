@@ -4,7 +4,7 @@ import ProductDetailForm from '@/components/wishlist/ProductDetailForm';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { CreateDetailDto } from '@/api/model';
-import { createWishCosmeticsMultipart } from '@/api/wish-cosmetics';
+import { createWishCosmeticsMultipart } from '@/lib/wish-cosmetics';
 
 const normalizePrice = (value: unknown): number => {
   const parsed = Number(value);

@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { Suspense, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -15,6 +14,7 @@ import { Modal } from '@/components/common/Modal';
 import { WishlistHeader } from '@/components/wishlist/WishlistHeader';
 import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import type { ReadListDto } from '@/api/model';
+import { WishCardImage } from '@/components/wishlist/WishCardImage';
 
 type WishListItem = {
   id: number;
@@ -23,6 +23,8 @@ type WishListItem = {
   main_category: string;
   sub_category: string;
   official_image: string;
+  capture_image: string;
+  price: number;
 };
 
 const toWishListItem = (item: ReadListDto): WishListItem => ({
@@ -32,7 +34,10 @@ const toWishListItem = (item: ReadListDto): WishListItem => ({
   main_category: item.category ?? '',
   sub_category: item.subCategory ?? '',
   official_image: item.productImageUrl ?? '',
+  capture_image: item.captureImageUrl ?? '',
+  price: item.price ?? 0,
 });
+
 
 function WishlistPageContent() {
   const router = useRouter();
@@ -51,18 +56,27 @@ function WishlistPageContent() {
     keyword: searchQuery || undefined,
     category: currentCategory !== 'All' ? currentCategory : undefined,
     subCategory: currentSub !== 'All' ? currentSub : undefined,
-    // price 정렬은 API DTO에 가격 필드가 없어 서버 기본 정렬로 fallback
+    // 가격순은 클라이언트 정렬이므로 서버에는 최신순(desc)으로 전체를 받아옵니다.
     sort: sortOrder === 'oldest' ? 'asc' : 'desc',
     size: 100,
   });
 
   const filteredItems = useMemo(() => {
-    return (data?.result?.content ?? [])
-      .filter((item): item is ReadListDto & { wishCosmeticsId: number } =>
-        typeof item.wishCosmeticsId === 'number',
+    const items = (data?.result?.content ?? [])
+      .filter(
+        (item): item is ReadListDto & { wishCosmeticsId: number } =>
+          typeof item.wishCosmeticsId === 'number',
       )
       .map(toWishListItem);
-  }, [data?.result?.content]);
+
+    if (sortOrder === 'price-desc') {
+      return [...items].sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+    }
+    if (sortOrder === 'price-asc') {
+      return [...items].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+    }
+    return items;
+  }, [data?.result?.content, sortOrder]);
 
   const handleMainChange = (category: FilterMainCategory) => {
     const params = new URLSearchParams(searchParams);
@@ -71,7 +85,7 @@ function WishlistPageContent() {
     } else {
       params.set('category', category);
     }
-    params.delete('sub'); // 대분류가 바뀌면 소분류 필터는 제거
+    params.delete('sub');
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -123,48 +137,42 @@ function WishlistPageContent() {
             </div>
           </div>
         ) : (
-          <div className="columns-2 gap-3 space-y-3 pb-4">
-            {filteredItems.map((item) => (
-              <Link
-                key={item.id}
-                href={`/wish/${item.id}`}
-                className="group border-mono-bright-gray block overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md"
+          <div className="flex w-full gap-3 pb-4">
+            {/* 짝수/홀수 인덱스로 열을 직접 분배해 정렬 순서(최신순 등)가
+                왼→오 읽기 순서와 일치하도록 합니다. */}
+            {[0, 1].map((colIndex) => (
+              <div
+                key={colIndex}
+                className="flex min-w-0 flex-1 flex-col gap-3"
               >
-                {/* 이미지 영역 */}
-                <div className="bg-mono-bright-gray relative w-full">
-                  {item.official_image ? (
-                    <Image
-                      src={item.official_image}
-                      alt={item.product_name}
-                      width={500}
-                      height={700}
-                      className="w-full object-cover"
-                    />
-                  ) : (
-                    // 이미지 없을 때 placeholder
-                    <div className="flex aspect-3/4 w-full items-center justify-center">
-                      <Image
-                        src="/icons/imgplus.svg"
-                        alt=""
-                        width={32}
-                        height={32}
-                        unoptimized
-                        className="opacity-30"
-                      />
-                    </div>
-                  )}
-                </div>
+                {filteredItems
+                  .filter((_, i) => i % 2 === colIndex)
+                  .map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/wish/${item.id}`}
+                      className="group border-mono-bright-gray block w-full min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md"
+                    >
+                      <div className="bg-mono-bright-gray relative w-full">
+                        <WishCardImage
+                          officialImage={item.official_image}
+                          captureImage={item.capture_image}
+                          productName={item.product_name}
+                        />
+                      </div>
 
-                {/* 텍스트 영역 */}
-                <div className="flex flex-col items-center gap-0.5 px-2 py-3">
-                  <span className="text-mono-dark-gray w-full truncate text-center text-sm">
-                    {item.brand_name}
-                  </span>
-                  <span className="text-mono-jet w-full truncate text-center text-sm font-semibold">
-                    {item.product_name}
-                  </span>
-                </div>
-              </Link>
+                      {/* 텍스트 영역: 여기에도 min-w-0이 있어야 truncate가 정상 작동함 */}
+                      <div className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
+                        <span className="text-mono-dark-gray w-full truncate text-center text-sm">
+                          {item.brand_name}
+                        </span>
+                        <span className="text-mono-jet w-full truncate text-center text-sm font-semibold">
+                          {item.product_name}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+              </div>
             ))}
           </div>
         )}

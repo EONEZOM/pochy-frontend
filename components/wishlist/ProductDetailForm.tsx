@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Plus, AlertCircle, Search, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -91,7 +91,7 @@ export default function ProductDetailForm({
     { label: '메모', field: 'memo' },
   ];
 
-  const fetchNaverShoppingInfo = async (
+  const fetchNaverShoppingInfo = useCallback(async (
     sourceData: any,
     options?: { showSuccessAlert?: boolean; showFailureAlert?: boolean },
   ) => {
@@ -149,7 +149,24 @@ export default function ProductDetailForm({
     } finally {
       setIsSearching(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 스캔 결과 뷰에서 열렸고 official_image가 없으면 마운트 즉시 자동 재검색합니다.
+  // 수동으로 버튼을 누르지 않아도 누락된 네이버 정보를 채웁니다.
+  // showScanWarning이 true인 경우에만 동작하므로 직접 등록 폼에서는 실행되지 않습니다.
+  useEffect(() => {
+    if (!showScanWarning) return;
+    if (initialData?.official_image) return;
+    if (!initialData?.brand_name || !initialData?.product_name) return;
+
+    fetchNaverShoppingInfo(initialData, {
+      showSuccessAlert: false,
+      showFailureAlert: false,
+    });
+  // 마운트 1회만 실행합니다.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleReSearch = async () => {
     await fetchNaverShoppingInfo(formData);

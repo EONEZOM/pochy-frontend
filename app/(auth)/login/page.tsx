@@ -19,6 +19,7 @@ function LoginContent() {
   const isFromLogout = searchParams.get('fromLogout') === '1';
   const [email, setEmail] = useState('');
   const [isCheckingSession, setIsCheckingSession] = useState(!isFromLogout);
+  const [isCheckingAutoLogin, setIsCheckingAutoLogin] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [isNaverLoginPending, setIsNaverLoginPending] = useState(false);
   const [isKakaoLoginPending, setIsKakaoLoginPending] = useState(false);
@@ -61,9 +62,21 @@ function LoginContent() {
     },
   });
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) return;
+
+    setIsCheckingAutoLogin(true);
+    try {
+      await reissue();
+      router.replace('/?setupNickname=1');
+      return;
+    } catch {
+      // refresh token이 없거나 만료된 경우 기존 매직링크 로그인으로 fallback
+    } finally {
+      setIsCheckingAutoLogin(false);
+    }
+
     setSubmittedEmail(trimmedEmail);
     requestMagicLink({
       params: { email: trimmedEmail },
@@ -153,12 +166,14 @@ function LoginContent() {
             <Button
               className="text-md h-14 w-full rounded-xl bg-zinc-900 font-bold text-white shadow-lg transition-transform active:scale-[0.98]"
               onClick={handleLogin}
-              disabled={isPending || isCheckingSession}
+              disabled={isPending || isCheckingSession || isCheckingAutoLogin}
             >
-              {isPending || isCheckingSession ? (
+              {isPending || isCheckingSession || isCheckingAutoLogin ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  {isCheckingSession ? '확인 중...' : '발송 중...'}
+                  {isCheckingSession || isCheckingAutoLogin
+                    ? '확인 중...'
+                    : '발송 중...'}
                 </span>
               ) : (
                 '로그인 하기'
