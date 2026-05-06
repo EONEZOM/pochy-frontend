@@ -13,23 +13,26 @@ export function WishlistHeader() {
   const [localSearchQuery, setLocalSearchQuery] = useState(queryFromUrl);
   const debouncedSearchQuery = useDebounce(localSearchQuery, 350);
 
-  const updateSearchQuery = useCallback((value: string) => {
-    const normalized = value.trim();
-    const currentQuery = searchParams.get('q') || '';
-    if (normalized === currentQuery) {
-      return;
-    }
-    const params = new URLSearchParams(searchParams.toString());
-    if (normalized) {
-      params.set('q', normalized);
-    } else {
-      params.delete('q');
-    }
-    const queryString = params.toString();
-    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
-      scroll: false,
-    });
-  }, [pathname, router, searchParams]);
+  const updateSearchQuery = useCallback(
+    (value: string) => {
+      const normalized = value.trim();
+      const currentQuery = searchParams.get('q') || '';
+      if (normalized === currentQuery) {
+        return;
+      }
+      const params = new URLSearchParams(searchParams.toString());
+      if (normalized) {
+        params.set('q', normalized);
+      } else {
+        params.delete('q');
+      }
+      const queryString = params.toString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+        scroll: false,
+      });
+    },
+    [pathname, router, searchParams],
+  );
 
   useEffect(() => {
     updateSearchQuery(debouncedSearchQuery);

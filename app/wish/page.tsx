@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Suspense, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   FILTER_CATEGORIES,
@@ -37,7 +38,6 @@ const toWishListItem = (item: ReadListDto): WishListItem => ({
   capture_image: item.captureImageUrl ?? '',
   price: item.price ?? 0,
 });
-
 
 function WishlistPageContent() {
   const router = useRouter();
@@ -99,6 +99,12 @@ function WishlistPageContent() {
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
+  const handleSort = (sort: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('sort', sort);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   const activeSubCategories = useMemo(
     () =>
       FILTER_CATEGORIES.find((c) => c.value === currentCategory)
@@ -118,6 +124,51 @@ function WishlistPageContent() {
         currentSub={currentSub}
         onMainChange={handleMainChange}
         onSubChange={handleSubChange}
+        leftControl={
+          <ExtraNav
+            side="bottom"
+            align="start"
+            selectedKey={sortOrder}
+            dimBackdrop
+            trigger={
+              <button
+                type="button"
+                className="text-mono-dark-gray ml-5 flex size-8 items-center justify-center"
+                aria-label="정렬 필터"
+              >
+                <Image
+                  src="/icons/filter.svg"
+                  alt=""
+                  width={20}
+                  height={20}
+                  unoptimized
+                />
+              </button>
+            }
+            items={[
+              {
+                key: 'latest',
+                label: '최신순',
+                onClick: () => handleSort('latest'),
+              },
+              {
+                key: 'oldest',
+                label: '오래된순',
+                onClick: () => handleSort('oldest'),
+              },
+              {
+                key: 'price-desc',
+                label: '높은 가격순',
+                onClick: () => handleSort('price-desc'),
+              },
+              {
+                key: 'price-asc',
+                label: '낮은 가격순',
+                onClick: () => handleSort('price-asc'),
+              },
+            ]}
+          />
+        }
       />
 
       <main className="p-4">
@@ -183,6 +234,7 @@ function WishlistPageContent() {
         <div className="relative h-24">
           <div className="absolute right-5 bottom-5">
             <ExtraNav
+              dimBackdrop
               items={[
                 {
                   label: '스캔해서 등록하기',
