@@ -13,7 +13,8 @@
  *
  * variant:
  * - title: 가운데 문자열 제목
- * - search: 가운데 검색 Input (우측 작은 돋보기는 rightElement)
+ * - title + searchExpanded: 가운데만 검색 Input — 좌측 뒤로가기·우측 rightIcons 유지
+ * - search: 가운데 검색 Input (전환형 헤더용). 확인은 Enter 또는 onSearch 호출로 처리
  */
 
 import * as React from 'react';
@@ -94,7 +95,7 @@ export type HeaderProps = {
   /** false면 좌측 영역은 빈 칸(w-10)만 유지 — 중앙 제목 위치는 그대로 */
   showBack?: boolean;
   onBack?: () => void;
-  /** variant === 'search'일 때 Enter 또는 인풋 우측 돋보기 클릭 시 호출 */
+  /** 검색 인풋에서 Enter 시 호출 (위시 검색 등) */
   onSearch?: () => void;
   backAriaLabel?: string;
   /** rightIcons 뒤에 커스텀 노드 붙일 때 */
@@ -104,17 +105,25 @@ export type HeaderProps = {
   sticky?: boolean;
 };
 
-/** 기본 모드: 중앙에 title 문자열 */
+/** 기본 모드: 중앙에 title 문자열 — searchExpanded 시 중앙만 검색창으로 전환 */
 type HeaderTitleVariantProps = {
   variant?: 'title';
   title?: string;
-  searchProps?: never;
+  /** true면 중앙 제목 대신 검색 입력 — 우측 rightIcons·좌측 영역은 그대로 */
+  searchExpanded?: boolean;
+  searchProps?: Omit<
+    React.ComponentProps<typeof Input>,
+    'className' | 'rightElement'
+  > & {
+    className?: string;
+  };
 };
 
-/** 검색 전용 모드: 중앙 전체가 검색창 — 피드 등에서 검색 모드로 헤더 교체할 때 사용 */
+/** 검색 전용 모드: 중앙 전체가 검색창 — 피드 등에서 검색 모드로 헤더 통째로 바꿀 때 사용 */
 type HeaderSearchVariantProps = {
   variant: 'search';
   title?: never;
+  searchExpanded?: never;
   onSearch?: () => void;
   searchProps?: Omit<
     React.ComponentProps<typeof Input>,
@@ -136,6 +145,7 @@ export default function Header({
   backAriaLabel = '뒤로 가기',
   variant = 'title',
   title,
+  searchExpanded,
   searchProps,
   onSearch,
   right,
@@ -152,6 +162,25 @@ export default function Header({
     }
     router.back();
   }, [onBack, router]);
+
+  const showCenterSearch =
+    variant === 'search' ||
+    (variant === 'title' && Boolean(searchExpanded) && Boolean(searchProps));
+
+  const searchInput = showCenterSearch && searchProps && (
+    <Input
+      {...searchProps}
+      type={searchProps.type ?? 'search'}
+      autoFocus={searchProps.autoFocus ?? (variant === 'title' && searchExpanded)}
+      onKeyDown={(e) => {
+        searchProps.onKeyDown?.(e);
+        if (e.key === 'Enter') {
+          onSearch?.();
+        }
+      }}
+      className={cn('pointer-events-auto w-full', searchProps.className)}
+    />
+  );
 
   return (
     <header
@@ -187,41 +216,15 @@ export default function Header({
       <div
         className={cn(
           'pointer-events-none absolute inset-0 flex items-center',
-          variant === 'search' ? 'px-12' : 'justify-center px-14',
+          showCenterSearch ? 'px-12' : 'justify-center px-14',
         )}
       >
-        {variant === 'title' ? (
+        {showCenterSearch ? (
+          searchInput
+        ) : (
           <h3 className="pointer-events-auto max-w-full truncate text-center text-base font-bold tracking-tight text-zinc-900">
             {title}
           </h3>
-        ) : (
-          // 검색 인풋 우측 돋보기는 Input의 rightElement (헤더 우측 rightIcons와 별개)
-          <Input
-            {...searchProps}
-            type={searchProps?.type ?? 'search'}
-            onKeyDown={(e) => {
-              searchProps?.onKeyDown?.(e);
-              if (e.key === 'Enter') {
-                onSearch?.();
-              }
-            }}
-            className="pointer-events-auto w-full"
-            rightElement={
-              <button
-                type="button"
-                className="cursor-pointer"
-                onClick={onSearch}
-              >
-                <Image
-                  src={HEADER_ICON.search}
-                  alt="검색"
-                  width={18}
-                  height={18}
-                  unoptimized
-                />
-              </button>
-            }
-          />
         )}
       </div>
 
