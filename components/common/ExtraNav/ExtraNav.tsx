@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
 
 export interface ExtraNavItem {
   key?: string;
@@ -201,7 +202,7 @@ export function ExtraNav({
                 {content}
               </Link>
             ) : (
-              <button
+              <Button
                 key={index}
                 type="button"
                 onClick={() => {
@@ -211,7 +212,7 @@ export function ExtraNav({
                 className={itemClass}
               >
                 {content}
-              </button>
+              </Button>
             );
           })}
         </div>

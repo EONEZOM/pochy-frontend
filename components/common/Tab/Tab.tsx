@@ -3,7 +3,6 @@
 import { memo } from 'react';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/common/Button';
 
 interface TabItem {
   label: string;
@@ -47,7 +46,7 @@ export const Tab = memo(
           ? 'rounded-2xl border border-mono-gray p-4'
           : 'border-b border-mono-bright-gray px-4 pt-3',
       ],
-      variant === 'pill' && 'gap-1.25 px-4 py-3',
+      variant === 'pill' && 'gap-2 bg-white px-4 py-3',
       className,
     );
 
@@ -72,14 +71,19 @@ export const Tab = memo(
           {items.map((item) => {
             const isActive = value === item.value;
             return (
-              <Button
+              <button
                 key={item.value}
-                size="sm"
-                variant={isActive ? 'solid' : 'default'}
+                type="button"
                 onClick={() => handleClick(item.value)}
+                className={cn(
+                  'h-10 shrink-0 rounded-full border px-5 text-sm font-semibold transition-colors',
+                  isActive
+                    ? 'bg-brand-classic border-transparent text-white'
+                    : 'border-mono-bright-gray text-mono-dark-gray bg-transparent',
+                )}
               >
                 {item.label}
-              </Button>
+              </button>
             );
           })}
         </div>
