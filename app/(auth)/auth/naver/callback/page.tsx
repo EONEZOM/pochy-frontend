@@ -3,36 +3,12 @@
 import { Suspense, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { naverLogin } from '@/api/generated/oauth/oauth';
-
-const ACCESS_TOKEN_STORAGE_KEY = 'ACCESS_TOKEN';
-
-const resolveAccessToken = (value: unknown): string | null => {
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value.trim();
-  }
-
-  if (typeof value !== 'object' || value === null) {
-    return null;
-  }
-
-  const record = value as Record<string, unknown>;
-  const candidateKeys = ['accessToken', 'access_token', 'token'];
-  for (const key of candidateKeys) {
-    const candidate = record[key];
-    if (typeof candidate === 'string' && candidate.trim().length > 0) {
-      return candidate.trim();
-    }
-  }
-
-  for (const nestedValue of Object.values(record)) {
-    const nestedToken = resolveAccessToken(nestedValue);
-    if (nestedToken) {
-      return nestedToken;
-    }
-  }
-
-  return null;
-};
+import {
+  ACCESS_TOKEN_STORAGE_KEY,
+  persistRefreshTokenCookie,
+  resolveAccessToken,
+  resolveRefreshToken,
+} from '@/utils/oauth-session';
 
 function NaverCallbackContent() {
   const router = useRouter();
@@ -55,6 +31,20 @@ function NaverCallbackContent() {
       try {
         const response = await naverLogin({ code, state });
         const accessToken = resolveAccessToken(response?.result);
+        const refreshToken = resolveRefreshToken(response?.result);
+
+        if (refreshToken) {
+          const cookieOk = await persistRefreshTokenCookie(refreshToken);
+          if (!cookieOk) {
+            if (!isMounted) {
+              return;
+            }
+            alert('로그인 세션을 저장하지 못했어요. 다시 시도해 주세요.');
+            router.replace('/login');
+            return;
+          }
+        }
+
         if (accessToken) {
           window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, accessToken);
         }
