@@ -71,4 +71,54 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const { wishCosmeticsId } = await params;
+  const targetUrl = `${API_BASE}/api/wish-cosmetics/${wishCosmeticsId}`;
+
+  try {
+    const authorization = request.headers.get('Authorization');
+    const forwardingHeaders: Record<string, string> = {};
+    if (authorization) {
+      forwardingHeaders.Authorization = authorization;
+    }
+
+    const contentType = request.headers.get('Content-Type') ?? '';
+
+    if (contentType.includes('multipart/form-data')) {
+      const incomingFormData = await request.formData();
+      const outgoingFormData = new FormData();
+
+      incomingFormData.forEach((value, key) => {
+        outgoingFormData.append(key, value);
+      });
+
+      const response = await fetch(targetUrl, {
+        method: 'PATCH',
+        headers: forwardingHeaders,
+        body: outgoingFormData,
+      });
+      return parseResponse(response);
+    }
+
+    const body = (await request.json()) as { request?: unknown };
+    const requestDto = body?.request ?? body;
+    const outgoingFormData = new FormData();
+
+    outgoingFormData.append(
+      'request',
+      new Blob([JSON.stringify(requestDto)], { type: 'application/json' }),
+    );
+
+    const response = await fetch(targetUrl, {
+      method: 'PATCH',
+      headers: forwardingHeaders,
+      body: outgoingFormData,
+    });
+    return parseResponse(response);
+  } catch (error) {
+    console.error('[wish-cosmetics/[id]][PATCH] proxy error:', error);
+    return NextResponse.json({ error: 'Proxy request failed' }, { status: 502 });
+  }
+}
+
 export const maxDuration = 30;

@@ -11,7 +11,7 @@
  *   따라서 이미지는 항상 File 객체로 변환 후 파일명과 함께 append합니다.
  */
 import { customInstance } from '@/api/axios-instance';
-import type { CreateDetailDto } from '@/api/model';
+import type { CreateDetailDto, UpdateDto } from '@/api/model';
 
 type CreateWishCosmeticsMultipartPayload = {
   request: CreateDetailDto[];
@@ -45,6 +45,57 @@ export const createWishCosmeticsMultipart = async ({
   return customInstance({
     url: '/api/wish-cosmetics',
     method: 'POST',
+    data: formData,
+  });
+};
+
+const appendFilePart = (
+  formData: FormData,
+  key: string,
+  file?: File | null,
+): void => {
+  if (!file) {
+    return;
+  }
+
+  const normalizedFile =
+    file.type && file.type.length > 0
+      ? file
+      : new File([file], file.name || `${key}.jpg`, { type: 'image/jpeg' });
+
+  formData.append(key, normalizedFile, normalizedFile.name || `${key}.jpg`);
+};
+
+type PatchWishCosmeticsMultipartPayload = {
+  wishCosmeticsId: number;
+  request: UpdateDto;
+  productDirectImage?: File | null;
+  captureImage?: File | null;
+};
+
+/**
+ * 위시 항목 수정(PATCH): 백엔드가 multipart + JSON `request` 파트를 요구할 때 사용합니다.
+ * (등록 API와 동일한 FormData 패턴)
+ */
+export const patchWishCosmeticsMultipart = async ({
+  wishCosmeticsId,
+  request,
+  productDirectImage,
+  captureImage,
+}: PatchWishCosmeticsMultipartPayload) => {
+  const formData = new FormData();
+
+  formData.append(
+    'request',
+    new Blob([JSON.stringify(request)], { type: 'application/json' }),
+  );
+
+  appendFilePart(formData, 'productDirectImage', productDirectImage);
+  appendFilePart(formData, 'captureImage', captureImage);
+
+  return customInstance({
+    url: `/api/wish-cosmetics/${wishCosmeticsId}`,
+    method: 'PATCH',
     data: formData,
   });
 };
