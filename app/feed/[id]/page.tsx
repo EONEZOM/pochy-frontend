@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import { Modal } from '@/components/common/Modal';
+import { useFeedBookmarksContext } from '@/components/feed/FeedBookmarksProvider';
 import { Header } from '@/components/layout/Header';
 import {
   FEED_DEFAULT_STICKERS,
@@ -39,13 +40,14 @@ export default function FeedDetailPage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : '';
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { isBookmarked, toggleBookmark } = useFeedBookmarksContext();
 
   const post = useMemo(
     () => FEED_MOCK_ITEMS.find((item) => item.id === id),
     [id],
   );
 
-  const [favorite, setFavorite] = useState(post?.bookmarked ?? false);
+  const favorite = isBookmarked(id);
   const [activeCategory, setActiveCategory] = useState('all');
   const [scrollY, setScrollY] = useState(0);
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -69,7 +71,6 @@ export default function FeedDetailPage() {
     if (!post) {
       return;
     }
-    setFavorite(post.bookmarked ?? false);
     setCarouselIndex(0);
     setScrollY(0);
     scrollRef.current?.scrollTo({ top: 0 });
@@ -169,7 +170,7 @@ export default function FeedDetailPage() {
                 ? '[&_svg]:fill-amber-400 [&_svg]:text-amber-400'
                 : '',
               onClick: () => {
-                setFavorite((v) => !v);
+                toggleBookmark(id);
               },
             },
             {

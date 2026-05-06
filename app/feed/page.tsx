@@ -3,23 +3,34 @@
 import { useMemo, useState } from 'react';
 
 import { Header } from '@/components/layout/Header';
+import { useFeedBookmarksContext } from '@/components/feed/FeedBookmarksProvider';
 import { FeedPostCard } from '@/components/feed/FeedPostCard';
 import { FeedPostGridCard } from '@/components/feed/FeedPostGridCard';
-import { FeedSortTabs } from '@/components/feed/FeedSortTabs';
 import {
-  FeedViewToggle,
+  FeedToolbar,
   type FeedViewMode,
-} from '@/components/feed/FeedViewToggle';
+} from '@/components/feed/FeedToolbar';
 import { FEED_MOCK_ITEMS, type FeedSortTab } from '@/constants/feed-mock';
 
 export default function FeedPage() {
+  const { bookmarkById, toggleBookmark } = useFeedBookmarksContext();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortTab, setSortTab] = useState<FeedSortTab>('recommended');
   const [viewMode, setViewMode] = useState<FeedViewMode>('list');
 
+  const feedItems = useMemo(() => {
+    return FEED_MOCK_ITEMS.map((item) => ({
+      ...item,
+      bookmarked:
+        bookmarkById[item.id] !== undefined
+          ? bookmarkById[item.id]
+          : Boolean(item.bookmarked),
+    }));
+  }, [bookmarkById]);
+
   const filteredItems = useMemo(() => {
-    let list = [...FEED_MOCK_ITEMS];
+    let list = [...feedItems];
 
     if (sortTab === 'favorites') {
       list = list.filter((item) => item.bookmarked);
@@ -39,51 +50,45 @@ export default function FeedPage() {
     }
 
     return list;
-  }, [searchQuery, sortTab]);
+  }, [feedItems, searchQuery, sortTab]);
 
   return (
     <div className="bg-mono-white flex min-h-full flex-col pb-2">
-      {searchOpen ? (
-        <Header
-          sticky
-          showBack
-          onBack={() => {
-            setSearchOpen(false);
-            setSearchQuery('');
-          }}
-          variant="search"
-          searchProps={{
-            placeholder: '검색어를 입력하세요',
-            value: searchQuery,
-            onChange: (e) => {
-              setSearchQuery(e.target.value);
+      <Header
+        sticky
+        showBack={false}
+        variant="title"
+        title="피드"
+        searchExpanded={searchOpen}
+        searchProps={{
+          placeholder: '검색어를 입력하세요',
+          value: searchQuery,
+          onChange: (e) => {
+            setSearchQuery(e.target.value);
+          },
+        }}
+        rightIcons={[
+          {
+            kind: 'search',
+            ariaLabel: searchOpen ? '검색 닫기' : '검색',
+            onClick: () => {
+              setSearchOpen((prev) => {
+                if (prev) {
+                  setSearchQuery('');
+                }
+                return !prev;
+              });
             },
-          }}
-        />
-      ) : (
-        <Header
-          sticky
-          showBack={false}
-          variant="title"
-          title="피드"
-          rightIcons={[
-            {
-              kind: 'search',
-              ariaLabel: '검색',
-              onClick: () => {
-                setSearchOpen(true);
-              },
-            },
-          ]}
-        />
-      )}
+          },
+        ]}
+      />
 
-      {!searchOpen && (
-        <>
-          <FeedSortTabs value={sortTab} onChange={setSortTab} />
-          <FeedViewToggle mode={viewMode} onChange={setViewMode} />
-        </>
-      )}
+      <FeedToolbar
+        sortTab={sortTab}
+        onSortChange={setSortTab}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+      />
 
       {viewMode === 'list' ? (
         <div className="flex flex-col">
@@ -93,7 +98,11 @@ export default function FeedPage() {
             </p>
           ) : (
             filteredItems.map((item) => (
-              <FeedPostCard key={item.id} item={item} />
+              <FeedPostCard
+                key={item.id}
+                item={item}
+                onBookmarkToggle={toggleBookmark}
+              />
             ))
           )}
         </div>
@@ -105,7 +114,11 @@ export default function FeedPage() {
             </p>
           ) : (
             filteredItems.map((item) => (
-              <FeedPostGridCard key={item.id} item={item} />
+              <FeedPostGridCard
+                key={item.id}
+                item={item}
+                onBookmarkToggle={toggleBookmark}
+              />
             ))
           )}
         </div>

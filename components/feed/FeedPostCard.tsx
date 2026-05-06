@@ -8,9 +8,10 @@ import { cn } from '@/lib/utils';
 
 type FeedPostCardProps = {
   item: FeedMockItem;
+  onBookmarkToggle?: (feedId: string) => void;
 };
 
-export function FeedPostCard({ item }: FeedPostCardProps) {
+export function FeedPostCard({ item, onBookmarkToggle }: FeedPostCardProps) {
   return (
     <article className="border-b border-zinc-100 px-4 py-4">
       <Link href={`/feed/${item.id}`} className="block">
@@ -63,8 +64,14 @@ export function FeedPostCard({ item }: FeedPostCardProps) {
         </div>
         <button
           type="button"
-          className="rounded-full p-1"
+          className="rounded-full p-1 transition-colors hover:bg-zinc-100"
           aria-label={item.bookmarked ? '즐겨찾기 해제' : '즐겨찾기'}
+          aria-pressed={item.bookmarked}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onBookmarkToggle?.(item.id);
+          }}
         >
           <Star
             className={cn(
