@@ -21,31 +21,31 @@ export type BottomNavItem = {
 const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
   {
     href: '/',
-    label: '홈',
+    label: 'Home',
     iconPath: '/icons/BottomNav/home.svg',
     iconActivePath: '/icons/BottomNav/home-af.svg',
   },
   {
     href: '/my-cosmetics',
-    label: '내 화장품',
+    label: 'My',
     iconPath: '/icons/BottomNav/my.svg',
     iconActivePath: '/icons/BottomNav/my-af.svg',
   },
   {
     href: '/wish',
-    label: '위시',
+    label: 'Wish',
     iconPath: '/icons/BottomNav/wish.svg',
     iconActivePath: '/icons/BottomNav/wish-af.svg',
   },
   {
     href: '/feed',
-    label: '피드',
+    label: 'Feed',
     iconPath: '/icons/BottomNav/feed.svg',
     iconActivePath: '/icons/BottomNav/feed-af.svg',
   },
   {
     href: '/profile',
-    label: '프로필',
+    label: 'Profile',
     iconPath: '/icons/BottomNav/profile.svg',
     iconActivePath: '/icons/BottomNav/profile-af.svg',
   },
