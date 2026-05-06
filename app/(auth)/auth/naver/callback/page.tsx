@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { naverLogin } from '@/api/generated/oauth/oauth';
 import {
   ACCESS_TOKEN_STORAGE_KEY,
+  formatOAuthCallbackError,
   persistRefreshTokenCookie,
   resolveAccessToken,
   resolveRefreshToken,
@@ -52,11 +53,12 @@ function NaverCallbackContent() {
           return;
         }
         router.replace('/success');
-      } catch {
+      } catch (error) {
         if (!isMounted) {
           return;
         }
-        alert('네이버 로그인 처리에 실패했어요. 다시 시도해 주세요.');
+        console.error('[oauth][naver-callback] login failed', error);
+        alert(formatOAuthCallbackError('네이버', error));
         router.replace('/login');
       }
     };

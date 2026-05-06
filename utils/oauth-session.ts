@@ -77,3 +77,66 @@ export const persistRefreshTokenCookie = async (
 
   return response.ok;
 };
+
+const resolveErrorMessage = (value: unknown): string | null => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const candidateKeys = ['message', 'error', 'detail'];
+  for (const key of candidateKeys) {
+    const candidate = record[key];
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  const nestedCandidates = [record.result, record.data, record.response];
+  for (const nested of nestedCandidates) {
+    const nestedMessage = resolveErrorMessage(nested);
+    if (nestedMessage) {
+      return nestedMessage;
+    }
+  }
+
+  return null;
+};
+
+export const formatOAuthCallbackError = (
+  providerLabel: string,
+  error: unknown,
+): string => {
+  const fallback = `${providerLabel} 로그인 처리에 실패했어요. 다시 시도해 주세요.`;
+
+  if (typeof error !== 'object' || error === null) {
+    return fallback;
+  }
+
+  const record = error as Record<string, unknown>;
+  const response =
+    typeof record.response === 'object' && record.response !== null
+      ? (record.response as Record<string, unknown>)
+      : null;
+  const status =
+    typeof response?.status === 'number' ? String(response.status) : null;
+  const message =
+    resolveErrorMessage(response?.data) ??
+    resolveErrorMessage(record) ??
+    null;
+
+  if (status && message) {
+    return `${providerLabel} 로그인 실패 (${status}): ${message}`;
+  }
+  if (status) {
+    return `${providerLabel} 로그인 실패 (${status})`;
+  }
+  if (message) {
+    return `${providerLabel} 로그인 실패: ${message}`;
+  }
+
+  return fallback;
+};
