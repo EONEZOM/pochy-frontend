@@ -15,6 +15,7 @@ import {
   Plus,
 } from 'lucide-react';
 
+import { BottomSheet } from '@/components/common/BottomSheet';
 import { Modal } from '@/components/common/Modal';
 import { useFeedBookmarksContext } from '@/components/feed/FeedBookmarksProvider';
 import { Header } from '@/components/layout/Header';
@@ -30,6 +31,7 @@ import { cn } from '@/lib/utils';
 const SCROLL_REACTION_START_PX = 12;
 const SCROLL_REACTION_FULL_HIDE_PX = 110;
 const SCROLL_REVEAL_PX = 88;
+const FEED_PRODUCTS_DEFAULT_SNAP = 0.52;
 
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
@@ -49,6 +51,10 @@ export default function FeedDetailPage() {
 
   const favorite = isBookmarked(id);
   const [activeCategory, setActiveCategory] = useState('all');
+  const [productsSheetOpen, setProductsSheetOpen] = useState(false);
+  const [productsSnapPoint, setProductsSnapPoint] = useState<number | string | null>(
+    FEED_PRODUCTS_DEFAULT_SNAP,
+  );
   const [scrollY, setScrollY] = useState(0);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [stickerModalOpen, setStickerModalOpen] = useState(false);
@@ -98,7 +104,14 @@ export default function FeedDetailPage() {
       (SCROLL_REACTION_FULL_HIDE_PX - SCROLL_REACTION_START_PX),
   );
 
-  const revealed = scrollY >= SCROLL_REVEAL_PX;
+  const activeSnapPoint =
+    typeof productsSnapPoint === 'number'
+      ? productsSnapPoint
+      : FEED_PRODUCTS_DEFAULT_SNAP;
+  const revealed = productsSheetOpen || scrollY >= SCROLL_REVEAL_PX;
+  const heroMinHeight = productsSheetOpen
+    ? `${Math.max(220, Math.round(560 - activeSnapPoint * 260))}px`
+    : 'min(72dvh, 680px)';
 
   const filteredProducts = useMemo(() => {
     if (activeCategory === 'all') {
@@ -248,7 +261,7 @@ export default function FeedDetailPage() {
         <div className="relative px-4 pt-2">
           <div
             className={cn(
-              'relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-zinc-200 bg-rose-50 transition-[filter] duration-300',
+              'relative w-full overflow-hidden rounded-2xl border border-zinc-200 bg-rose-50 transition-[filter,min-height] duration-300',
               revealed && 'brightness-[0.92]',
             )}
             style={{
@@ -257,6 +270,7 @@ export default function FeedDetailPage() {
                 linear-gradient(to bottom, rgba(244, 114, 182, 0.15) 1px, transparent 1px)
               `,
               backgroundSize: '24px 24px',
+              minHeight: heroMinHeight,
             }}
           >
             {revealed ? (
@@ -315,24 +329,42 @@ export default function FeedDetailPage() {
           </div>
         </div>
 
-        {!revealed ? (
-          <div className="mt-6 flex flex-col items-center gap-1 px-4 text-zinc-400">
+        {!productsSheetOpen ? (
+          <button
+            type="button"
+            className="mt-6 flex w-full flex-col items-center gap-1 px-4 text-zinc-400 transition-colors hover:text-zinc-600"
+            aria-label="관련 제품 열기"
+            onClick={() => {
+              setProductsSnapPoint(FEED_PRODUCTS_DEFAULT_SNAP);
+              setProductsSheetOpen(true);
+            }}
+          >
             <span className="text-xs font-medium">아래로 당겨보세요</span>
             <ChevronDown className="size-5 animate-bounce" aria-hidden />
-          </div>
+          </button>
         ) : (
           <p className="text-mono-dark-gray mt-5 px-4 text-center text-sm font-medium">
             스티커를 클릭해 추가 정보를 얻으세요?
           </p>
         )}
+      </div>
 
-        <section
-          className={cn(
-            'mt-6 rounded-t-3xl bg-zinc-100 px-4 pb-10 pt-6 transition-opacity duration-300',
-            revealed ? 'opacity-100' : 'opacity-85',
-          )}
-        >
-          <p className="text-mono-jet mb-3 text-sm font-bold">관련 제품</p>
+      <BottomSheet
+        open={productsSheetOpen}
+        onOpenChange={(open) => {
+          setProductsSheetOpen(open);
+          if (!open) {
+            setProductsSnapPoint(FEED_PRODUCTS_DEFAULT_SNAP);
+          }
+        }}
+        snapPoints={[FEED_PRODUCTS_DEFAULT_SNAP, 0.72, 0.9]}
+        activeSnapPoint={productsSnapPoint}
+        setActiveSnapPoint={setProductsSnapPoint}
+        dismissible
+        title="관련 제품"
+        className="max-h-[92vh]"
+      >
+        <div className="-mx-6 rounded-t-3xl bg-zinc-100 px-4 pb-4 pt-2">
           <div className="-mx-1 flex gap-2 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {FEED_DETAIL_CHIP_BAR.map((chip) => {
               const selected = activeCategory === chip.id;
@@ -379,8 +411,8 @@ export default function FeedDetailPage() {
               </button>
             ))}
           </div>
-        </section>
-      </div>
+        </div>
+      </BottomSheet>
 
       <Modal
         open={stickerModalOpen}
