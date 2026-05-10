@@ -1,7 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 
 interface WishCardImageProps {
   officialImage: string;
@@ -15,6 +16,7 @@ interface WishCardImageProps {
 /**
  * officialImage → captureImage → imgplus.svg 순으로 fallback합니다.
  * onError 핸들러로 URL이 깨진 경우(엑박)도 처리합니다.
+ * 백엔드 상대 경로(`wish_capture_img/…`)는 `resolveMediaUrl`로 절대 URL로 만듭니다.
  */
 export function WishCardImage({
   officialImage,
@@ -23,17 +25,32 @@ export function WishCardImage({
   fill = false,
   className,
 }: WishCardImageProps) {
-  const initialSrc = officialImage || captureImage || '';
-  const [src, setSrc] = useState(initialSrc);
-  const [failed, setFailed] = useState(!initialSrc);
+  const resolvedOfficial = useMemo(
+    () => resolveMediaUrl(officialImage),
+    [officialImage],
+  );
+  const resolvedCapture = useMemo(
+    () => resolveMediaUrl(captureImage),
+    [captureImage],
+  );
+
+  const computedInitial = resolvedOfficial || resolvedCapture || '';
+  const [src, setSrc] = useState(computedInitial);
+  const [failed, setFailed] = useState(!computedInitial);
+
+  useEffect(() => {
+    const next = resolvedOfficial || resolvedCapture || '';
+    setSrc(next);
+    setFailed(!next);
+  }, [resolvedOfficial, resolvedCapture]);
 
   const handleError = useCallback(() => {
-    if (src === officialImage && captureImage) {
-      setSrc(captureImage);
+    if (src === resolvedOfficial && resolvedCapture) {
+      setSrc(resolvedCapture);
     } else {
       setFailed(true);
     }
-  }, [src, officialImage, captureImage]);
+  }, [src, resolvedOfficial, resolvedCapture]);
 
   if (failed) {
     if (fill) {

@@ -9,45 +9,143 @@
  *   또한 File 없이 순수 Blob을 append하면 일부 환경에서
  *   Content-Type이 application/octet-stream으로 전송되어 500 에러가 발생합니다.
  *   따라서 이미지는 항상 File 객체로 변환 후 파일명과 함께 append합니다.
+ *
+ * 등록 API는 `POST /api/wish-cosmetics/v2`(CreateDetailDtoV2 + capture/direct 인덱스)를 사용합니다.
  */
 import { customInstance } from '@/api/axios-instance';
-import type { CreateDetailDto, UpdateDto } from '@/api/model';
+import type { CreateDetailDtoV2, UpdateDto } from '@/api/model';
+import { ProductImageType } from '@/api/model/productImageType';
 
-type CreateWishCosmeticsMultipartPayload = {
-  request: CreateDetailDto[];
+export function normalizeMultipartImageFile(
+  image: File,
+  fallbackName: string,
+): File {
+  if (image.type && image.type.length > 0) {
+    return image;
+  }
+  return new File([image], image.name || fallbackName, {
+    type: 'image/jpeg',
+  });
+}
+
+type CreateWishCosmeticsV2MultipartPayload = {
+  request: CreateDetailDtoV2[];
   captureImages: File[];
+  directImages?: File[];
 };
 
-export const createWishCosmeticsMultipart = async ({
+/**
+ * 위시 스캔/직접 등록 V2 — 멀티파트 필드: captureImages, directImages(선택), request(JSON)
+ */
+export const createWishCosmeticsV2Multipart = async ({
   request,
   captureImages,
-}: CreateWishCosmeticsMultipartPayload) => {
+  directImages = [],
+}: CreateWishCosmeticsV2MultipartPayload) => {
   const formData = new FormData();
 
   captureImages.forEach((image, index) => {
-    const normalizedFile =
-      image.type && image.type.length > 0
-        ? image
-        : new File([image], image.name || `capture-${index}.jpg`, {
-            type: 'image/jpeg',
-          });
+    const normalizedFile = normalizeMultipartImageFile(
+      image,
+      `capture-${index}.jpg`,
+    );
     formData.append(
       'captureImages',
       normalizedFile,
       normalizedFile.name || `capture-${index}.jpg`,
     );
   });
+
+  directImages.forEach((image, index) => {
+    const normalizedFile = normalizeMultipartImageFile(
+      image,
+      `direct-${index}.jpg`,
+    );
+    formData.append(
+      'directImages',
+      normalizedFile,
+      normalizedFile.name || `direct-${index}.jpg`,
+    );
+  });
+
   formData.append(
     'request',
     new Blob([JSON.stringify(request)], { type: 'application/json' }),
   );
 
   return customInstance({
-    url: '/api/wish-cosmetics',
+    url: '/api/wish-cosmetics/v2',
     method: 'POST',
     data: formData,
   });
 };
+
+function normalizePriceFromUnknown(value: unknown): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/**
+ * 스캔 분석 결과(JSON 행)를 V2 `request` 행과 `directImages` 파일 목록으로 변환합니다.
+ */
+export function mapScanResultsToV2Request(
+  analysisResults: Record<string, unknown>[],
+): {
+  request: CreateDetailDtoV2[];
+  directImageFiles: File[];
+} {
+  const directImageFiles: File[] = [];
+  const fileToIndex = new Map<File, number>();
+
+  for (const item of analysisResults) {
+    const f = item.imageFile;
+    if (f instanceof File && !fileToIndex.has(f)) {
+      fileToIndex.set(f, directImageFiles.length);
+      directImageFiles.push(f);
+    }
+  }
+
+  const request = analysisResults.map((item) => {
+    const imageFile = item.imageFile;
+    let productImage;
+
+    if (imageFile instanceof File && fileToIndex.has(imageFile)) {
+      productImage = {
+        type: ProductImageType.DIRECT,
+        directImageIndex: fileToIndex.get(imageFile)!,
+      };
+    } else {
+      const naverUrl = String(item.official_image ?? '').trim();
+      const validNaver = /^https?:\/\//i.test(naverUrl);
+      productImage = validNaver
+        ? { type: ProductImageType.NAVER, naverImageUrl: naverUrl }
+        : { type: ProductImageType.NAVER };
+    }
+
+    const rawIdx = item.image_index;
+    let captureImageIndex = 0;
+    if (typeof rawIdx === 'number' && Number.isFinite(rawIdx)) {
+      captureImageIndex = rawIdx;
+    } else if (rawIdx != null && String(rawIdx).trim() !== '') {
+      const parsed = Number.parseInt(String(rawIdx), 10);
+      captureImageIndex = Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    return {
+      name: String(item.product_name ?? ''),
+      brand: String(item.brand_name ?? ''),
+      category: String(item.main_category ?? ''),
+      subCategory: String(item.sub_category ?? ''),
+      feature: String(item.features ?? ''),
+      memo: String(item.memo ?? ''),
+      price: normalizePriceFromUnknown(item.price),
+      captureImageIndex,
+      productImage,
+    };
+  });
+
+  return { request, directImageFiles };
+}
 
 const appendFilePart = (
   formData: FormData,
@@ -58,10 +156,7 @@ const appendFilePart = (
     return;
   }
 
-  const normalizedFile =
-    file.type && file.type.length > 0
-      ? file
-      : new File([file], file.name || `${key}.jpg`, { type: 'image/jpeg' });
+  const normalizedFile = normalizeMultipartImageFile(file, `${key}.jpg`);
 
   formData.append(key, normalizedFile, normalizedFile.name || `${key}.jpg`);
 };

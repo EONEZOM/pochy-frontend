@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 
 export default function ResultCard({
   item,
@@ -11,7 +12,9 @@ export default function ResultCard({
   onSelect: () => void;
   onDelete: () => void;
 }) {
-  const imageSrc = String(item.official_image ?? item.image_url ?? '').trim();
+  const imageSrc = resolveMediaUrl(
+    String(item.official_image ?? item.image_url ?? '').trim(),
+  );
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[130px] shrink-0">

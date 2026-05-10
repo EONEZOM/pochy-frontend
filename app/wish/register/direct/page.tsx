@@ -3,8 +3,10 @@
 import ProductDetailForm from '@/components/wishlist/ProductDetailForm';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import type { CreateDetailDto } from '@/api/model';
-import { createWishCosmeticsMultipart } from '@/lib/wish-cosmetics';
+import type { CreateDetailDtoV2 } from '@/api/model';
+import { ProductImageType } from '@/api/model';
+import { createWishCosmeticsV2Multipart } from '@/lib/wish-cosmetics';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 
 const normalizePrice = (value: unknown): number => {
   const parsed = Number(value);
@@ -13,8 +15,11 @@ const normalizePrice = (value: unknown): number => {
 
 const normalizeImageUrl = (value: unknown): string | undefined => {
   const url = String(value ?? '').trim();
-  if (!url || url.startsWith('blob:')) return undefined;
-  return url;
+  if (!url || url.startsWith('blob:')) {
+    return undefined;
+  }
+  const resolved = resolveMediaUrl(url);
+  return resolved || undefined;
 };
 
 export default function DirectRegisterPage() {
@@ -23,7 +28,23 @@ export default function DirectRegisterPage() {
 
   const handleDirectSave = async (data: Record<string, unknown>) => {
     if (isPending) return;
-    const request: CreateDetailDto = {
+
+    const imageFile = data.imageFile;
+    const captureImages =
+      imageFile instanceof File ? [imageFile] : ([] as File[]);
+    const directImages =
+      imageFile instanceof File ? [imageFile] : ([] as File[]);
+
+    const naverUrl = normalizeImageUrl(data.official_image ?? data.image_url);
+
+    const productImage =
+      imageFile instanceof File
+        ? { type: ProductImageType.DIRECT, directImageIndex: 0 }
+        : naverUrl
+          ? { type: ProductImageType.NAVER, naverImageUrl: naverUrl }
+          : { type: ProductImageType.NAVER };
+
+    const row: CreateDetailDtoV2 = {
       name: String(data.product_name ?? ''),
       brand: String(data.brand_name ?? ''),
       category: String(data.main_category ?? ''),
@@ -31,16 +52,17 @@ export default function DirectRegisterPage() {
       feature: String(data.features ?? ''),
       memo: String(data.memo ?? ''),
       price: normalizePrice(data.price),
-      productImageUrl: normalizeImageUrl(data.official_image ?? data.image_url),
+      captureImageIndex: 0,
+      productImage,
     };
-
-    const imageFile = data.imageFile;
-    const captureImages =
-      imageFile instanceof File ? [imageFile] : ([] as File[]);
 
     setIsPending(true);
     try {
-      await createWishCosmeticsMultipart({ request: [request], captureImages });
+      await createWishCosmeticsV2Multipart({
+        request: [row],
+        captureImages,
+        directImages,
+      });
       alert('위시리스트에 등록되었습니다.');
       router.push('/wish');
     } catch {

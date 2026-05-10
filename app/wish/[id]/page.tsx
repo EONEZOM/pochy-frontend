@@ -10,6 +10,7 @@ import {
 } from 'react';
 import Image from 'next/image';
 import { WishCardImage } from '@/components/wishlist/WishCardImage';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { PencilLine, Share2, Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview';
@@ -155,10 +156,12 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
   const { data: youtubeData, isLoading: isYoutubeLoading } =
     useYoutubeReview(searchQuery);
 
-  const currentCaptureImageSrc =
-    currentItem?.captureImageUrl ??
-    currentItem?.productImageUrl ??
-    '/icons/imgplus.svg';
+  const currentCaptureImageSrcRaw =
+    currentItem?.captureImageUrl ?? currentItem?.productImageUrl ?? '';
+
+  const currentCaptureImageSrc = currentCaptureImageSrcRaw
+    ? resolveMediaUrl(currentCaptureImageSrcRaw)
+    : '/icons/imgplus.svg';
 
   const { mutateAsync: patchWishCosmetics, isPending: isSavePending } =
     useMutation({

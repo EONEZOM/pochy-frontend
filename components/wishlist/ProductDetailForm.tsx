@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Plus, AlertCircle, Search, Loader2 } from 'lucide-react';
+import { Plus, AlertCircle, Search, Loader2, Info } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { COSMETIC_CATEGORIES } from '@/constants/category';
@@ -13,9 +13,34 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import Input from '@/components/common/Input/Input';
 import { Header } from '@/components/layout/Header';
+
+/** Figma 상세 폼: 입력·셀렉트 공통 스타일 (전역 `p` 규칙보다 우선하도록 `!` 사용) */
+const FIELD_LABEL_CLASS =
+  '!text-[11px] font-bold leading-normal tracking-tight text-[#161618]';
+const INPUT_SURFACE_CLASS =
+  '!bg-[#F3F3F3] rounded-xl border-0 text-[#161618] !text-sm placeholder:text-[#B7B7B7] focus-visible:border-[#FF93DB] focus-visible:ring-1 focus-visible:ring-[#FF93DB]/35';
+const SELECT_TRIGGER_CLASS = cn(
+  'h-12 w-full rounded-xl border-0 bg-[#F3F3F3] px-4 !text-sm font-normal text-[#161618] shadow-none',
+  'focus:border-[#FF93DB] focus:ring-1 focus:ring-[#FF93DB]/35 focus-visible:ring-[#FF93DB]/35',
+  'data-placeholder:text-[#B7B7B7] [&_svg]:text-[#B7B7B7]',
+);
+const SELECT_CONTENT_CLASS =
+  'rounded-xl border border-[#E8E8E8] bg-white p-1.5 shadow-xl';
+const SELECT_ITEM_CLASS =
+  'cursor-pointer rounded-lg py-3 pl-3 pr-9 text-sm focus:bg-[#FFF7FC] focus:text-[#161618]';
 
 interface ProductDetailFormProps {
   initialData: any;
@@ -39,6 +64,7 @@ export default function ProductDetailForm({
   const [formData, setFormData] = useState(initialData);
   const [isSearching, setIsSearching] = useState(false);
   const [showTip, setShowTip] = useState(false);
+  const [priceGuideOpen, setPriceGuideOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
 
@@ -83,12 +109,6 @@ export default function ProductDetailForm({
   const topFields = [
     { label: '브랜드명', field: 'brand_name' },
     { label: '제품명', field: 'product_name' },
-  ];
-
-  const bottomFields = [
-    { label: '특징', field: 'features' },
-    { label: '가격', field: 'price' },
-    { label: '메모', field: 'memo' },
   ];
 
   const fetchNaverShoppingInfo = useCallback(async (
@@ -221,7 +241,7 @@ export default function ProductDetailForm({
   return (
     <div className="flex min-h-full flex-col bg-white">
       <Header
-        className="border-b border-zinc-100"
+        className="h-10 min-h-10 border-0 bg-white/95 px-[20px] py-2.5 shadow-none backdrop-blur-[30px] [&_h3]:font-bold [&_h3]:leading-5 [&_h3]:text-[#161618]"
         onBack={onBack}
         title="상품 정보"
         rightIcons={[
@@ -230,27 +250,37 @@ export default function ProductDetailForm({
             text: submitLabel,
             ariaLabel: submitLabel,
             onClick: () => void handleSubmit(),
+            className:
+              'h-9 rounded-full border-0 bg-[#FF93DB] px-4 font-bold text-[#161618] hover:bg-[#FF85D5]',
           },
         ]}
       />
 
-      <main className="flex-1 space-y-6 p-5">
+      <main className="flex flex-1 flex-col gap-6 px-[20px] pt-5 pb-8">
         {/* 제품 이미지 섹션 */}
         <div
           onClick={handleImageClick}
           className={cn(
-            'group relative mx-auto aspect-square w-36 overflow-hidden rounded-3xl bg-zinc-100 shadow-inner',
+            'group relative mx-auto aspect-square w-full max-w-[200px] overflow-hidden rounded-2xl bg-[#F3F3F3]',
             disableManualImageUpload ? 'cursor-not-allowed opacity-80' : 'cursor-pointer',
           )}
         >
           <Image
             src={
-              formData.official_image ||
-              formData.image_url ||
-              '/icons/imgplus.svg'
+              formData.official_image || formData.image_url
+                ? resolveMediaUrl(
+                    String(
+                      formData.official_image || formData.image_url || '',
+                    ),
+                  )
+                : '/icons/imgplus.svg'
             }
             alt="product"
             fill
+            unoptimized={Boolean(
+              typeof formData.image_url === 'string' &&
+                formData.image_url.startsWith('blob:'),
+            )}
             className={cn(
               'transition-opacity group-hover:opacity-80',
               !formData.official_image && !formData.image_url
@@ -283,26 +313,26 @@ export default function ProductDetailForm({
           />
         </div>
 
-        <div className="space-y-5">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-sm font-bold tracking-wider text-zinc-400 uppercase">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+            <span className="text-[11px] font-bold tracking-[0.08em] text-[#B7B7B7] uppercase">
               제품 정보
             </span>
 
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               {/* 네이버쇼핑 정보 채우기 툴팁 */}
               <div className="relative" ref={tipRef}>
                 <button
                   type="button"
                   onClick={() => setShowTip((v) => !v)}
-                  className="flex size-4 cursor-pointer items-center justify-center rounded-full bg-zinc-200 text-[10px] font-bold text-zinc-500"
+                  className="flex size-4 cursor-pointer items-center justify-center rounded-full bg-[#E8E8E8] text-[10px] font-bold text-[#B7B7B7]"
                 >
                   ?
                 </button>
                 {showTip && (
-                  <div className="absolute bottom-6 left-1/2 z-10 w-44 -translate-x-1/2 rounded-lg bg-zinc-800 px-3 py-2 text-[11px] text-white shadow-lg">
+                  <div className="absolute bottom-6 left-1/2 z-10 w-44 -translate-x-1/2 rounded-lg bg-[#161618] px-3 py-2 text-[11px] text-white shadow-lg">
                     브랜드명과 제품명을 입력해주세요
-                    <div className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-zinc-800" />
+                    <div className="absolute -bottom-1 left-1/2 size-2 -translate-x-1/2 rotate-45 bg-[#161618]" />
                   </div>
                 )}
               </div>
@@ -324,40 +354,37 @@ export default function ProductDetailForm({
 
           {/* 브랜드명, 제품명 */}
           {topFields.map((input) => (
-            <div key={input.field} className="flex flex-col gap-1.5">
-              <label className="pl-1 text-xs font-bold text-zinc-700">
-                {input.label}
-              </label>
+            <div key={input.field} className="flex flex-col gap-2">
+              <label className={FIELD_LABEL_CLASS}>{input.label}</label>
               <Input
                 value={formData[input.field] || ''}
                 onChange={(e) => handleChange(input.field, e.target.value)}
                 placeholder={`${input.label}을 입력해주세요`}
+                className={INPUT_SURFACE_CLASS}
               />
             </div>
           ))}
 
           {/* 대분류 */}
-          <div className="flex flex-col gap-1.5">
-            <label className="pl-1 text-xs font-bold text-zinc-700">
-              대분류
-            </label>
+          <div className="flex flex-col gap-2">
+            <label className={FIELD_LABEL_CLASS}>대분류</label>
             <Select
               value={formData.main_category}
               onValueChange={handleMainChange}
             >
-              <SelectTrigger className="border-mono-gray focus:border-brand-pink h-12 w-full rounded-sm border px-4 text-sm focus:ring-0">
+              <SelectTrigger className={SELECT_TRIGGER_CLASS}>
                 <SelectValue placeholder="대분류를 선택해주세요" />
               </SelectTrigger>
               <SelectContent
                 position="popper"
-                className="z-10 rounded-sm border-zinc-100 bg-white shadow-xl"
+                className={cn('z-50', SELECT_CONTENT_CLASS)}
               >
                 <SelectGroup>
                   {COSMETIC_CATEGORIES.map((cat) => (
                     <SelectItem
                       key={cat.value}
                       value={cat.value}
-                      className="py-3"
+                      className={SELECT_ITEM_CLASS}
                     >
                       {cat.label}
                     </SelectItem>
@@ -368,10 +395,8 @@ export default function ProductDetailForm({
           </div>
 
           {/* 소분류 */}
-          <div className="flex flex-col gap-1.5">
-            <label className="pl-1 text-xs font-bold text-zinc-700">
-              소분류
-            </label>
+          <div className="flex flex-col gap-2">
+            <label className={FIELD_LABEL_CLASS}>소분류</label>
             <Select
               value={formData.sub_category}
               onValueChange={(value) => handleChange('sub_category', value)}
@@ -381,7 +406,7 @@ export default function ProductDetailForm({
             >
               <SelectTrigger
                 className={cn(
-                  'border-mono-gray focus:border-brand-pink h-12 w-full rounded-sm border px-4 text-sm focus:ring-0',
+                  SELECT_TRIGGER_CLASS,
                   (!formData.main_category ||
                     formData.main_category === 'Etc') &&
                     'opacity-50',
@@ -397,14 +422,14 @@ export default function ProductDetailForm({
               </SelectTrigger>
               <SelectContent
                 position="popper"
-                className="rounded-sm border-zinc-100 bg-white shadow-xl"
+                className={cn('z-50', SELECT_CONTENT_CLASS)}
               >
                 <SelectGroup>
                   {selectedMainCategory?.subCategories.map((sub) => (
                     <SelectItem
                       key={sub.value}
                       value={sub.value}
-                      className="py-3"
+                      className={SELECT_ITEM_CLASS}
                     >
                       {sub.label}
                     </SelectItem>
@@ -414,30 +439,93 @@ export default function ProductDetailForm({
             </Select>
           </div>
 
-          {/* 특징, 가격, 메모 */}
-          {bottomFields.map((input) => (
-            <div key={input.field} className="flex flex-col gap-1.5">
-              <label className="pl-1 text-xs font-bold text-zinc-700">
-                {input.label}
-              </label>
-              <Input
-                value={formData[input.field] || ''}
-                onChange={(e) => handleChange(input.field, e.target.value)}
-                placeholder={`${input.label}을 입력해주세요`}
-              />
-            </div>
-          ))}
+          {/* 특징 */}
+          <div className="flex flex-col gap-2">
+            <label className={FIELD_LABEL_CLASS}>특징</label>
+            <Input
+              value={formData.features || ''}
+              onChange={(e) => handleChange('features', e.target.value)}
+              placeholder="특징을 입력해주세요"
+              className={INPUT_SURFACE_CLASS}
+            />
+          </div>
+
+          {/* 가격 — 우측 안내 버튼 → 바텀시트 */}
+          <div className="flex flex-col gap-2">
+            <label className={FIELD_LABEL_CLASS}>가격</label>
+            <Input
+              value={formData.price || ''}
+              onChange={(e) => handleChange('price', e.target.value)}
+              placeholder="가격을 입력해주세요"
+              className={INPUT_SURFACE_CLASS}
+              inputMode="numeric"
+              rightElement={
+                <button
+                  type="button"
+                  onClick={() => setPriceGuideOpen(true)}
+                  className="flex size-9 cursor-pointer items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-[#E8E8E8] transition active:scale-[0.98]"
+                  aria-label="가격 입력 안내"
+                >
+                  <Info className="size-[18px] text-[#161618]" strokeWidth={2} />
+                </button>
+              }
+            />
+          </div>
+
+          {/* 메모 */}
+          <div className="flex flex-col gap-2">
+            <label className={FIELD_LABEL_CLASS}>메모</label>
+            <Input
+              value={formData.memo || ''}
+              onChange={(e) => handleChange('memo', e.target.value)}
+              placeholder="메모를 입력해주세요"
+              className={INPUT_SURFACE_CLASS}
+            />
+          </div>
         </div>
 
         {showScanWarning && (
-          <div className="flex items-center gap-2 rounded-xl bg-zinc-50 p-4 text-xs text-zinc-500">
-            <AlertCircle size={14} className="text-zinc-400" />
-            <span>
+          <div className="flex items-start gap-2 rounded-lg bg-[#FFF7FC] px-3 py-2.5">
+            <AlertCircle
+              size={16}
+              className="mt-0.5 shrink-0 text-[#FF93DB]"
+              strokeWidth={2}
+            />
+            <span className="!text-[11px] !leading-[150%] font-normal text-[#161618]">
               스캔 입력의 경우 정보가 정확하지 않을 수 있으니 확인 부탁드려요!
             </span>
           </div>
         )}
       </main>
+
+      {/* 가격 입력 안내 (Figma 보조 패널 스타일) */}
+      <Drawer open={priceGuideOpen} onOpenChange={setPriceGuideOpen}>
+        <DrawerContent className="mx-auto max-w-[480px] border-0 bg-white shadow-2xl">
+          <DrawerHeader className="space-y-2 px-5 pb-0 pt-2 text-left">
+            <DrawerTitle className="!text-lg font-bold leading-tight text-[#161618]">
+              가격 입력 안내
+            </DrawerTitle>
+            <DrawerDescription asChild>
+              <div className="!text-[11px] !leading-[150%] font-normal text-[#161618]">
+                숫자만 입력해 주세요. 「네이버쇼핑 정보 채우기」를 사용하면 네이버
+                쇼핑 최저가가 자동으로 들어올 수 있어요. 표시된 금액은 참고용이며,
+                필요하면 직접 수정할 수 있어요.
+              </div>
+            </DrawerDescription>
+          </DrawerHeader>
+
+          <DrawerFooter className="border-t-0 px-5 pb-6 pt-4">
+            <DrawerClose asChild>
+              <Button
+                type="button"
+                className="h-14 w-full rounded-full border-0 bg-[#FF93DB] text-base font-bold text-[#161618] hover:bg-[#FF85D5]"
+              >
+                확인
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
