@@ -152,7 +152,7 @@ function LoginContent() {
           alt=""
           width={525}
           height={69}
-          className="absolute top-[-80px] left-0 h-auto w-full object-cover md:top-[-80px] md:left-[19px] md:h-[150px] md:w-[74px] lg:top-[500px] lg:left-[24px] lg:h-[136px] lg:w-[67px]"
+          className="absolute top-0 left-0 h-auto w-full object-cover md:top-[-80px] md:left-[19px] md:h-[150px] md:w-[74px] lg:top-[500px] lg:left-[24px] lg:h-[136px] lg:w-[67px]"
           unoptimized
           priority
         />

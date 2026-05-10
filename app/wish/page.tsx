@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useMemo } from 'react';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -11,7 +11,6 @@ import {
 } from '@/constants/category';
 import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea';
 import { ExtraNav } from '@/components/common/ExtraNav';
-import { Modal } from '@/components/common/Modal';
 import { WishlistHeader } from '@/components/wishlist/WishlistHeader';
 import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import type { ReadListDto } from '@/api/model';
@@ -43,8 +42,6 @@ function WishlistPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
-  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
 
   const searchQuery = searchParams.get('q') || '';
   const currentCategory =
@@ -239,7 +236,7 @@ function WishlistPageContent() {
               items={[
                 {
                   label: '스캔해서 등록하기',
-                  onClick: () => setIsScanModalOpen(true),
+                  onClick: () => router.push('/wish/register/scan'),
                   icon: '/icons/imgplus.svg',
                 },
                 {
@@ -252,17 +249,6 @@ function WishlistPageContent() {
           </div>
         </div>
       </div>
-
-      {/* 스캔 모달 */}
-      <Modal
-        open={isScanModalOpen}
-        onOpenChange={setIsScanModalOpen}
-        variant="warning"
-        title="주의"
-        description={`등록할 상품이 잘 나온 사진을\n준비해주세요!\n\n여러개의 제품의 경우\n정확도가 떨어질 수 있습니다.`}
-        confirmText="확인"
-        onConfirm={() => router.push('/wish/register/scan')}
-      />
     </div>
   );
 }

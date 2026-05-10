@@ -27,7 +27,6 @@ import Image from 'next/image';
 import { ImageFileData } from '@/types/image';
 import RegisterReviewStep from '@/components/wishlist/RegisterReviewStep';
 import { Button } from '@/components/ui/button';
-import { Modal } from '@/components/common/Modal';
 import { Header } from '@/components/layout/Header';
 import type { CreateDetailDto } from '@/api/model';
 import { createWishCosmeticsMultipart } from '@/lib/wish-cosmetics';
@@ -60,7 +59,6 @@ const buildCaptureImagesForRequest = (
 
 export default function WishlistRegisterPage() {
   const router = useRouter();
-  const [isTipModalOpen, setIsTipModalOpen] = useState(true);
   const [images, setImages] = useState<ImageFileData[]>([]);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
   const [resizedFiles, setResizedFiles] = useState<File[]>([]);
@@ -238,17 +236,6 @@ export default function WishlistRegisterPage() {
             ? 'AI 분석 중...'
             : `${images.length}개의 이미지 스캔하기`}
         </Button>
-
-        {/* 팁 모달 */}
-        <Modal
-          open={isTipModalOpen}
-          onOpenChange={setIsTipModalOpen}
-          variant="warning" // warning 아이콘 = warning.svg
-          title="팁"
-          description={`제품 사진은 물론,\n이름만 적힌 텍스트 캡쳐본도 포치가\n똑똑하게 읽어드려요!`}
-          confirmText="확인"
-          closeOnOverlayClick={false} // ✅ 배경 클릭으로 못 닫게
-        />
       </div>
     </div>
   );

@@ -90,7 +90,7 @@ export function ExtraNav({
               );
 
               const itemClass =
-                'flex h-11 min-w-40 items-center justify-center gap-2 rounded-full bg-[#ffe9ef] px-4 shadow-sm transition-all hover:bg-[#ffdfe9] active:scale-[0.98]';
+                'flex h-11 min-w-40 items-center justify-center gap-2 rounded-full bg-[#ffffff] px-4 shadow-sm transition-all hover:bg-[#ffdfe9] active:scale-[0.98]';
 
               return item.href ? (
                 <Link
