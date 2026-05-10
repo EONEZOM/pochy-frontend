@@ -38,7 +38,7 @@ export default function RootLayout({
           <div className="relative flex min-h-full w-full max-w-120 min-w-90 flex-col bg-white shadow-xl">
             <main
               vaul-drawer-wrapper=""
-              className="flex flex-1 flex-col bg-white pb-14"
+              className="flex min-h-0 flex-1 flex-col bg-white pb-14"
             >
               {children}
             </main>
