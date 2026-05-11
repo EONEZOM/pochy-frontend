@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview';
 import { Header } from '@/components/layout/Header';
 import {
+  deleteWishCosmetics,
   useReadWishCosmeticsDetail,
   useReadWishCosmeticsList,
   getReadWishCosmeticsDetailQueryKey,
@@ -50,6 +51,7 @@ import {
 import { COSMETIC_CATEGORIES } from '@/constants/category';
 import { cn } from '@/lib/utils';
 import Input from '@/components/common/Input/Input';
+import { Modal } from '@/components/common/Modal/Modal';
 import type { ReadDetailDto, UpdateDto } from '@/api/model';
 
 const MEMO_MAX_LEN = 60;
@@ -126,6 +128,7 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showCapture, setShowCapture] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
   const [selectedWishId, setSelectedWishId] = useState(routeWishId);
   const [isEditing, setIsEditing] = useState(false);
@@ -190,6 +193,22 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
       },
     });
 
+  const { mutateAsync: removeWishItems, isPending: isDeletePending } =
+    useMutation({
+      mutationFn: (wishCosmeticsIds: number[]) =>
+        deleteWishCosmetics({ wishCosmeticsIds }),
+      onSuccess: async (_, deletedIds) => {
+        await queryClient.invalidateQueries({
+          queryKey: ['/api/wish-cosmetics'],
+        });
+        for (const wid of deletedIds) {
+          queryClient.removeQueries({
+            queryKey: getReadWishCosmeticsDetailQueryKey(wid),
+          });
+        }
+      },
+    });
+
   const handleCaptureShare = async () => {
     if (!currentCaptureImageSrc) {
       return;
@@ -210,6 +229,25 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
       if ((error as Error).name !== 'AbortError') {
         alert('공유에 실패했습니다.');
       }
+    }
+  };
+
+  const handleGoToMy = useCallback(() => {
+    router.push('/my-cosmetics');
+  }, [router]);
+
+  const handleConfirmDeleteWish = async () => {
+    const id = currentItem?.wishCosmeticsId;
+    if (!id || isDeletePending) {
+      return;
+    }
+
+    try {
+      await removeWishItems([id]);
+      setDeleteConfirmOpen(false);
+      router.push('/wish');
+    } catch {
+      alert('삭제하지 못했습니다. 다시 시도해 주세요.');
     }
   };
 
@@ -386,7 +424,24 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
         </div>
 
         {!isEditing ? (
-          <div className="mt-3 flex justify-end">
+          <div className="mt-3 flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleGoToMy}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-none"
+              >
+                MY로 이동하기
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-transparent px-3 py-1.5 text-sm font-semibold text-zinc-900 shadow-none"
+              >
+                삭제하기
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={handleStartEdit}
@@ -777,6 +832,19 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
           </div>
         </div>
       ) : null}
+
+      <Modal
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        variant="warning"
+        title="위시를 삭제할까요?"
+        description="삭제한 항목은 복구할 수 없어요."
+        showCancel
+        confirmText={isDeletePending ? '삭제 중...' : '삭제하기'}
+        cancelText="취소"
+        closeOnConfirm={false}
+        onConfirm={() => void handleConfirmDeleteWish()}
+      />
 
       <AnimatePresence>
         {showCapture && (

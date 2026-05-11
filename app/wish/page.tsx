@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -12,9 +12,11 @@ import {
 import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea';
 import { ExtraNav } from '@/components/common/ExtraNav';
 import { WishlistHeader } from '@/components/wishlist/WishlistHeader';
+import { WishlistEmptyView } from '@/components/wishlist/WishlistEmptyView';
 import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import type { ReadListDto } from '@/api/model';
 import { WishCardImage } from '@/components/wishlist/WishCardImage';
+import { cn } from '@/lib/utils';
 
 type WishListItem = {
   id: number;
@@ -42,6 +44,7 @@ function WishlistPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isRegisterMenuOpen, setIsRegisterMenuOpen] = useState(false);
 
   const searchQuery = searchParams.get('q') || '';
   const currentCategory =
@@ -109,64 +112,74 @@ function WishlistPageContent() {
     [currentCategory],
   );
 
+  const isDefaultFilters =
+    searchQuery === '' && currentCategory === 'All' && currentSub === 'All';
+
+  const showRegisteredEmpty =
+    !isLoading && !isError && filteredItems.length === 0 && isDefaultFilters;
+
+  const showFilteredEmpty =
+    !isLoading && !isError && filteredItems.length === 0 && !isDefaultFilters;
+
   return (
     <div className="relative">
       <WishlistHeader />
 
-      {/* 카테고리 필터링 영역 */}
-      <CategoryFilterArea
-        mainCategories={FILTER_CATEGORIES}
-        activeSubCategories={activeSubCategories}
-        currentCategory={currentCategory}
-        currentSub={currentSub}
-        onMainChange={handleMainChange}
-        onSubChange={handleSubChange}
-        leftControl={
-          <ExtraNav
-            side="bottom"
-            align="start"
-            selectedKey={sortOrder}
-            dimBackdrop
-            trigger={
-              <button
-                type="button"
-                className="text-mono-dark-gray ml-5 flex size-8 items-center justify-center"
-                aria-label="정렬 필터"
-              >
-                <Image
-                  src="/icons/filter.svg"
-                  alt=""
-                  width={20}
-                  height={20}
-                  unoptimized
-                />
-              </button>
-            }
-            items={[
-              {
-                key: 'latest',
-                label: '최신순',
-                onClick: () => handleSort('latest'),
-              },
-              {
-                key: 'oldest',
-                label: '오래된순',
-                onClick: () => handleSort('oldest'),
-              },
-              {
-                key: 'price-desc',
-                label: '높은 가격순',
-                onClick: () => handleSort('price-desc'),
-              },
-              {
-                key: 'price-asc',
-                label: '낮은 가격순',
-                onClick: () => handleSort('price-asc'),
-              },
-            ]}
-          />
-        }
-      />
+      {!showRegisteredEmpty ? (
+        <CategoryFilterArea
+          mainCategories={FILTER_CATEGORIES}
+          activeSubCategories={activeSubCategories}
+          currentCategory={currentCategory}
+          currentSub={currentSub}
+          onMainChange={handleMainChange}
+          onSubChange={handleSubChange}
+          leftControl={
+            <ExtraNav
+              side="bottom"
+              align="start"
+              selectedKey={sortOrder}
+              dimBackdrop
+              trigger={
+                <button
+                  type="button"
+                  className="text-mono-dark-gray ml-5 flex size-8 items-center justify-center"
+                  aria-label="정렬 필터"
+                >
+                  <Image
+                    src="/icons/filter.svg"
+                    alt=""
+                    width={20}
+                    height={20}
+                    unoptimized
+                  />
+                </button>
+              }
+              items={[
+                {
+                  key: 'latest',
+                  label: '최신순',
+                  onClick: () => handleSort('latest'),
+                },
+                {
+                  key: 'oldest',
+                  label: '오래된순',
+                  onClick: () => handleSort('oldest'),
+                },
+                {
+                  key: 'price-desc',
+                  label: '높은 가격순',
+                  onClick: () => handleSort('price-desc'),
+                },
+                {
+                  key: 'price-asc',
+                  label: '낮은 가격순',
+                  onClick: () => handleSort('price-asc'),
+                },
+              ]}
+            />
+          }
+        />
+      ) : null}
 
       <main className="px-5 pb-4">
         {isLoading ? (
@@ -177,12 +190,14 @@ function WishlistPageContent() {
           <div className="flex min-h-[60vh] items-center justify-center text-sm text-red-500">
             위시리스트를 불러오지 못했습니다.
           </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="flex min-h-[60vh] flex-col items-center justify-center">
-            <div className="font-bold">첫 번째 위시템을 기다리고 있어요.</div>
-            <div className="text-mono-dark-gray">
-              + 버튼을 눌러 등록해 보세요.
-            </div>
+        ) : showRegisteredEmpty ? (
+          <WishlistEmptyView />
+        ) : showFilteredEmpty ? (
+          <div className="text-mono-dark-gray flex min-h-[50vh] flex-col items-center justify-center gap-2 px-4 text-center text-sm">
+            <p className="text-mono-jet text-base font-bold">
+              조건에 맞는 위시가 없어요
+            </p>
+            <p>검색어나 카테고리 필터를 바꿔 보세요.</p>
           </div>
         ) : (
           <div className="flex w-full gap-4 pb-4">
@@ -211,7 +226,7 @@ function WishlistPageContent() {
                         />
                       </div>
 
-                      <div className="flex h-14 min-h-14 shrink-0 min-w-0 flex-col gap-0.5 pt-2">
+                      <div className="flex h-14 min-h-14 min-w-0 shrink-0 flex-col gap-0.5 pt-2">
                         <span className="text-mono-dark-gray w-full truncate text-xs">
                           {item.brand_name}
                         </span>
@@ -227,12 +242,39 @@ function WishlistPageContent() {
         )}
       </main>
 
-      {/* 등록 페이지 이동 Popover */}
+      {/* 등록 FAB — 빈 화면 오버레이(z-35) 위에 표시 */}
       <div className="pointer-events-none fixed bottom-16 left-1/2 z-50 w-full max-w-120 -translate-x-1/2">
-        <div className="relative h-24">
-          <div className="absolute right-5 bottom-5">
+        <div
+          className={cn(
+            'relative pr-5',
+            showRegisteredEmpty ? 'h-[168px]' : 'h-24',
+          )}
+        >
+          {showRegisteredEmpty ? (
+            <div
+              className={cn(
+                'pointer-events-none absolute right-2 bottom-[70px] w-[230px] transition-[opacity,filter] duration-200',
+                isRegisterMenuOpen && 'opacity-40 grayscale',
+              )}
+            >
+              <Image
+                src="/figma/wish/Union.svg"
+                alt=""
+                width={200}
+                height={100}
+                unoptimized
+                className="block h-auto w-full"
+                priority
+              />
+              <p className="text-mono-jet absolute inset-x-3 top-2 bottom-6 flex items-center justify-center text-center text-[10px] leading-snug font-bold whitespace-pre-line">
+                {`버튼을 눌러 첫 번째\n위시리스트를 등록해 보세요!`}
+              </p>
+            </div>
+          ) : null}
+          <div className="pointer-events-auto absolute right-5 bottom-5">
             <ExtraNav
               dimBackdrop
+              onOpenChange={setIsRegisterMenuOpen}
               items={[
                 {
                   label: '스캔해서 등록하기',

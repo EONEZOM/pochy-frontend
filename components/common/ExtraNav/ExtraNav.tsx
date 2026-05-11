@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
@@ -30,6 +30,8 @@ interface ExtraNavProps {
   className?: string;
   selectedKey?: string;
   dimBackdrop?: boolean;
+  /** 메뉴(+) 열림 여부 — 부모에서 오버레이·말풍선 등과 동기화할 때 사용 */
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function ExtraNav({
@@ -41,8 +43,14 @@ export function ExtraNav({
   className,
   selectedKey,
   dimBackdrop = false,
+  onOpenChange,
 }: ExtraNavProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    onOpenChange?.(isOpen);
+  }, [isOpen, onOpenChange]);
+
   const shouldRenderBackdrop = dimBackdrop && isOpen;
   const backdrop =
     shouldRenderBackdrop && typeof window !== 'undefined'
