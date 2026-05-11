@@ -34,6 +34,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { isAxiosError } from 'axios';
 import { extractImageFileData } from '@/utils/image-utils';
 import { useAnalyzeCosmeticCapture } from '@/hooks/mutation/useAnalyzeCosmeticCapture';
 import { ImagePlus, X } from 'lucide-react';
@@ -53,6 +54,24 @@ import { WishScanAnalyzeLoading } from '@/components/wishlist/WishScanAnalyzeLoa
 const MAX_CAPTURE_IMAGES = 9;
 
 type AnalysisResult = Record<string, unknown>;
+
+const getWishRegisterErrorMessage = (error: unknown): string => {
+  if (!isAxiosError(error)) {
+    return '위시리스트 등록 중 오류가 발생했습니다.';
+  }
+  const data = error.response?.data;
+  if (data && typeof data === 'object') {
+    const rec = data as Record<string, unknown>;
+    const message = rec.message ?? rec.error ?? rec.detail;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message.trim();
+    }
+  }
+  if (error.response?.status === 400) {
+    return '요청 형식이 맞지 않아 등록되지 않았습니다. 필수 정보를 확인해 주세요.';
+  }
+  return '위시리스트 등록 중 오류가 발생했습니다.';
+};
 
 const buildCaptureImagesForRequest = (
   files: File[],
@@ -165,7 +184,7 @@ export default function WishlistRegisterPage() {
       router.push('/wish');
     } catch (error) {
       console.error('[WishRegister/scan] 등록 실패:', error);
-      alert('위시리스트 등록 중 오류가 발생했습니다.');
+      alert(getWishRegisterErrorMessage(error));
     } finally {
       setIsCreatePending(false);
     }

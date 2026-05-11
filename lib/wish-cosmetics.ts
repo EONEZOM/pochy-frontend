@@ -81,7 +81,15 @@ export const createWishCosmeticsV2Multipart = async ({
 };
 
 function normalizePriceFromUnknown(value: unknown): number {
-  const parsed = Number(value);
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  const raw = String(value ?? '').trim();
+  if (!raw || raw === '정보 없음') {
+    return 0;
+  }
+  const cleaned = raw.replace(/,/g, '').replace(/원/g, '').trim();
+  const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
@@ -97,16 +105,40 @@ export function mapScanResultsToV2Request(
   const directImageFiles: File[] = [];
   const fileToIndex = new Map<File, number>();
 
-  for (const item of analysisResults) {
-    const f = item.imageFile;
-    if (f instanceof File && !fileToIndex.has(f)) {
-      fileToIndex.set(f, directImageFiles.length);
-      directImageFiles.push(f);
+  const registerDirectFile = (file: unknown): void => {
+    if (!(file instanceof File)) {
+      return;
     }
+    if (!fileToIndex.has(file)) {
+      fileToIndex.set(file, directImageFiles.length);
+      directImageFiles.push(file);
+    }
+  };
+
+  for (const item of analysisResults) {
+    registerDirectFile(item.imageFile);
   }
+  for (const item of analysisResults) {
+    registerDirectFile(item.captureSourceFile);
+  }
+
+  const rowCount = analysisResults.length;
 
   const request = analysisResults.map((item) => {
     const imageFile = item.imageFile;
+    const captureSourceFile = item.captureSourceFile;
+
+    const rawIdx = item.image_index;
+    let captureImageIndex = 0;
+    if (typeof rawIdx === 'number' && Number.isFinite(rawIdx)) {
+      captureImageIndex = rawIdx;
+    } else if (rawIdx != null && String(rawIdx).trim() !== '') {
+      const parsed = Number.parseInt(String(rawIdx), 10);
+      captureImageIndex = Number.isFinite(parsed) ? parsed : 0;
+    }
+    const maxCaptureIndex = Math.max(0, rowCount - 1);
+    captureImageIndex = Math.min(Math.max(0, captureImageIndex), maxCaptureIndex);
+
     let productImage;
 
     if (imageFile instanceof File && fileToIndex.has(imageFile)) {
@@ -117,18 +149,22 @@ export function mapScanResultsToV2Request(
     } else {
       const naverUrl = String(item.official_image ?? '').trim();
       const validNaver = /^https?:\/\//i.test(naverUrl);
-      productImage = validNaver
-        ? { type: ProductImageType.NAVER, naverImageUrl: naverUrl }
-        : { type: ProductImageType.NAVER };
-    }
-
-    const rawIdx = item.image_index;
-    let captureImageIndex = 0;
-    if (typeof rawIdx === 'number' && Number.isFinite(rawIdx)) {
-      captureImageIndex = rawIdx;
-    } else if (rawIdx != null && String(rawIdx).trim() !== '') {
-      const parsed = Number.parseInt(String(rawIdx), 10);
-      captureImageIndex = Number.isFinite(parsed) ? parsed : 0;
+      if (validNaver) {
+        productImage = {
+          type: ProductImageType.NAVER,
+          naverImageUrl: naverUrl,
+        };
+      } else if (
+        captureSourceFile instanceof File &&
+        fileToIndex.has(captureSourceFile)
+      ) {
+        productImage = {
+          type: ProductImageType.DIRECT,
+          directImageIndex: fileToIndex.get(captureSourceFile)!,
+        };
+      } else {
+        productImage = { type: ProductImageType.NAVER };
+      }
     }
 
     return {

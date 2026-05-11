@@ -51,9 +51,16 @@ export default function RegisterReviewStep({
     setResults(results.filter((_, i) => i !== index));
   };
 
-  const handleDetailSubmit = (updatedData: any) => {
+  const handleDetailSubmit = (updatedData: Record<string, unknown>) => {
     const updatedResults = [...results];
-    updatedResults[selectedIndex!] = updatedData;
+    const idx = selectedIndex;
+    if (idx === null) {
+      return;
+    }
+    updatedResults[idx] = {
+      ...(updatedResults[idx] as Record<string, unknown>),
+      ...updatedData,
+    };
     setResults(updatedResults);
     setSelectedIndex(null);
   };

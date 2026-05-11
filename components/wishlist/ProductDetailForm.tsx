@@ -31,13 +31,11 @@ import Input from '@/components/common/Input/Input';
 import { Header } from '@/components/layout/Header';
 import { WishCardImage } from '@/components/wishlist/WishCardImage';
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview';
-import { Modal } from '@/components/common/Modal';
-
 const MEMO_MAX_LEN = 60;
 
 /** Figma `위시 - 스캔수정상세` (1:2233) 상단 안내 */
 const SCAN_EDIT_AI_BANNER_COPY =
-  'AI가 정보를 자동으로 채워두었어요. 혹시 실제와 다른 내용이 있다면, 눌러서 바로 수정이 가능해요.';
+  'AI가 정보를 자동으로 채워두었어요.\n혹시 실제와 다른 내용이 있다면, 눌러서 바로 수정이 가능해요.';
 
 /** Figma `Group 756` 드롭다운 (1:2358): 흰 배경 + 얕은 그림자 */
 const scanSelectContentClassName =
@@ -86,9 +84,37 @@ function WishFieldRow({
   );
 }
 
+type ProductDetailFormData = {
+  brand_name: string;
+  product_name: string;
+  main_category: string;
+  sub_category: string;
+  features: string;
+  price: string | number;
+  memo: string;
+  official_image?: string | null;
+  image_url?: string | null;
+  mall_url?: string | null;
+  imageFile?: File | null;
+};
+
+type ProductDetailFormInitialData = Partial<ProductDetailFormData>;
+
+type ProductDetailFormSubmitData = ProductDetailFormData &
+  Record<string, unknown>;
+
+type ProductDetailFormStringField =
+  | 'brand_name'
+  | 'product_name'
+  | 'main_category'
+  | 'sub_category'
+  | 'features'
+  | 'price'
+  | 'memo';
+
 interface ProductDetailFormProps {
-  initialData: any;
-  onSubmit: (updatedData: any) => void | Promise<void>;
+  initialData: ProductDetailFormInitialData;
+  onSubmit: (updatedData: ProductDetailFormSubmitData) => void | Promise<void>;
   onBack: () => void;
   submitLabel?: string;
   showScanWarning?: boolean;
@@ -128,15 +154,14 @@ export default function ProductDetailForm({
   canScanPrev = false,
   canScanNext = false,
 }: ProductDetailFormProps) {
-  const [formData, setFormData] = useState(() => ({
+  const [formData, setFormData] = useState<ProductDetailFormData>(() => ({
     ...FORM_DEFAULTS,
     ...initialData,
   }));
   const [isSearching, setIsSearching] = useState(false);
   const [showCapture, setShowCapture] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isNaverLowestPriceModalOpen, setIsNaverLowestPriceModalOpen] =
-    useState(false);
+  const [showNaverLowestPriceTip, setShowNaverLowestPriceTip] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedMainCategory = useMemo(() => {
@@ -154,23 +179,15 @@ export default function ProductDetailForm({
     });
   };
 
-  useEffect(() => {
-    return () => {
-      if (formData.image_url && formData.image_url.startsWith('blob:')) {
-        URL.revokeObjectURL(formData.image_url);
-      }
-    };
-  }, [formData.image_url]);
-
   const fetchNaverShoppingInfo = useCallback(
     async (
-      sourceData: any,
+      sourceData: ProductDetailFormInitialData,
       options?: {
         showSuccessAlert?: boolean;
         showFailureAlert?: boolean;
         showLoading?: boolean;
       },
-    ) => {
+    ): Promise<ProductDetailFormData | null> => {
       const { showSuccessAlert = true, showFailureAlert = true } =
         options ?? {};
       const { showLoading = true } = options ?? {};
@@ -194,7 +211,12 @@ export default function ProductDetailForm({
         if (!res.ok) {
           throw new Error('검색 실패');
         }
-        const data = await res.json();
+        const data = (await res.json()) as {
+          official_image?: string | null;
+          lowest_price?: string | number | null;
+          mall_url?: string | null;
+          category_list?: string[];
+        };
 
         if (data.official_image) {
           const nextData = (() => {
@@ -206,16 +228,18 @@ export default function ProductDetailForm({
             return {
               ...sourceData,
               official_image: data.official_image,
-              price: data.lowest_price,
+              price: data.lowest_price ?? '',
               mall_url: data.mall_url,
-              features: isFeaturesEmpty ? categoryString : sourceData.features,
+              features: isFeaturesEmpty
+                ? categoryString
+                : String(sourceData.features ?? ''),
             };
           })();
-          setFormData(nextData);
+          setFormData(nextData as ProductDetailFormData);
           if (showSuccessAlert) {
             alert('상품 정보를 새로 가져왔습니다.');
           }
-          return nextData;
+          return nextData as ProductDetailFormData;
         }
         if (showFailureAlert) {
           alert('검색 결과가 없습니다. 정보를 직접 확인해주세요.');
@@ -236,6 +260,7 @@ export default function ProductDetailForm({
     [],
   );
 
+  // 스캔 결과 보정용.
   useEffect(() => {
     if (!showScanWarning) {
       return;
@@ -247,21 +272,25 @@ export default function ProductDetailForm({
       return;
     }
 
-    void fetchNaverShoppingInfo(initialData, {
-      showSuccessAlert: false,
-      showFailureAlert: false,
-      showLoading: false,
-    });
-    // 마운트 1회만 (스캔 결과 보정용)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const timerId = window.setTimeout(() => {
+      void fetchNaverShoppingInfo(initialData, {
+        showSuccessAlert: false,
+        showFailureAlert: false,
+        showLoading: false,
+      });
+    }, 0);
+    return () => window.clearTimeout(timerId);
+  }, [fetchNaverShoppingInfo, initialData, showScanWarning]);
 
   const handleReSearch = async () => {
     await fetchNaverShoppingInfo(formData);
   };
 
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  const handleChange = (field: ProductDetailFormStringField, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,7 +303,7 @@ export default function ProductDetailForm({
         URL.revokeObjectURL(formData.image_url);
       }
       const previewUrl = URL.createObjectURL(file);
-      setFormData((prev: any) => ({
+      setFormData((prev) => ({
         ...prev,
         official_image: null,
         image_url: previewUrl,
@@ -587,21 +616,38 @@ export default function ProductDetailForm({
                 <span className="shrink-0 text-xs font-bold text-[#161618]">
                   원
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setIsNaverLowestPriceModalOpen(true)}
-                  className="shrink-0"
-                  aria-label="네이버 최저가 안내 보기"
-                >
-                  <Image
-                    src="/icons/warning.svg"
-                    alt=""
-                    width={15}
-                    height={15}
-                    unoptimized
-                    aria-hidden
-                  />
-                </button>
+                <div className="relative shrink-0">
+                  {showNaverLowestPriceTip ? (
+                    <div className="absolute right-0 bottom-full z-10 mb-1 flex justify-end">
+                      <Image
+                        src="/icons/네이버최저가.svg"
+                        alt="네이버 최저가 안내"
+                        width={103}
+                        height={47}
+                        unoptimized
+                        className="h-auto w-[103px] max-w-[min(103px,calc(100vw-40px))]"
+                      />
+                    </div>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNaverLowestPriceTip((open) => !open);
+                    }}
+                    className="shrink-0"
+                    aria-expanded={showNaverLowestPriceTip}
+                    aria-label="네이버 최저가 안내 보기"
+                  >
+                    <Image
+                      src="/icons/warning.svg"
+                      alt=""
+                      width={15}
+                      height={15}
+                      unoptimized
+                      aria-hidden
+                    />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -744,13 +790,6 @@ export default function ProductDetailForm({
                     accept="image/*"
                     className="hidden"
                   />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="mt-2 text-[11px] font-semibold text-[#FF60CA]"
-                  >
-                    사진 변경
-                  </button>
                 </>
               ) : null}
             </div>
@@ -1018,25 +1057,6 @@ export default function ProductDetailForm({
           </button>
         </div>
       </div>
-
-      <Modal
-        open={isNaverLowestPriceModalOpen}
-        onOpenChange={setIsNaverLowestPriceModalOpen}
-        title=""
-        hideIcon
-        confirmText="확인"
-        className="max-w-[340px] rounded-[24px] px-6 py-5 shadow-xl [&_button]:h-10 [&_button]:min-h-10 [&_button]:rounded-full [&_button]:px-8 [&_button]:text-base [&_button]:font-bold"
-      >
-        <div className="flex flex-col items-center gap-4">
-          <Image
-            src="/icons/네이버최저가.svg"
-            alt="네이버 최저가 안내"
-            width={103}
-            height={47}
-            unoptimized
-          />
-        </div>
-      </Modal>
 
       {showCapture ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-5">
