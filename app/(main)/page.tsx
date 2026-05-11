@@ -17,7 +17,7 @@ import {
 } from '@/api/generated/member-controller/member-controller';
 import type { ApiResponseDTO } from '@/api/model';
 import type { Detail } from '@/api/model';
-import mainLogo from '@/public/logo/main-logo.png';
+import mainLogo from '@/public/figma/login/hero-1.svg';
 
 function resolveNicknameFromResponse(data: ApiResponseDTO): string | null {
   return typeof data?.result === 'string' && data.result.trim().length > 0
@@ -158,44 +158,22 @@ function MainPageContent() {
 
   return (
     <>
-      <main className="bg-mono-white min-h-full px-4 pt-4 pb-6">
-        <div className="mx-auto w-fit">
+      <main className="min-h-full bg-[linear-gradient(180deg,#FFFFFF_31%,#FFC6EC_100%)] px-5 pt-[38px] pb-8">
+        <div className="mx-auto flex w-full max-w-[360px] justify-center">
           <Image
             src={mainLogo}
             alt="main-logo"
-            width={94}
-            height={56}
-            className="h-[80px] w-[120px]"
+            width={144}
+            height={106}
+            className="h-[80px] w-[120px] object-contain"
             priority
           />
         </div>
 
-        <section className="mt-4 flex items-center justify-center gap-2">
-          {homeData?.profileUrl ? (
-            <Image
-              src={homeData.profileUrl}
-              alt="profile"
-              width={36}
-              height={36}
-              unoptimized
-              className="border-mono-dark-gray/70 size-9 rounded-full border object-cover"
-            />
-          ) : (
-            <div className="border-mono-dark-gray/70 text-mono-dark-gray flex size-12 items-center justify-center rounded-full border">
-              <ImageIcon className="size-5" />
-            </div>
-          )}
-          <h3 className="text-mono-jet flex flex-col text-lg leading-tight font-bold">
-            반가워요 {homeData?.nickname ?? '포치'}님,
-            <br />
-            흩어져 있는 위시템을 포치에 모아봐요!
-          </h3>
-        </section>
-
-        <div className="mt-5 space-y-5 px-5">
+        <div className="mx-auto mt-10 w-full max-w-[360px] space-y-4">
           {sections.map((section) => (
             <section key={section.title}>
-              <h2 className="text-mono-jet text-sm font-bold">
+              <h2 className="text-base leading-5 font-bold text-[#161618]">
                 {section.title}
               </h2>
               <div className="mt-2">
@@ -278,7 +256,7 @@ export default function MainPage() {
   return (
     <Suspense
       fallback={
-        <main className="bg-mono-white min-h-screen px-4 pt-4 pb-6">
+        <main className="min-h-screen bg-[linear-gradient(180deg,#FFFFFF_31%,#FFC6EC_100%)] px-5 pt-[38px] pb-8">
           <p className="text-mono-dark-gray text-sm">불러오는 중...</p>
         </main>
       }

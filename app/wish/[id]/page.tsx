@@ -11,7 +11,7 @@ import {
 import Image from 'next/image';
 import { WishCardImage } from '@/components/wishlist/WishCardImage';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
-import { PencilLine, Share2, Download, X } from 'lucide-react';
+import { Share2, Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview';
 import { Header } from '@/components/layout/Header';
@@ -42,6 +42,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { COSMETIC_CATEGORIES } from '@/constants/category';
 import { cn } from '@/lib/utils';
 import Input from '@/components/common/Input/Input';
@@ -118,7 +123,6 @@ const draftFromDetail = (detail: ReadDetailDto): DraftForm => {
  *   이를 통해 새 항목 데이터 로딩 중에도 이전 내용이 희미하게 표시됩니다.
  */
 function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
-  const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [showCapture, setShowCapture] = useState(false);
@@ -185,31 +189,6 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
         ]);
       },
     });
-
-  const handleShare = async () => {
-    const shareUrl =
-      typeof window !== 'undefined'
-        ? window.location.href
-        : `/wish/${params.id}`;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: currentItem?.productName ?? '위시리스트',
-          text: currentItem?.brand ?? '',
-          url: shareUrl,
-        });
-        return;
-      }
-
-      await navigator.clipboard.writeText(shareUrl);
-      alert('링크가 복사되었습니다.');
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        alert('공유 링크를 복사하지 못했습니다.');
-      }
-    }
-  };
 
   const handleCaptureShare = async () => {
     if (!currentCaptureImageSrc) {
@@ -355,17 +334,12 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
           className="border-b border-zinc-100"
           title="제품 상세보기"
           showBack
-          rightIcons={
-            !isEditing
-              ? [{ kind: 'share', onClick: () => void handleShare() }]
-              : undefined
-          }
         />
       </div>
 
       <div
         className={cn(
-          'flex-1 overflow-y-auto px-5 pb-36 transition-opacity duration-200',
+          'overflow-anchor-none flex-1 overflow-y-auto px-[20px] pb-36 transition-opacity duration-200',
           isDetailFetching && 'opacity-40',
         )}
       >
@@ -400,15 +374,13 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
             </CarouselContent>
             <CarouselPrevious
               type="button"
-              variant="outline"
               disabled={wishItems.length <= 1}
-              className="top-1/2 -left-0 left-2 h-10 w-10 -translate-y-1/2 border-zinc-200 bg-white/90 shadow-md"
+              className="top-1/2 -left-0 left-1 h-16 w-16 -translate-y-1/2 [&_img]:size-12"
             />
             <CarouselNext
               type="button"
-              variant="outline"
               disabled={wishItems.length <= 1}
-              className="top-1/2 -right-0 right-2 h-10 w-10 -translate-y-1/2 border-zinc-200 bg-white/90 shadow-md"
+              className="top-1/2 -right-0 right-1 h-16 w-16 -translate-y-1/2 [&_img]:size-12"
             />
           </Carousel>
         </div>
@@ -418,9 +390,16 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
             <button
               type="button"
               onClick={handleStartEdit}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-zinc-800 shadow-sm"
+              className="inline-flex items-center gap-1.5 border-0 bg-transparent px-0 py-1.5 text-sm font-semibold text-zinc-900 shadow-none"
             >
-              <PencilLine className="size-4 text-zinc-500" aria-hidden />
+              <Image
+                src="/icons/PenNewSquare.svg"
+                alt=""
+                width={18}
+                height={18}
+                unoptimized
+                className="shrink-0"
+              />
               수정하기
             </button>
           </div>
@@ -477,28 +456,55 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
           <WishFieldRow label="가격" isEditing={isEditing}>
             {!isEditing ? (
               <div className="flex w-full items-center gap-3">
-                <div className="flex h-12 min-w-0 flex-1 items-center rounded-lg border border-[var(--mono-gray)] bg-white px-3">
+                <div className="flex h-10 min-w-0 flex-1 items-center rounded-lg border border-[var(--mono-gray)] bg-white px-3">
                   <span className="mr-2 text-sm leading-none font-bold text-[var(--brand-pink)]">
                     최저가
                   </span>
                   <span className="text-sm font-medium text-[var(--mono-jet)]">
                     {formatPriceKo(currentItem.price)}
                   </span>
-                  <div className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-full bg-[#6f6161] text-white">
-                    <span className="text-sm leading-none font-bold">!</span>
-                  </div>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="ml-auto flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#6f6161] text-white outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
+                        aria-label="네이버 최저가 안내"
+                      >
+                        <span className="text-sm leading-none font-bold">
+                          !
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      side="top"
+                      align="end"
+                      sideOffset={8}
+                      className="w-auto border-0 bg-transparent p-0 shadow-none ring-0"
+                    >
+                      <Image
+                        src="/icons/네이버최저가.svg"
+                        alt="네이버 쇼핑 최저가 기준 안내"
+                        width={165}
+                        height={75}
+                        unoptimized
+                        className="block h-auto w-[165px] max-w-[min(165px,calc(100vw-32px))]"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             ) : (
               <Input
-                type="number"
+                type="text"
                 inputMode="numeric"
+                autoComplete="off"
                 placeholder="예: 28000"
                 value={draft.price}
                 onChange={(e) => {
+                  const digitsOnly = e.target.value.replace(/\D/g, '');
                   setDraft((d) => ({
                     ...d,
-                    price: e.target.value,
+                    price: digitsOnly,
                   }));
                 }}
                 className="text-[var(--brand-pink)] placeholder:text-zinc-300"
@@ -507,81 +513,86 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
             )}
           </WishFieldRow>
 
-          <div className="flex items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <WishFieldLabel>분류</WishFieldLabel>
-              {isEditing ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <Select
-                    value={draft.category}
-                    onValueChange={(value) => {
-                      const main = COSMETIC_CATEGORIES.find(
-                        (c) => c.value === value,
-                      );
-                      const firstSub = main?.subCategories[0]?.value ?? '';
-                      setDraft((d) => ({
-                        ...d,
-                        category: value,
-                        subCategory: firstSub || d.subCategory,
-                      }));
-                    }}
+          <div>
+            <WishFieldLabel>분류</WishFieldLabel>
+            {isEditing ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Select
+                  value={draft.category}
+                  onValueChange={(value) => {
+                    const main = COSMETIC_CATEGORIES.find(
+                      (c) => c.value === value,
+                    );
+                    const firstSub = main?.subCategories[0]?.value ?? '';
+                    setDraft((d) => ({
+                      ...d,
+                      category: value,
+                      subCategory: firstSub || d.subCategory,
+                    }));
+                  }}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="h-7 w-full min-w-0 rounded-lg border-zinc-200 bg-white py-1 text-xs"
+                    aria-label="대분류"
                   >
-                    <SelectTrigger
-                      className="h-8 w-full min-w-0 rounded-lg border-zinc-200 bg-white"
-                      aria-label="대분류"
-                    >
-                      <SelectValue placeholder="대분류" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COSMETIC_CATEGORIES.map((c) => (
-                        <SelectItem key={c.value} value={c.value}>
-                          {c.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={draft.subCategory}
-                    onValueChange={(value) => {
-                      setDraft((d) => ({
-                        ...d,
-                        subCategory: value,
-                      }));
-                    }}
+                    <SelectValue placeholder="대분류" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    side="bottom"
+                    align="start"
+                    sideOffset={4}
+                    className="max-h-60"
                   >
-                    <SelectTrigger
-                      className="h-8 w-full min-w-0 rounded-lg border-zinc-200 bg-white"
-                      aria-label="소분류"
-                    >
-                      <SelectValue placeholder="소분류" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subOptions.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <span className="flex h-8 min-w-0 items-center justify-center rounded-full border border-[var(--brand-pink)] bg-white px-6 text-sm font-bold text-[var(--brand-pink)]">
-                    {viewMainCategoryLabel}
-                  </span>
-                  <span className="flex h-8 min-w-0 items-center justify-center rounded-full bg-[var(--brand-classic)] px-6 text-sm font-bold text-white">
-                    {viewSubCategoryLabel}
-                  </span>
-                </div>
-              )}
-            </div>
-            <PencilLine
-              className={cn(
-                'mt-9 size-5 shrink-0 text-zinc-400',
-                !isEditing && 'pointer-events-none invisible',
-              )}
-              aria-hidden
-            />
+                    {COSMETIC_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={draft.subCategory}
+                  onValueChange={(value) => {
+                    setDraft((d) => ({
+                      ...d,
+                      subCategory: value,
+                    }));
+                  }}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="h-7 w-full min-w-0 rounded-lg border-zinc-200 bg-white py-1 text-xs"
+                    aria-label="소분류"
+                  >
+                    <SelectValue placeholder="소분류" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    side="bottom"
+                    align="start"
+                    sideOffset={4}
+                    className="max-h-60"
+                  >
+                    {subOptions.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 min-w-0 items-center justify-center rounded-full border border-[var(--brand-pink)] bg-white px-6 text-sm font-bold text-[var(--brand-pink)]">
+                  {viewMainCategoryLabel}
+                </span>
+                <span className="flex h-8 min-w-0 items-center justify-center rounded-full bg-[var(--brand-classic)] px-6 text-sm font-bold text-white">
+                  {viewSubCategoryLabel}
+                </span>
+              </div>
+            )}
           </div>
 
           <WishFieldRow label="특징" isEditing={isEditing}>
@@ -609,53 +620,59 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
             />
           </WishFieldRow>
 
-          <div className="flex items-start gap-2">
-            <div className="min-w-0 flex-1">
-              <WishFieldLabel>메모</WishFieldLabel>
-              <textarea
-                readOnly={!isEditing}
-                value={
-                  isEditing
-                    ? draft.memo
-                    : currentItem.memo?.trim()
-                      ? currentItem.memo
-                      : '메모는 최대 60자까지 입력할 수 있습니다.'
-                }
-                maxLength={MEMO_MAX_LEN}
-                onChange={
-                  isEditing
-                    ? (e) => {
-                        setDraft((d) => ({ ...d, memo: e.target.value }));
-                      }
-                    : undefined
-                }
-                placeholder={
-                  isEditing ? '메모는 최대 60자까지 입력할 수 있습니다.' : ''
-                }
-                rows={4}
-                className={cn(
-                  'border-mono-gray focus-visible:border-brand-pink w-full resize-none rounded-sm border px-4 py-3 text-sm outline-none focus-visible:ring-0',
-                  !currentItem.memo?.trim() && !isEditing
-                    ? 'text-[var(--mono-dark-gray)]'
-                    : '',
-                  !isEditing && readonlyFieldClass,
-                  isEditing && 'placeholder:text-zinc-400',
-                )}
-                aria-label="메모"
-              />
-              {isEditing ? (
+          <div>
+            <WishFieldLabel>메모</WishFieldLabel>
+            {isEditing ? (
+              <>
+                <div className="flex w-full items-start gap-2 rounded-lg border border-[var(--mono-gray)] bg-white px-3 py-1">
+                  <textarea
+                    readOnly={false}
+                    value={draft.memo}
+                    maxLength={MEMO_MAX_LEN}
+                    onChange={(e) => {
+                      setDraft((d) => ({ ...d, memo: e.target.value }));
+                    }}
+                    placeholder="메모는 최대 60자까지 입력할 수 있습니다."
+                    rows={4}
+                    className="focus-visible:border-brand-pink min-h-[96px] flex-1 resize-none border-0 bg-transparent px-0 py-0 text-sm leading-snug outline-none placeholder:text-zinc-400 focus-visible:ring-0"
+                    aria-label="메모"
+                  />
+                  <Image
+                    src="/icons/PenNewSquare.svg"
+                    alt=""
+                    width={20}
+                    height={20}
+                    unoptimized
+                    className="mt-0.5 shrink-0"
+                    aria-hidden
+                  />
+                </div>
                 <p className="mt-1 text-xs text-zinc-400">
                   {draft.memo.length}/{MEMO_MAX_LEN}
                 </p>
-              ) : null}
-            </div>
-            <PencilLine
-              className={cn(
-                'mt-9 size-5 shrink-0 text-zinc-400',
-                !isEditing && 'pointer-events-none invisible',
-              )}
-              aria-hidden
-            />
+              </>
+            ) : (
+              <>
+                <textarea
+                  readOnly
+                  value={
+                    currentItem.memo?.trim()
+                      ? currentItem.memo
+                      : '메모는 최대 60자까지 입력할 수 있습니다.'
+                  }
+                  maxLength={MEMO_MAX_LEN}
+                  rows={4}
+                  className={cn(
+                    'border-mono-gray focus-visible:border-brand-pink w-full resize-none rounded-sm border px-4 py-3 text-sm outline-none focus-visible:ring-0',
+                    !currentItem.memo?.trim()
+                      ? 'text-[var(--mono-dark-gray)]'
+                      : '',
+                    readonlyFieldClass,
+                  )}
+                  aria-label="메모"
+                />
+              </>
+            )}
           </div>
 
           <div>
@@ -680,60 +697,74 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
         </div>
 
         <section className="mt-10 border-t border-zinc-100 pt-6">
-          <h3 className="mb-4 text-base font-bold text-zinc-900">
-            연관 리뷰 영상
-          </h3>
+          <WishFieldLabel>연관 리뷰 영상</WishFieldLabel>
 
-          <Carousel
-            opts={{
-              align: 'start',
-              containScroll: 'trimSnaps',
-            }}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-4">
-              {isYoutubeLoading
-                ? [1, 2, 3].map((n) => (
-                    <CarouselItem key={n} className="basis-[38%] pl-4">
-                      <div className="h-40 w-full animate-pulse rounded-xl bg-zinc-100" />
-                      <div className="mt-2 h-4 w-3/4 animate-pulse rounded bg-zinc-100" />
-                    </CarouselItem>
-                  ))
-                : youtubeData?.items?.map((video) => (
-                    <CarouselItem
-                      key={video.id.videoId}
-                      className="basis-[38%] pl-4"
+          {isYoutubeLoading ? (
+            <Carousel
+              opts={{
+                align: 'start',
+                containScroll: 'trimSnaps',
+              }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-4">
+                {[1, 2, 3].map((n) => (
+                  <CarouselItem key={n} className="basis-[38%] pl-4">
+                    <div className="h-40 w-full animate-pulse rounded-xl bg-zinc-100" />
+                    <div className="mt-2 h-4 w-3/4 animate-pulse rounded bg-zinc-100" />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+          ) : youtubeData?.items && youtubeData.items.length > 0 ? (
+            <Carousel
+              opts={{
+                align: 'start',
+                containScroll: 'trimSnaps',
+              }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-4">
+                {youtubeData.items.map((video) => (
+                  <CarouselItem
+                    key={video.id.videoId}
+                    className="basis-[38%] pl-4"
+                  >
+                    <a
+                      href={`https://www.youtube.com/watch?v=${video.id.videoId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group block"
                     >
-                      <a
-                        href={`https://www.youtube.com/watch?v=${video.id.videoId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group block transition-transform active:scale-95"
-                      >
-                        <div className="relative aspect-video w-full overflow-hidden rounded-xl">
-                          <Image
-                            src={video.snippet.thumbnails.high.url}
-                            alt={video.snippet.title}
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                        <p className="mt-2 line-clamp-2 text-sm font-semibold text-zinc-900">
-                          {video.snippet.title}
-                        </p>
-                        <p className="text-xs text-zinc-400">
-                          {video.snippet.channelTitle}
-                        </p>
-                      </a>
-                    </CarouselItem>
-                  ))}
-            </CarouselContent>
-          </Carousel>
+                      <div className="relative aspect-video w-full overflow-hidden rounded-xl">
+                        <Image
+                          src={video.snippet.thumbnails.high.url}
+                          alt={video.snippet.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <p className="mt-2 line-clamp-2 text-sm font-semibold text-zinc-900">
+                        {video.snippet.title}
+                      </p>
+                      <p className="text-xs text-zinc-400">
+                        {video.snippet.channelTitle}
+                      </p>
+                    </a>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+          ) : (
+            <p className="text-sm text-[var(--mono-dark-gray)]">
+              연관 리뷰 영상을 찾을 수 없어요.
+            </p>
+          )}
         </section>
       </div>
 
       {isEditing ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-20 z-40 flex justify-center px-5">
+        <div className="pointer-events-none fixed right-[20px] bottom-20 left-[20px] z-40 flex justify-center">
           <div className="pointer-events-auto w-full max-w-120">
             <button
               type="button"
@@ -796,7 +827,7 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
                 onClick={() => void handleCaptureDownload()}
                 className="flex flex-col items-center gap-2 text-white"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black">
+                <div className="ml flex h-12 w-12 items-center justify-center rounded-full bg-black">
                   <Download size={20} />
                 </div>
                 <span className="text-xs">저장하기</span>
@@ -839,6 +870,11 @@ function WishFieldLabel({ children }: { children: ReactNode }) {
   );
 }
 
+const editFieldShellClass =
+  'flex min-h-10 w-full items-center gap-2 rounded-lg border border-[var(--mono-gray)] bg-white px-3 py-1';
+const editFieldInnerClass =
+  'min-w-0 flex-1 [&>div]:min-w-0 [&>div]:flex-1 [&_input]:h-9 [&_input]:min-h-9 [&_input]:border-0 [&_input]:bg-transparent [&_input]:shadow-none [&_input]:focus-visible:ring-0';
+
 function WishFieldRow({
   label,
   isEditing,
@@ -849,18 +885,24 @@ function WishFieldRow({
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-start gap-2">
-      <div className="min-w-0 flex-1">
-        <WishFieldLabel>{label}</WishFieldLabel>
-        {children}
-      </div>
-      <PencilLine
-        className={cn(
-          'mt-9 size-5 shrink-0 text-zinc-400',
-          !isEditing && 'pointer-events-none invisible',
-        )}
-        aria-hidden
-      />
+    <div>
+      <WishFieldLabel>{label}</WishFieldLabel>
+      {isEditing ? (
+        <div className={editFieldShellClass}>
+          <div className={editFieldInnerClass}>{children}</div>
+          <Image
+            src="/icons/PenNewSquare.svg"
+            alt=""
+            width={20}
+            height={20}
+            unoptimized
+            className="shrink-0"
+            aria-hidden
+          />
+        </div>
+      ) : (
+        children
+      )}
     </div>
   );
 }

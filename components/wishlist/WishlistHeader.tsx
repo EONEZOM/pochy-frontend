@@ -38,6 +38,11 @@ export function WishlistHeader() {
     updateSearchQuery(debouncedSearchQuery);
   }, [debouncedSearchQuery, updateSearchQuery]);
 
+  /** 브라우저 뒤로가기·외부 링크 등으로 `q`만 바뀐 경우 입력값과 맞춥니다. */
+  useEffect(() => {
+    setLocalSearchQuery(queryFromUrl);
+  }, [queryFromUrl]);
+
   return (
     <div className="sticky top-0 z-30 bg-white/95 px-3 pt-3 pb-2 backdrop-blur-sm">
       <div className="flex items-center gap-2">
@@ -55,33 +60,35 @@ export function WishlistHeader() {
             unoptimized
           />
         </button>
-        <Input
-          type="search"
-          placeholder="검색"
-          value={localSearchQuery}
-          onChange={(e) => {
-            setLocalSearchQuery(e.target.value);
-          }}
-          className="h-11 rounded-lg border-zinc-700 bg-transparent px-4 py-2 text-sm"
-          rightElement={
-            <button
-              type="button"
-              aria-label="검색"
-              className="text-zinc-700"
-              onClick={() => {
-                updateSearchQuery(localSearchQuery);
-              }}
-            >
-              <Image
-                src="/icons/search.svg"
-                alt="돋보기아이콘"
-                width={24}
-                height={24}
-                unoptimized
-              />
-            </button>
-          }
-        />
+        <div className="min-w-0 flex-1">
+          <Input
+            type="search"
+            placeholder="검색"
+            value={localSearchQuery}
+            onChange={(e) => {
+              setLocalSearchQuery(e.target.value);
+            }}
+            className="h-11 rounded-lg border-zinc-700 bg-transparent px-4 py-2 text-sm"
+            rightElement={
+              <button
+                type="button"
+                aria-label="검색"
+                className="text-zinc-700"
+                onClick={() => {
+                  updateSearchQuery(localSearchQuery);
+                }}
+              >
+                <Image
+                  src="/icons/search.svg"
+                  alt="돋보기아이콘"
+                  width={24}
+                  height={24}
+                  unoptimized
+                />
+              </button>
+            }
+          />
+        </div>
       </div>
     </div>
   );

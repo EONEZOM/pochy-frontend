@@ -30,19 +30,20 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} min-h-dvh antialiased`}
     >
-      <body className="flex h-full justify-center overflow-x-hidden bg-zinc-50">
+      <body className="flex min-h-dvh justify-center items-start overflow-x-hidden bg-zinc-50">
         <RegisterPWA />
         <QueryProvider>
-          <div className="relative flex min-h-full w-full max-w-120 min-w-90 flex-col bg-white shadow-xl">
-            <main
-              vaul-drawer-wrapper=""
-              className="flex min-h-0 flex-1 flex-col bg-white pb-14"
-            >
+          {/* vaul: bottom 시트의 기준을 뷰포트 하단에 맞추려면 main만 감싸면 안 됨(하단 내비 위에 붙는 현상). */}
+          <div
+            vaul-drawer-wrapper=""
+            className="relative flex min-h-dvh w-full max-w-120 min-w-90 flex-col bg-white shadow-xl"
+          >
+            <main className="flex min-h-0 flex-1 flex-col bg-white pb-14">
               {children}
             </main>
-            <BottomNav className="sticky bottom-0" />
+            <BottomNav />
           </div>
         </QueryProvider>
       </body>

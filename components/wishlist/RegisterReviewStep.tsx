@@ -2,7 +2,7 @@
 
 /**
  * 위시 스캔 결과 확인 / 수정 그리드
- * Figma: `포치 공유용` > `위시 - 스캔수정` (node-id: 782-7709)
+ * Figma: `포치 임시` > `위시 - 스캔수정` / 카드 탭 시 `위시 - 스캔수정상세` (node-id: 1-2233)
  * - 헤더: 「사진으로 등록하기」, 좌측 뒤로가기만
  * - 안내 박스: `#FFF7FC`, 라운드 8px, 11px 본문
  * - 그리드: 가로 3열, 간격 16px, 타일 최대 130×130 (`aspect-square`)
@@ -30,6 +30,22 @@ export default function RegisterReviewStep({
 }: ReviewStepProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
+  const handleScanPrev = () => {
+    setSelectedIndex((prev) => {
+      if (prev === null) return prev;
+      if (prev <= 0) return prev;
+      return prev - 1;
+    });
+  };
+
+  const handleScanNext = () => {
+    setSelectedIndex((prev) => {
+      if (prev === null) return prev;
+      if (prev >= results.length - 1) return prev;
+      return prev + 1;
+    });
+  };
+
   const handleDelete = (index: number) => {
     if (!confirm('이 항목을 삭제할까요?')) return;
     setResults(results.filter((_, i) => i !== index));
@@ -45,9 +61,16 @@ export default function RegisterReviewStep({
   if (selectedIndex !== null) {
     return (
       <ProductDetailForm
+        key={selectedIndex}
         initialData={results[selectedIndex]}
         showScanWarning={true}
-        submitLabel="수정 완료"
+        scanItemIndex={selectedIndex}
+        scanItemCount={results.length}
+        onScanPrev={handleScanPrev}
+        onScanNext={handleScanNext}
+        canScanPrev={selectedIndex > 0}
+        canScanNext={selectedIndex < results.length - 1}
+        submitLabel="확인"
         onBack={() => setSelectedIndex(null)}
         onSubmit={handleDetailSubmit}
       />
@@ -82,7 +105,7 @@ export default function RegisterReviewStep({
           </div>
         </div>
 
-        <div className="mt-auto mb-[-60px] shrink-0 pt-4">
+        <div className="mt-auto shrink-0 pt-4">
           <Button
             type="button"
             onClick={onSave}

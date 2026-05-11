@@ -287,7 +287,7 @@ export default function WishlistRegisterPage() {
             onClick={startAnalysis}
             disabled={isPending || images.length === 0}
             className={cn(
-              'mb-[-100px] h-14 w-full rounded-full border-0 px-6 text-base font-bold text-[#161618] transition-colors',
+              'h-14 w-full rounded-full border-0 px-6 text-base font-bold text-[#161618] transition-colors',
               images.length > 0
                 ? 'bg-[#FF93DB] hover:bg-[#FF85D5] disabled:pointer-events-none disabled:opacity-70'
                 : 'bg-[#DCDCDC] disabled:opacity-50',

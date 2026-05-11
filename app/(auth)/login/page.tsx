@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/common/BottomSheet';
 import { Input } from '@/components/ui/input';
+import type { RequestMagicLinkParams } from '@/api/model';
 import {
   reissue,
   useRequestMagicLink,
@@ -86,7 +87,7 @@ function LoginContent() {
 
     setSubmittedEmail(trimmedEmail);
     requestMagicLink({
-      params: { email: trimmedEmail },
+      params: { email: trimmedEmail } as RequestMagicLinkParams,
     });
   };
 
