@@ -2,10 +2,9 @@
 
 /**
  * 홈 섹션 가로 리스트
- * - 데이터 있음 (Default): Figma `홈` (1:2773) — 타일 96×96, gap 8px, 라운드 8px, 흰 테두리·그림자
- *   https://www.figma.com/design/ozRGHFE4rnqkqnikqCh7Pg/%ED%8F%AC%EC%B9%98-%EC%9E%84%EC%8B%9C?node-id=1-2773
- * - 데이터 없음 (Empty): Figma `홈 - 처음` (1:3590) — 그라데이션 카드 + `public/main` 일러스트
- *   https://www.figma.com/design/ozRGHFE4rnqkqnikqCh7Pg/%ED%8F%AC%EC%B9%98-%EC%9E%84%EC%8B%9C?node-id=1-3590
+ * - 데이터 있음 (Default): Figma `홈` 메인 리스트 (1:3190) — 타일 100×100, gap 12px, 라운드 12px, 흰 테두리·소프트 섀도
+ *   https://www.figma.com/design/ozRGHFE4rnqkqnikqCh7Pg/%ED%8F%AC%EC%B9%98-%EC%9E%84%EC%8B%9C?node-id=1-3190
+ * - 데이터 없음 (Empty): 카드 없이 안내 문구만 표시
  */
 
 import Image from 'next/image';
@@ -14,20 +13,13 @@ import { ImageIcon } from 'lucide-react';
 import type { Detail } from '@/api/model';
 import { cn } from '@/lib/utils';
 
+/** 메인 리스트 타일 (Figma 1:3190 기준) */
+const TILE_PX = 100;
+
 type HomeSectionCarouselProps = {
   sectionTitle: string;
   showSkeleton: boolean;
   items: Detail[];
-};
-
-/** 섹션별 빈 상태 일러스트 (`public/main`) */
-const EMPTY_ILLUSTRATION: Record<
-  string,
-  { src: string; width: number; height: number }
-> = {
-  위시: { src: '/main/home-empty-wish.svg', width: 88, height: 87 },
-  마이: { src: '/main/home-empty-my.svg', width: 72, height: 104 },
-  피드: { src: '/main/home-empty-feed.svg', width: 225, height: 102 },
 };
 
 const isValidImageUrl = (value?: string): boolean => {
@@ -59,11 +51,11 @@ export function HomeSectionCarousel({
 }: HomeSectionCarouselProps) {
   if (showSkeleton) {
     return (
-      <div className="flex gap-2 overflow-hidden">
+      <div className="flex gap-3 overflow-hidden">
         {Array.from({ length: 5 }).map((_, index) => (
           <div
             key={`${sectionTitle}-skeleton-${index}`}
-            className="bg-mono-white text-mono-dark-gray/40 flex size-24 shrink-0 snap-start items-center justify-center rounded-lg border-2 border-white/70 shadow-[1px_1px_3px_0_rgba(0,0,0,0.25)]"
+            className="bg-mono-white text-mono-dark-gray/40 flex size-[100px] shrink-0 items-center justify-center rounded-xl border-2 border-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
           >
             <ImageIcon className="size-4" />
           </div>
@@ -73,48 +65,27 @@ export function HomeSectionCarousel({
   }
 
   if (items.length === 0) {
-    const illustration =
-      EMPTY_ILLUSTRATION[sectionTitle] ?? EMPTY_ILLUSTRATION['위시'];
-
     return (
-      <div
-        className={cn(
-          'flex min-h-[120px] w-full items-center justify-center rounded-lg border-2 border-white/70 px-5 py-8',
-          'bg-[linear-gradient(180deg,#FFFFFF_31%,#FFC6EC_100%)]',
-          'shadow-[1px_1px_3px_0_rgba(0,0,0,0.25)]',
-        )}
-      >
-        <Image
-          src={illustration.src}
-          alt=""
-          width={illustration.width}
-          height={illustration.height}
-          unoptimized
-          className="h-auto max-h-[min(168px,48vw)] w-auto max-w-full object-contain"
-        />
-      </div>
+      <p className="flex h-[100px] items-center justify-center py-3 text-center text-lg leading-5 font-bold text-[#161618]">
+        아직 등록된 화장품이 없어요
+      </p>
     );
   }
 
   return (
-    <div
-      className={cn(
-        'flex touch-pan-x snap-x snap-mandatory gap-2 overflow-x-auto overflow-y-hidden scroll-smooth pb-1',
-        '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-      )}
-    >
+    <div className="flex gap-3 overflow-hidden">
       {items.map((item, index) => (
         <div
           key={`${sectionTitle}-${item.id ?? item.imageUrl ?? index}`}
-          className="relative size-24 shrink-0 snap-start overflow-hidden rounded-lg border-2 border-white/70 bg-white shadow-[1px_1px_3px_0_rgba(0,0,0,0.25)]"
+          className="relative size-[100px] shrink-0 overflow-hidden rounded-xl border-2 border-white bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
         >
           {isValidImageUrl(item.imageUrl) ? (
             <Image
               src={item.imageUrl as string}
               alt={`${sectionTitle} item`}
               fill
-              sizes="96px"
-              className="object-cover shadow-[2px_2px_1px_0_rgba(0,0,0,0.25)]"
+              sizes={`${TILE_PX}px`}
+              className="object-cover"
             />
           ) : (
             <div className="text-mono-dark-gray/50 flex size-full items-center justify-center bg-[#F3F3F3]">

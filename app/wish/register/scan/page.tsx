@@ -32,6 +32,7 @@
  * 스캔 실패 모달: Figma node-id 782-7629 (sad 아이콘 + 실패 / 확인)
  */
 
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAxiosError } from 'axios';
@@ -88,6 +89,7 @@ const buildCaptureImagesForRequest = (
 
 export default function WishlistRegisterPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [images, setImages] = useState<ImageFileData[]>([]);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
   const [resizedFiles, setResizedFiles] = useState<File[]>([]);
@@ -180,6 +182,7 @@ export default function WishlistRegisterPage() {
         captureImages: normalizedCaptureImages,
         directImages: directImageFiles,
       });
+      await queryClient.invalidateQueries({ queryKey: ['/api/wish-cosmetics'] });
       alert('위시리스트에 등록되었습니다.');
       router.push('/wish');
     } catch (error) {

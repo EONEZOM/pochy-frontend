@@ -29,8 +29,20 @@ type WishListItem = {
   price: number;
 };
 
-const toWishListItem = (item: ReadListDto): WishListItem => ({
-  id: item.wishCosmeticsId as number,
+const parseWishId = (item: ReadListDto): number | null => {
+  const raw = item.wishCosmeticsId;
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return raw;
+  }
+  if (typeof raw === 'string') {
+    const n = Number.parseInt(raw, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
+
+const toWishListItem = (item: ReadListDto, id: number): WishListItem => ({
+  id,
   brand_name: item.brand ?? '',
   product_name: item.productName ?? '',
   main_category: item.category ?? '',
@@ -63,11 +75,11 @@ function WishlistPageContent() {
 
   const filteredItems = useMemo(() => {
     const items = (data?.result?.content ?? [])
-      .filter(
-        (item): item is ReadListDto & { wishCosmeticsId: number } =>
-          typeof item.wishCosmeticsId === 'number',
-      )
-      .map(toWishListItem);
+      .map((item) => {
+        const id = parseWishId(item);
+        return id == null ? null : toWishListItem(item, id);
+      })
+      .filter((item): item is WishListItem => item != null);
 
     if (sortOrder === 'price-desc') {
       return [...items].sort((a, b) => (b.price ?? 0) - (a.price ?? 0));

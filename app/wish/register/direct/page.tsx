@@ -1,6 +1,7 @@
 'use client';
 
 import ProductDetailForm from '@/components/wishlist/ProductDetailForm';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { isAxiosError } from 'axios';
@@ -46,6 +47,7 @@ const normalizeImageUrl = (value: unknown): string | undefined => {
 
 export default function DirectRegisterPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
 
   const handleDirectSave = async (data: Record<string, unknown>) => {
@@ -91,6 +93,7 @@ export default function DirectRegisterPage() {
         captureImages,
         directImages,
       });
+      await queryClient.invalidateQueries({ queryKey: ['/api/wish-cosmetics'] });
       alert('위시리스트에 등록되었습니다.');
       router.push('/wish');
     } catch (error) {

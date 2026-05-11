@@ -4,9 +4,11 @@ import * as React from 'react';
 import { Suspense } from 'react';
 import { AxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { ImageIcon } from 'lucide-react';
 import { HomeSectionCarousel } from '@/components/main/HomeSectionCarousel';
+import { MainHomeListHeader } from '@/components/main/MainHomeListHeader';
+import { MainHomeEmptyView } from '@/components/main/MainHomeEmptyView';
+import { MainHomeBottomZipperWithLip } from '@/components/main/MainHomeBottomZipperWithLip';
+import { MainHomeTopZipperWithLogo } from '@/components/main/MainHomeTopZipperWithLogo';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/common/Modal';
 import { useGetHomeData } from '@/api/generated/home/home';
@@ -17,7 +19,26 @@ import {
 } from '@/api/generated/member-controller/member-controller';
 import type { ApiResponseDTO } from '@/api/model';
 import type { Detail } from '@/api/model';
-import mainLogo from '@/public/figma/login/hero-1.svg';
+import type { ReadListDto } from '@/api/model';
+
+/** 메인(리스트·로딩)과 빈 홈 공통 배경 그라데이션 */
+const MAIN_HOME_GRADIENT_BG =
+  'linear-gradient(180deg, #FFFFFF 0%, #FFF5FC 42%, #FFC6EC 100%)';
+
+const MAIN_HOME_LIST_LAYOUT =
+  'flex min-h-0 flex-1 flex-col overflow-hidden';
+
+const parseWishCosmeticsId = (item: ReadListDto): number | null => {
+  const raw = item.wishCosmeticsId;
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return raw;
+  }
+  if (typeof raw === 'string') {
+    const n = Number.parseInt(raw, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
 
 function resolveNicknameFromResponse(data: ApiResponseDTO): string | null {
   return typeof data?.result === 'string' && data.result.trim().length > 0
@@ -40,6 +61,63 @@ function getNicknameErrorMessage(error: unknown): string {
 
 function isNicknameLengthValid(nickname: string): boolean {
   return nickname.length >= 2 && nickname.length <= 10;
+}
+
+type MainHomeListViewProps = {
+  showSkeleton: boolean;
+  sections: Array<{ title: string; items: Detail[] }>;
+  nickname?: string | null;
+  profileUrl?: string | null;
+};
+
+/**
+ * 위시·마이·피드가 하나라도 있을 때
+ * - 상단 인사·프로필: Figma 1:3210
+ * - 섹션 리스트: Figma 1:3190
+ */
+function MainHomeListView({
+  showSkeleton,
+  sections,
+  nickname,
+  profileUrl,
+}: MainHomeListViewProps) {
+  return (
+    <main
+      className={MAIN_HOME_LIST_LAYOUT}
+      style={{ background: MAIN_HOME_GRADIENT_BG }}
+    >
+      <MainHomeTopZipperWithLogo />
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-6">
+        <div className="mx-auto w-full max-w-[360px] shrink-0">
+          <MainHomeListHeader
+            nickname={nickname}
+            profileUrl={profileUrl}
+            isLoading={showSkeleton}
+          />
+        </div>
+
+        <div className="relative z-20 mx-auto mt-6 w-full max-w-[360px] shrink-0 space-y-8 pb-4">
+          {sections.map((section) => (
+            <section key={section.title}>
+              <h2 className="text-[18px] leading-6 font-bold text-[#161618]">
+                {section.title}
+              </h2>
+              <div className="mt-3">
+                <HomeSectionCarousel
+                  sectionTitle={section.title}
+                  showSkeleton={showSkeleton}
+                  items={section.items}
+                />
+              </div>
+            </section>
+          ))}
+        </div>
+      </div>
+
+      <MainHomeBottomZipperWithLip />
+    </main>
+  );
 }
 
 function MainPageContent() {
@@ -70,15 +148,15 @@ function MainPageContent() {
   const isNicknameModalOpen =
     !isHomeLoading && !hasServerNickname && !isNicknameModalDismissed;
 
-  const wishItems: Detail[] = (wishListResponse?.result?.content ?? [])
-    .filter(
-      (item): item is { wishCosmeticsId: number; productImageUrl?: string } =>
-        typeof item.wishCosmeticsId === 'number',
-    )
-    .map((item) => ({
-      id: item.wishCosmeticsId,
-      imageUrl: item.productImageUrl,
-    }));
+  const wishItems: Detail[] = (wishListResponse?.result?.content ?? []).flatMap(
+    (item) => {
+      const id = parseWishCosmeticsId(item);
+      if (id == null) {
+        return [];
+      }
+      return [{ id, imageUrl: item.productImageUrl } satisfies Detail];
+    },
+  );
 
   const sections: Array<{ title: string; items: Detail[] }> = [
     { title: '위시', items: wishItems },
@@ -87,6 +165,14 @@ function MainPageContent() {
   ];
 
   const showHomeSkeleton = isHomeLoading || isWishListLoading;
+
+  const myListItems = homeData?.myList ?? [];
+  const feedListItems = homeData?.feed ?? [];
+  const isAllSectionsEmpty =
+    !showHomeSkeleton &&
+    wishItems.length === 0 &&
+    myListItems.length === 0 &&
+    feedListItems.length === 0;
 
   const { mutate: updateNickname, isPending: isSavingNickname } =
     useUpdateNickname({
@@ -158,35 +244,27 @@ function MainPageContent() {
 
   return (
     <>
-      <main className="min-h-full bg-[linear-gradient(180deg,#FFFFFF_31%,#FFC6EC_100%)] px-5 pt-[38px] pb-8">
-        <div className="mx-auto flex w-full max-w-[360px] justify-center">
-          <Image
-            src={mainLogo}
-            alt="main-logo"
-            width={144}
-            height={106}
-            className="h-[80px] w-[120px] object-contain"
-            priority
+      <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden">
+        {showHomeSkeleton ? (
+          <MainHomeListView
+            showSkeleton
+            sections={sections}
+            nickname={homeData?.nickname}
+            profileUrl={homeData?.profileUrl}
           />
-        </div>
-
-        <div className="mx-auto mt-10 w-full max-w-[360px] space-y-4">
-          {sections.map((section) => (
-            <section key={section.title}>
-              <h2 className="text-base leading-5 font-bold text-[#161618]">
-                {section.title}
-              </h2>
-              <div className="mt-2">
-                <HomeSectionCarousel
-                  sectionTitle={section.title}
-                  showSkeleton={showHomeSkeleton}
-                  items={section.items}
-                />
-              </div>
-            </section>
-          ))}
-        </div>
-      </main>
+        ) : isAllSectionsEmpty ? (
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white p-0">
+            <MainHomeEmptyView />
+          </main>
+        ) : (
+          <MainHomeListView
+            showSkeleton={false}
+            sections={sections}
+            nickname={homeData?.nickname}
+            profileUrl={homeData?.profileUrl}
+          />
+        )}
+      </div>
 
       <Modal
         open={isNicknameModalOpen}
@@ -256,7 +334,10 @@ export default function MainPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-[linear-gradient(180deg,#FFFFFF_31%,#FFC6EC_100%)] px-5 pt-[38px] pb-8">
+        <main
+          className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-8 pb-8"
+          style={{ background: MAIN_HOME_GRADIENT_BG }}
+        >
           <p className="text-mono-dark-gray text-sm">불러오는 중...</p>
         </main>
       }
