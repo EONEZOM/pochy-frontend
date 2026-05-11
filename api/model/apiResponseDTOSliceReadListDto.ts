@@ -11,4 +11,5 @@ export interface ApiResponseDTOSliceReadListDto {
   code?: string;
   message?: string;
   result?: SliceReadListDto;
+  success?: boolean;
 }

@@ -11,4 +11,5 @@ export interface ApiResponseDTONaverLoginUrl {
   code?: string;
   message?: string;
   result?: NaverLoginUrl;
+  success?: boolean;
 }

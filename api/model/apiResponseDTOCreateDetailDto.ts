@@ -11,4 +11,5 @@ export interface ApiResponseDTOCreateDetailDto {
   code?: string;
   message?: string;
   result?: CreateDetailDto;
+  success?: boolean;
 }

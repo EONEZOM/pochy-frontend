@@ -11,4 +11,5 @@ export interface ApiResponseDTOFavoriteListDto {
   code?: string;
   message?: string;
   result?: FavoriteListDto;
+  success?: boolean;
 }

@@ -11,4 +11,5 @@ export interface ApiResponseDTOSliceMyCosmeticsResponseDTO {
   code?: string;
   message?: string;
   result?: SliceMyCosmeticsResponseDTO;
+  success?: boolean;
 }

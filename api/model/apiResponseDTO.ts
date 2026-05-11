@@ -10,4 +10,5 @@ export interface ApiResponseDTO {
   code?: string;
   message?: string;
   result?: unknown;
+  success?: boolean;
 }

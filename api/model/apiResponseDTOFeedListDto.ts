@@ -11,4 +11,5 @@ export interface ApiResponseDTOFeedListDto {
   code?: string;
   message?: string;
   result?: FeedListDto;
+  success?: boolean;
 }

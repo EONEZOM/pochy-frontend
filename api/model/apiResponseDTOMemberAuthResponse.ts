@@ -11,4 +11,5 @@ export interface ApiResponseDTOMemberAuthResponse {
   code?: string;
   message?: string;
   result?: MemberAuthResponse;
+  success?: boolean;
 }

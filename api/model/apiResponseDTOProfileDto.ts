@@ -11,4 +11,5 @@ export interface ApiResponseDTOProfileDto {
   code?: string;
   message?: string;
   result?: ProfileDto;
+  success?: boolean;
 }

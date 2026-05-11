@@ -11,4 +11,5 @@ export interface ApiResponseDTOUpdateDto {
   code?: string;
   message?: string;
   result?: UpdateDto;
+  success?: boolean;
 }

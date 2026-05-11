@@ -11,4 +11,5 @@ export interface ApiResponseDTOTokenDto {
   code?: string;
   message?: string;
   result?: TokenDto;
+  success?: boolean;
 }

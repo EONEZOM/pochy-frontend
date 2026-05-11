@@ -11,4 +11,5 @@ export interface ApiResponseDTOReadDetailDto {
   code?: string;
   message?: string;
   result?: ReadDetailDto;
+  success?: boolean;
 }
