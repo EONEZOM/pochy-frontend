@@ -3,10 +3,32 @@
 import ProductDetailForm from '@/components/wishlist/ProductDetailForm';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { isAxiosError } from 'axios';
 import type { CreateDetailDtoV2 } from '@/api/model';
 import { ProductImageType } from '@/api/model';
 import { createWishCosmeticsV2Multipart } from '@/lib/wish-cosmetics';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
+
+const getWishRegisterErrorMessage = (error: unknown): string => {
+  if (!isAxiosError(error)) {
+    return '위시리스트 등록 중 오류가 발생했습니다.';
+  }
+  const data = error.response?.data;
+  if (data && typeof data === 'object') {
+    const rec = data as Record<string, unknown>;
+    const message = rec.message ?? rec.error ?? rec.detail;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message.trim();
+    }
+  }
+  if (error.response?.status === 400) {
+    return '요청 형식이 맞지 않아 등록되지 않았습니다. 필수 정보를 확인해 주세요.';
+  }
+  if (error.response?.status === 500) {
+    return '서버에서 처리하지 못했습니다. 이미지·네이버 상품 정보를 확인한 뒤 다시 시도해 주세요.';
+  }
+  return '위시리스트 등록 중 오류가 발생했습니다.';
+};
 
 const normalizePrice = (value: unknown): number => {
   const parsed = Number(value);
@@ -30,19 +52,25 @@ export default function DirectRegisterPage() {
     if (isPending) return;
 
     const imageFile = data.imageFile;
-    const captureImages =
-      imageFile instanceof File ? [imageFile] : ([] as File[]);
-    const directImages =
-      imageFile instanceof File ? [imageFile] : ([] as File[]);
-
     const naverUrl = normalizeImageUrl(data.official_image ?? data.image_url);
 
-    const productImage =
-      imageFile instanceof File
-        ? { type: ProductImageType.DIRECT, directImageIndex: 0 }
-        : naverUrl
-          ? { type: ProductImageType.NAVER, naverImageUrl: naverUrl }
-          : { type: ProductImageType.NAVER };
+    if (!(imageFile instanceof File) && !naverUrl) {
+      alert(
+        '상품 이미지가 필요합니다. 네이버쇼핑 정보를 채우거나 직접 사진을 등록해 주세요.',
+      );
+      return;
+    }
+
+    const hasLocalImage = imageFile instanceof File;
+    const captureImages = hasLocalImage ? [imageFile] : ([] as File[]);
+    const directImages = hasLocalImage ? [imageFile] : ([] as File[]);
+
+    const productImage = hasLocalImage
+      ? { type: ProductImageType.DIRECT, directImageIndex: 0 }
+      : { type: ProductImageType.NAVER, naverImageUrl: naverUrl! };
+
+    /** 캡처 파일이 없으면 인덱스 0으로 두면 백엔드가 빈 목록 접근으로 실패할 수 있음 */
+    const captureImageIndex = captureImages.length > 0 ? 0 : -1;
 
     const row: CreateDetailDtoV2 = {
       name: String(data.product_name ?? ''),
@@ -52,7 +80,7 @@ export default function DirectRegisterPage() {
       feature: String(data.features ?? ''),
       memo: String(data.memo ?? ''),
       price: normalizePrice(data.price),
-      captureImageIndex: 0,
+      captureImageIndex,
       productImage,
     };
 
@@ -65,8 +93,9 @@ export default function DirectRegisterPage() {
       });
       alert('위시리스트에 등록되었습니다.');
       router.push('/wish');
-    } catch {
-      alert('위시리스트 등록 중 오류가 발생했습니다.');
+    } catch (error) {
+      console.error('[WishRegister/direct] 등록 실패:', error);
+      alert(getWishRegisterErrorMessage(error));
     } finally {
       setIsPending(false);
     }
@@ -74,13 +103,12 @@ export default function DirectRegisterPage() {
 
   return (
     <ProductDetailForm
-      initialData={{}} // 빈 값으로 시작
-      submitLabel={isPending ? '등록 중...' : '위시리스트 추가'}
+      initialData={{}}
+      headerTitle="직접 등록하기"
+      layoutVariant="directRegister"
+      submitLabel={isPending ? '등록 중...' : '등록하기'}
       onBack={() => router.back()}
       onSubmit={handleDirectSave}
-      // TODO: 테스트 이후 직접 업로드/등록 정책 정상화 필요
-      disableManualImageUpload
-      autoFillNaverOnSubmit
     />
   );
 }

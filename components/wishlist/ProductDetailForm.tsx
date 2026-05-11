@@ -8,9 +8,8 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import { Search, Loader2, X, Share2, Download } from 'lucide-react';
+import { Search, Loader2, X, Share2, Download, ImagePlus } from 'lucide-react';
 import Image from 'next/image';
-import { Button } from '@/components/ui/button';
 import { COSMETIC_CATEGORIES } from '@/constants/category';
 import {
   Select,
@@ -117,6 +116,10 @@ interface ProductDetailFormProps {
   onSubmit: (updatedData: ProductDetailFormSubmitData) => void | Promise<void>;
   onBack: () => void;
   submitLabel?: string;
+  /** 헤더 제목. 스캔 수정 단계는 항상 「사진으로 등록하기」가 우선입니다. */
+  headerTitle?: string;
+  /** 직접 등록하기 등 피그마 전용 레이아웃 (헤더·본문 320·하단 pill). */
+  layoutVariant?: 'default' | 'directRegister';
   showScanWarning?: boolean;
   disableManualImageUpload?: boolean;
   autoFillNaverOnSubmit?: boolean;
@@ -144,6 +147,8 @@ export default function ProductDetailForm({
   onSubmit,
   onBack,
   submitLabel = '저장하기',
+  headerTitle,
+  layoutVariant = 'default',
   showScanWarning = false,
   disableManualImageUpload = false,
   autoFillNaverOnSubmit = false,
@@ -154,6 +159,7 @@ export default function ProductDetailForm({
   canScanPrev = false,
   canScanNext = false,
 }: ProductDetailFormProps) {
+  const isDirectRegisterLayout = layoutVariant === 'directRegister';
   const [formData, setFormData] = useState<ProductDetailFormData>(() => ({
     ...FORM_DEFAULTS,
     ...initialData,
@@ -390,6 +396,24 @@ export default function ProductDetailForm({
     return '/icons/imgplus.svg';
   }, [captureFilePreviewSrc, formData.image_url]);
 
+  /** 직접 등록 상단 카드: 네이버 공식 이미지·직접 촬영·업로드 파일 중 하나라도 있으면 미리보기 표시 */
+  const hasDirectRegisterProductImage = useMemo(() => {
+    if (String(formData.official_image ?? '').trim()) {
+      return true;
+    }
+    if (String(formData.image_url ?? '').trim()) {
+      return true;
+    }
+    if (formData.imageFile instanceof File) {
+      return true;
+    }
+    return false;
+  }, [formData.imageFile, formData.image_url, formData.official_image]);
+
+  const resolvedHeaderTitle = isScanEditLayout
+    ? '사진으로 등록하기'
+    : (headerTitle ?? '제품 상세보기');
+
   const handleCaptureShare = async () => {
     if (!capturePreviewSrc || capturePreviewSrc === '/icons/imgplus.svg') {
       return;
@@ -439,413 +463,318 @@ export default function ProductDetailForm({
           className={cn(
             isScanEditLayout
               ? 'h-10 min-h-10 border-0 bg-white/95 px-[20px] py-2.5 shadow-none backdrop-blur-[30px] [&_h3]:leading-5 [&_h3]:font-bold [&_h3]:text-[#161618]'
-              : 'border-b border-zinc-100',
+              : isDirectRegisterLayout
+                ? 'h-10 min-h-10 border-0 bg-white/95 px-[20px] py-2.5 shadow-none backdrop-blur-[30px] [&_h3]:leading-5 [&_h3]:font-bold [&_h3]:text-[#161618]'
+                : 'border-b border-zinc-100',
           )}
-          title={isScanEditLayout ? '사진으로 등록하기' : '제품 상세보기'}
+          title={resolvedHeaderTitle}
           showBack
           onBack={onBack}
         />
       </div>
 
       <div className="overflow-anchor-none flex-1 overflow-y-auto px-[20px] pb-36">
-        {isScanEditLayout ? (
-          <div className="mt-4 space-y-3">
-            <div className="flex items-start gap-2">
-              <Image
-                src="/icons/느낌표-pink.svg"
-                alt=""
-                width={15}
-                height={15}
-                unoptimized
-                className="mt-px shrink-0"
-                aria-hidden
-              />
-              <p className="text-[11px] leading-[150%] font-normal text-[#FF60CA]">
-                {SCAN_EDIT_AI_BANNER_COPY}
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-3 flex justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={isSearching}
-              onClick={() => void handleReSearch()}
-              className="inline-flex h-auto items-center gap-1.5 rounded-full border-0 bg-[#03C75A] px-3 py-2 text-xs font-semibold text-white shadow-none hover:bg-[#03C75A]/90 disabled:opacity-60"
-            >
-              {isSearching ? (
-                <Loader2 size={14} className="animate-spin" aria-hidden />
-              ) : (
-                <Search size={14} aria-hidden />
-              )}
-              네이버쇼핑 정보 채우기
-            </Button>
-          </div>
-        )}
-
-        <div className={cn('relative', isScanEditLayout ? 'mt-4' : 'mt-2')}>
-          <div
-            className={cn(
-              'relative mx-auto',
-              isScanEditLayout
-                ? 'h-[200px] w-[208px] max-w-full overflow-visible rounded-lg bg-[#F3F3F3] shadow-[1px_1px_1px_0_rgba(0,0,0,0.25)]'
-                : 'aspect-square w-full max-w-[280px] overflow-hidden rounded-2xl bg-zinc-100',
-            )}
-          >
-            {isScanEditLayout ? (
-              <>
-                <button
-                  type="button"
-                  onClick={onScanPrev}
-                  disabled={!canScanPrev}
-                  className="absolute top-1/2 -left-20 z-10 h-16 w-16 -translate-y-1/2 disabled:opacity-30 [&_img]:size-12"
-                  aria-label="이전 제품"
-                >
-                  <Image
-                    src="/icons/Alt Arrow Left.svg"
-                    alt=""
-                    width={48}
-                    height={48}
-                    unoptimized
-                    aria-hidden
-                  />
-                </button>
-                <button
-                  type="button"
-                  onClick={onScanNext}
-                  disabled={!canScanNext}
-                  className="absolute top-1/2 -right-20 z-10 h-16 w-16 -translate-y-1/2 disabled:opacity-30 [&_img]:size-12"
-                  aria-label="다음 제품"
-                >
-                  <Image
-                    src="/icons/Alt Arrow Right.svg"
-                    alt=""
-                    width={48}
-                    height={48}
-                    unoptimized
-                    aria-hidden
-                  />
-                </button>
-              </>
-            ) : null}
-            <WishCardImage
-              officialImage={officialForCard}
-              captureImage={captureForCard}
-              productName={String(formData.product_name ?? '')}
-              fill
-              className="object-contain"
-            />
-          </div>
-        </div>
-
-        {isScanEditLayout ? (
-          <div className="mt-3 flex justify-center">
-            <div className="flex h-4 w-[68px] items-center justify-center rounded-full bg-[#161618] text-[9px] font-bold text-white">
-              {scanIndexText}
-            </div>
-          </div>
-        ) : null}
-
-        {isScanEditLayout ? (
-          <div className="mt-2 flex justify-end">
-            <button
-              type="button"
-              disabled={isSearching}
-              onClick={() => void handleReSearch()}
-              className="inline-flex h-8 min-w-[91px] items-center justify-center gap-1.5 rounded-full bg-[#FFC6EC] px-4 text-xs font-bold text-white transition-opacity disabled:opacity-60"
-            >
-              {isSearching ? (
-                <Loader2
-                  size={14}
-                  className="shrink-0 animate-spin"
+        <div className={cn(isDirectRegisterLayout && 'mx-auto w-full')}>
+          {isScanEditLayout ? (
+            <div className="mt-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <Image
+                  src="/icons/느낌표-pink.svg"
+                  alt=""
+                  width={15}
+                  height={15}
+                  unoptimized
+                  className="mt-px shrink-0"
                   aria-hidden
                 />
-              ) : null}
-              <span>{isSearching ? '불러오는 중' : 'AI 자동완성'}</span>
-            </button>
-          </div>
-        ) : null}
-
-        {isScanEditLayout ? (
-          <div className="mt-6 space-y-4">
-            <div>
-              <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
-                브랜드명
-              </div>
-              <Input
-                value={formData.brand_name || ''}
-                onChange={(e) => handleChange('brand_name', e.target.value)}
-                placeholder="브랜드명"
-                aria-label="브랜드명"
-                className={scanTextInputClassName}
-              />
-            </div>
-
-            <div>
-              <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
-                제품명
-              </div>
-              <Input
-                value={formData.product_name || ''}
-                onChange={(e) => handleChange('product_name', e.target.value)}
-                placeholder="제품명"
-                aria-label="제품명"
-                className={scanTextInputClassName}
-              />
-            </div>
-
-            <div>
-              <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
-                가격
-              </div>
-              <div className="flex min-h-[37px] items-center gap-2 rounded-[4px] border-[0.5px] border-[#DCDCDC] px-2.5 py-2">
-                <span className="shrink-0 text-[11px] font-normal text-[#FF60CA]">
-                  최저가
-                </span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={formData.price || ''}
-                  onChange={(e) => handleChange('price', e.target.value)}
-                  className="min-w-0 flex-1 border-0 bg-transparent p-0 text-xs font-bold text-[#161618] outline-none placeholder:font-normal placeholder:text-[#B7B7B7]"
-                  aria-label="가격"
-                />
-                <span className="shrink-0 text-xs font-bold text-[#161618]">
-                  원
-                </span>
-                <div className="relative shrink-0">
-                  {showNaverLowestPriceTip ? (
-                    <div className="absolute right-0 bottom-full z-10 mb-1 flex justify-end">
-                      <Image
-                        src="/icons/네이버최저가.svg"
-                        alt="네이버 최저가 안내"
-                        width={103}
-                        height={47}
-                        unoptimized
-                        className="h-auto w-[103px] max-w-[min(103px,calc(100vw-40px))]"
-                      />
-                    </div>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowNaverLowestPriceTip((open) => !open);
-                    }}
-                    className="shrink-0"
-                    aria-expanded={showNaverLowestPriceTip}
-                    aria-label="네이버 최저가 안내 보기"
-                  >
-                    <Image
-                      src="/icons/warning.svg"
-                      alt=""
-                      width={15}
-                      height={15}
-                      unoptimized
-                      aria-hidden
-                    />
-                  </button>
-                </div>
+                <p className="text-[11px] leading-[150%] font-normal text-[#FF60CA]">
+                  {SCAN_EDIT_AI_BANNER_COPY}
+                </p>
               </div>
             </div>
+          ) : null}
 
-            <div>
-              <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
-                분류
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Select
-                  value={formData.main_category}
-                  onValueChange={handleMainChange}
-                >
-                  <SelectTrigger
-                    className={scanSelectTriggerClassName}
-                    aria-label="대분류"
-                  >
-                    <SelectValue placeholder="대분류" />
-                  </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    sideOffset={6}
-                    className={scanSelectContentClassName}
-                  >
-                    <SelectGroup className="flex flex-col gap-2 p-0">
-                      {COSMETIC_CATEGORIES.map((c) => (
-                        <SelectItem
-                          key={c.value}
-                          value={c.value}
-                          className={scanSelectItemClassName}
-                        >
-                          {c.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={formData.sub_category}
-                  onValueChange={(value) => handleChange('sub_category', value)}
-                  disabled={
-                    !formData.main_category || formData.main_category === 'Etc'
-                  }
-                >
-                  <SelectTrigger
-                    className={cn(
-                      scanSelectTriggerClassName,
-                      (!formData.main_category ||
-                        formData.main_category === 'Etc') &&
-                        'opacity-50',
-                    )}
-                    aria-label="소분류"
-                  >
-                    <SelectValue
-                      placeholder={
-                        formData.main_category
-                          ? '소분류'
-                          : '대분류를 먼저 선택해 주세요'
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    sideOffset={6}
-                    className={scanSelectContentClassName}
-                  >
-                    <SelectGroup className="flex flex-col gap-2 p-0">
-                      {subOptions.map((s) => (
-                        <SelectItem
-                          key={s.value}
-                          value={s.value}
-                          className={scanSelectItemClassName}
-                        >
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div>
-              <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
-                특징
-              </div>
-              <Input
-                value={formData.features || ''}
-                onChange={(e) => handleChange('features', e.target.value)}
-                placeholder="특징"
-                aria-label="특징"
-                className="h-auto min-h-[37px] rounded-[4px] border-[0.5px] border-[#DCDCDC] px-2.5 py-2.5 text-[11px] leading-[150%] font-normal text-[#161618] placeholder:text-[#B7B7B7] focus-visible:border-[#DCDCDC] focus-visible:ring-0"
-              />
-            </div>
-
-            <div>
-              <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
-                메모
-              </div>
-              <textarea
-                value={formData.memo || ''}
-                maxLength={MEMO_MAX_LEN}
-                onChange={(e) => handleChange('memo', e.target.value)}
-                placeholder="구매처, 가격, 할인 정보 등 잊기 쉬운 것들을 메모해 보세요. (최대 60자)"
-                rows={4}
-                className="focus-visible:border-brand-pink w-full resize-none rounded-[4px] border-[0.5px] border-[#DCDCDC] px-2.5 py-2.5 text-[11px] leading-[150%] font-normal text-[#161618] outline-none placeholder:text-[#6C6C6C]/80 focus-visible:ring-0"
-                aria-label="메모"
-              />
-              <p className="mt-1 text-[11px] text-[#B7B7B7]">
-                {String(formData.memo ?? '').length}/{MEMO_MAX_LEN}
-              </p>
-            </div>
-
-            <div>
-              <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
-                원본 사진
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCapture(true)}
-                className="relative size-[72px] overflow-hidden rounded-lg border-[0.5px] border-[#DCDCDC] bg-[#F3F3F3]"
-              >
-                <Image
-                  src={capturePreviewSrc}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  unoptimized={
-                    capturePreviewSrc.startsWith('data:') ||
-                    capturePreviewSrc.startsWith('blob:') ||
-                    capturePreviewSrc.endsWith('.svg')
-                  }
-                />
-              </button>
-              {!disableManualImageUpload ? (
-                <>
+          <div
+            className={cn(
+              'relative',
+              isScanEditLayout
+                ? 'mt-4'
+                : isDirectRegisterLayout
+                  ? 'mt-4'
+                  : 'mt-2',
+            )}
+          >
+            {isDirectRegisterLayout ? (
+              <>
+                {!disableManualImageUpload ? (
                   <input
+                    id="wish-direct-register-photo-input"
                     type="file"
                     ref={fileInputRef}
                     onChange={handleFileChange}
                     accept="image/*"
                     className="hidden"
                   />
-                </>
-              ) : null}
-            </div>
+                ) : null}
+
+                {!hasDirectRegisterProductImage && !disableManualImageUpload ? (
+                  <label
+                    htmlFor="wish-direct-register-photo-input"
+                    className={cn(
+                      'relative mx-auto flex aspect-square w-full max-w-[260px] cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[#FF93DB] bg-white px-4 transition-colors',
+                      'hover:bg-[#FFF8FD]',
+                    )}
+                  >
+                    <ImagePlus
+                      className="size-6 shrink-0 text-[#FF60CA]"
+                      strokeWidth={1.5}
+                      aria-hidden
+                    />
+                    <span className="text-center text-sm leading-[150%] font-normal text-[#FF60CA]">
+                      터치하여 사진을 추가해 주세요.
+                    </span>
+                  </label>
+                ) : (
+                  <div
+                    className={cn(
+                      'relative mx-auto aspect-square w-full max-w-[260px] overflow-hidden rounded-lg bg-[#F3F3F3] shadow-[1px_1px_1px_0_rgba(0,0,0,0.25)]',
+                      !disableManualImageUpload &&
+                        'cursor-pointer transition-opacity hover:opacity-95',
+                    )}
+                  >
+                    {!disableManualImageUpload ? (
+                      <button
+                        type="button"
+                        className="absolute inset-0 z-10 bg-transparent"
+                        aria-label="사진 변경"
+                        onClick={() => fileInputRef.current?.click()}
+                      />
+                    ) : null}
+                    <WishCardImage
+                      officialImage={officialForCard}
+                      captureImage={captureForCard}
+                      productName={String(formData.product_name ?? '')}
+                      fill
+                      className="object-contain"
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              <div
+                className={cn(
+                  'relative mx-auto',
+                  isScanEditLayout
+                    ? 'h-[200px] w-[208px] max-w-full overflow-visible rounded-lg bg-[#F3F3F3] shadow-[1px_1px_1px_0_rgba(0,0,0,0.25)]'
+                    : 'aspect-square w-full max-w-[260px] overflow-hidden rounded-2xl bg-zinc-100',
+                )}
+              >
+                {isScanEditLayout ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={onScanPrev}
+                      disabled={!canScanPrev}
+                      className="absolute top-1/2 -left-20 z-10 h-16 w-16 -translate-y-1/2 disabled:opacity-30 [&_img]:size-12"
+                      aria-label="이전 제품"
+                    >
+                      <Image
+                        src="/icons/Alt Arrow Left.svg"
+                        alt=""
+                        width={48}
+                        height={48}
+                        unoptimized
+                        aria-hidden
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onScanNext}
+                      disabled={!canScanNext}
+                      className="absolute top-1/2 -right-20 z-10 h-16 w-16 -translate-y-1/2 disabled:opacity-30 [&_img]:size-12"
+                      aria-label="다음 제품"
+                    >
+                      <Image
+                        src="/icons/Alt Arrow Right.svg"
+                        alt=""
+                        width={48}
+                        height={48}
+                        unoptimized
+                        aria-hidden
+                      />
+                    </button>
+                  </>
+                ) : null}
+                <WishCardImage
+                  officialImage={officialForCard}
+                  captureImage={captureForCard}
+                  productName={String(formData.product_name ?? '')}
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="mt-8 space-y-6">
-            <WishFieldRow label="브랜드명">
-              <Input
-                value={formData.brand_name || ''}
-                onChange={(e) => handleChange('brand_name', e.target.value)}
-                placeholder="브랜드명"
-                aria-label="브랜드명"
-              />
-            </WishFieldRow>
 
-            <WishFieldRow label="제품명">
-              <Input
-                value={formData.product_name || ''}
-                onChange={(e) => handleChange('product_name', e.target.value)}
-                placeholder="제품명"
-                aria-label="제품명"
-              />
-            </WishFieldRow>
+          {!isScanEditLayout ? (
+            <div className="mt-3 flex w-full justify-end">
+              <button
+                type="button"
+                disabled={isSearching}
+                onClick={() => void handleReSearch()}
+                className={cn(
+                  'inline-flex min-h-[32px] w-full max-w-[100px] shrink-0 items-center justify-center gap-1.5 rounded-full px-4 transition-opacity disabled:opacity-60',
+                  'border-[0.5px] border-[#B7B7B7] bg-white text-[11px] font-bold text-[#B7B7B7]',
+                  'shadow-[1px_1px_2px_0_rgba(0,0,0,0.08)]',
+                )}
+              >
+                <span>{isSearching ? '불러오는 중' : 'AI 자동완성'}</span>
+              </button>
+            </div>
+          ) : null}
 
-            <WishFieldRow label="가격">
-              <Input
-                type="number"
-                inputMode="numeric"
-                placeholder="예: 28000"
-                value={formData.price || ''}
-                onChange={(e) => handleChange('price', e.target.value)}
-                className="text-[var(--brand-pink)] placeholder:text-zinc-300"
-                aria-label="가격"
-              />
-            </WishFieldRow>
+          {isScanEditLayout ? (
+            <div className="mt-3 flex justify-center">
+              <div className="flex h-4 w-[68px] items-center justify-center rounded-full bg-[#161618] text-[9px] font-bold text-white">
+                {scanIndexText}
+              </div>
+            </div>
+          ) : null}
 
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <WishFieldLabel>분류</WishFieldLabel>
-                <div className="grid grid-cols-2 gap-2">
+          {isScanEditLayout ? (
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                disabled={isSearching}
+                onClick={() => void handleReSearch()}
+                className="inline-flex h-8 min-w-[91px] items-center justify-center gap-1.5 rounded-full bg-[#FFC6EC] px-4 text-xs font-bold text-white transition-opacity disabled:opacity-60"
+              >
+                {isSearching ? (
+                  <Loader2
+                    size={14}
+                    className="shrink-0 animate-spin"
+                    aria-hidden
+                  />
+                ) : null}
+                <span>{isSearching ? '불러오는 중' : 'AI 자동완성'}</span>
+              </button>
+            </div>
+          ) : null}
+
+          {isScanEditLayout || isDirectRegisterLayout ? (
+            <div className="mt-6 space-y-4">
+              <div>
+                <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
+                  브랜드명
+                </div>
+                <Input
+                  value={formData.brand_name || ''}
+                  onChange={(e) => handleChange('brand_name', e.target.value)}
+                  placeholder="브랜드명"
+                  aria-label="브랜드명"
+                  className={scanTextInputClassName}
+                />
+              </div>
+
+              <div>
+                <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
+                  제품명
+                </div>
+                <Input
+                  value={formData.product_name || ''}
+                  onChange={(e) => handleChange('product_name', e.target.value)}
+                  placeholder="제품명"
+                  aria-label="제품명"
+                  className={scanTextInputClassName}
+                />
+              </div>
+
+              <div>
+                <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
+                  가격
+                </div>
+                <div className="flex min-h-[37px] items-center gap-2 rounded-[4px] border-[0.5px] border-[#DCDCDC] px-2.5 py-2">
+                  <span className="shrink-0 text-[11px] font-normal text-[#FF60CA]">
+                    최저가
+                  </span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={formData.price || ''}
+                    onChange={(e) => handleChange('price', e.target.value)}
+                    className="min-w-0 flex-1 border-0 bg-transparent p-0 text-xs font-bold text-[#161618] outline-none placeholder:font-normal placeholder:text-[#B7B7B7]"
+                    aria-label="가격"
+                  />
+                  <span className="shrink-0 text-xs font-bold text-[#161618]">
+                    원
+                  </span>
+                  <div className="relative shrink-0">
+                    {showNaverLowestPriceTip ? (
+                      <div className="absolute right-[-10px] bottom-full z-10 mb-1 flex justify-end">
+                        <Image
+                          src="/icons/네이버최저가.svg"
+                          alt="네이버 최저가 안내"
+                          width={103}
+                          height={47}
+                          unoptimized
+                          className="h-auto w-[103px] max-w-[min(103px,calc(100vw-40px))]"
+                        />
+                      </div>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNaverLowestPriceTip((open) => !open);
+                      }}
+                      className="shrink-0"
+                      aria-expanded={showNaverLowestPriceTip}
+                      aria-label="네이버 최저가 안내 보기"
+                    >
+                      <Image
+                        src="/icons/warning.svg"
+                        alt=""
+                        width={15}
+                        height={15}
+                        unoptimized
+                        aria-hidden
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
+                  분류
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <Select
                     value={formData.main_category}
                     onValueChange={handleMainChange}
                   >
                     <SelectTrigger
-                      className="h-8 w-full min-w-0 rounded-lg border-zinc-200 bg-white"
+                      className={scanSelectTriggerClassName}
                       aria-label="대분류"
                     >
                       <SelectValue placeholder="대분류" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {COSMETIC_CATEGORIES.map((c) => (
-                        <SelectItem key={c.value} value={c.value}>
-                          {c.label}
-                        </SelectItem>
-                      ))}
+                    <SelectContent
+                      position="popper"
+                      sideOffset={6}
+                      className={scanSelectContentClassName}
+                    >
+                      <SelectGroup className="flex flex-col gap-2 p-0">
+                        {COSMETIC_CATEGORIES.map((c) => (
+                          <SelectItem
+                            key={c.value}
+                            value={c.value}
+                            className={scanSelectItemClassName}
+                          >
+                            {c.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                   <Select
@@ -860,7 +789,7 @@ export default function ProductDetailForm({
                   >
                     <SelectTrigger
                       className={cn(
-                        'h-8 w-full min-w-0 rounded-lg border-zinc-200 bg-white',
+                        scanSelectTriggerClassName,
                         (!formData.main_category ||
                           formData.main_category === 'Etc') &&
                           'opacity-50',
@@ -875,84 +804,94 @@ export default function ProductDetailForm({
                         }
                       />
                     </SelectTrigger>
-                    <SelectContent>
-                      {subOptions.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
+                    <SelectContent
+                      position="popper"
+                      sideOffset={6}
+                      className={scanSelectContentClassName}
+                    >
+                      <SelectGroup className="flex flex-col gap-2 p-0">
+                        {subOptions.map((s) => (
+                          <SelectItem
+                            key={s.value}
+                            value={s.value}
+                            className={scanSelectItemClassName}
+                          >
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-              <Image
-                src="/icons/PenNewSquare.svg"
-                alt=""
-                width={24}
-                height={24}
-                unoptimized
-                className="mt-9 shrink-0"
-                aria-hidden
-              />
-            </div>
 
-            <WishFieldRow label="특징">
-              <Input
-                value={formData.features || ''}
-                onChange={(e) => handleChange('features', e.target.value)}
-                placeholder="특징"
-                aria-label="특징"
-              />
-            </WishFieldRow>
+              <div>
+                <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
+                  특징
+                </div>
+                <Input
+                  value={formData.features || ''}
+                  onChange={(e) => handleChange('features', e.target.value)}
+                  placeholder="특징"
+                  aria-label="특징"
+                  className="h-auto min-h-[37px] rounded-[4px] border-[0.5px] border-[#DCDCDC] px-2.5 py-2.5 text-[11px] leading-[150%] font-normal text-[#161618] placeholder:text-[#B7B7B7] focus-visible:border-[#DCDCDC] focus-visible:ring-0"
+                />
+              </div>
 
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <WishFieldLabel>메모</WishFieldLabel>
+              <div>
+                <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
+                  메모
+                </div>
                 <textarea
                   value={formData.memo || ''}
                   maxLength={MEMO_MAX_LEN}
                   onChange={(e) => handleChange('memo', e.target.value)}
-                  placeholder="메모는 최대 60자까지 입력할 수 있습니다."
+                  placeholder="구매처, 가격, 할인 정보 등 잊기 쉬운 것들을 메모해 보세요. (최대 60자)"
                   rows={4}
-                  className="border-mono-gray focus-visible:border-brand-pink w-full resize-none rounded-sm border px-4 py-3 text-sm outline-none placeholder:text-zinc-400 focus-visible:ring-0"
+                  className="focus-visible:border-brand-pink w-full resize-none rounded-[4px] border-[0.5px] border-[#DCDCDC] px-2.5 py-2.5 text-[11px] leading-[150%] font-normal text-[#161618] outline-none placeholder:text-[#6C6C6C]/80 focus-visible:ring-0"
                   aria-label="메모"
                 />
-                <p className="mt-1 text-xs text-zinc-400">
+                <p className="mt-1 text-[11px] text-[#B7B7B7]">
                   {String(formData.memo ?? '').length}/{MEMO_MAX_LEN}
                 </p>
               </div>
-              <Image
-                src="/icons/PenNewSquare.svg"
-                alt=""
-                width={24}
-                height={24}
-                unoptimized
-                className="mt-9 shrink-0"
-                aria-hidden
-              />
-            </div>
 
-            <div>
-              <WishFieldLabel>원본 사진</WishFieldLabel>
-              <button
-                type="button"
-                onClick={() => setShowCapture(true)}
-                className="relative aspect-square w-28 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50"
-              >
-                <Image
-                  src={capturePreviewSrc}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  unoptimized={
-                    capturePreviewSrc.startsWith('data:') ||
-                    capturePreviewSrc.startsWith('blob:') ||
-                    capturePreviewSrc.endsWith('.svg')
+              <div>
+                <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
+                  원본 사진
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (disableManualImageUpload) {
+                      setShowCapture(true);
+                      return;
+                    }
+                    fileInputRef.current?.click();
+                  }}
+                  className={cn(
+                    'relative size-[72px] overflow-hidden rounded-lg border-[0.5px] border-[#DCDCDC] bg-[#F3F3F3]',
+                    !disableManualImageUpload && 'cursor-pointer',
+                  )}
+                  aria-label={
+                    disableManualImageUpload
+                      ? '원본 사진 크게 보기'
+                      : '사진 변경'
                   }
-                />
-              </button>
-              {!disableManualImageUpload ? (
-                <>
+                >
+                  <Image
+                    src={capturePreviewSrc}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    unoptimized={
+                      capturePreviewSrc.startsWith('data:') ||
+                      capturePreviewSrc.startsWith('blob:') ||
+                      capturePreviewSrc.endsWith('.svg')
+                    }
+                  />
+                </button>
+                {!disableManualImageUpload && !isDirectRegisterLayout ? (
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -960,95 +899,272 @@ export default function ProductDetailForm({
                     accept="image/*"
                     className="hidden"
                   />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="mt-2 text-sm font-semibold text-[var(--brand-pink)]"
-                  >
-                    사진 변경
-                  </button>
-                </>
-              ) : null}
+                ) : null}
+              </div>
             </div>
-          </div>
-        )}
-
-        <section className="mt-10 border-t border-zinc-100 pt-6">
-          <WishFieldLabel>연관 리뷰 영상</WishFieldLabel>
-
-          {isYoutubeLoading ? (
-            <Carousel
-              opts={{
-                align: 'start',
-                containScroll: 'trimSnaps',
-              }}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-4">
-                {[1, 2, 3].map((n) => (
-                  <CarouselItem key={n} className="basis-[38%] pl-4">
-                    <div className="h-40 w-full animate-pulse rounded-xl bg-zinc-100" />
-                    <div className="mt-2 h-4 w-3/4 animate-pulse rounded bg-zinc-100" />
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
-          ) : youtubeData?.items && youtubeData.items.length > 0 ? (
-            <Carousel
-              opts={{
-                align: 'start',
-                containScroll: 'trimSnaps',
-              }}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-4">
-                {youtubeData.items.map((video) => (
-                  <CarouselItem
-                    key={video.id.videoId}
-                    className="basis-[38%] pl-4"
-                  >
-                    <a
-                      href={`https://www.youtube.com/watch?v=${video.id.videoId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group block"
-                    >
-                      <div className="relative aspect-video w-full overflow-hidden rounded-xl">
-                        <Image
-                          src={video.snippet.thumbnails.high.url}
-                          alt={video.snippet.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-sm font-semibold text-zinc-900">
-                        {video.snippet.title}
-                      </p>
-                      <p className="text-xs text-zinc-400">
-                        {video.snippet.channelTitle}
-                      </p>
-                    </a>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-            </Carousel>
           ) : (
-            <p className="text-sm text-[var(--mono-dark-gray)]">
-              연관 리뷰 영상을 찾을 수 없어요.
-            </p>
+            <div className="mt-8 space-y-6">
+              <WishFieldRow label="브랜드명">
+                <Input
+                  value={formData.brand_name || ''}
+                  onChange={(e) => handleChange('brand_name', e.target.value)}
+                  placeholder="브랜드명"
+                  aria-label="브랜드명"
+                />
+              </WishFieldRow>
+
+              <WishFieldRow label="제품명">
+                <Input
+                  value={formData.product_name || ''}
+                  onChange={(e) => handleChange('product_name', e.target.value)}
+                  placeholder="제품명"
+                  aria-label="제품명"
+                />
+              </WishFieldRow>
+
+              <WishFieldRow label="가격">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="예: 28000"
+                  value={formData.price || ''}
+                  onChange={(e) => handleChange('price', e.target.value)}
+                  className="text-[var(--brand-pink)] placeholder:text-zinc-300"
+                  aria-label="가격"
+                />
+              </WishFieldRow>
+
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <WishFieldLabel>분류</WishFieldLabel>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select
+                      value={formData.main_category}
+                      onValueChange={handleMainChange}
+                    >
+                      <SelectTrigger
+                        className="h-8 w-full min-w-0 rounded-lg border-zinc-200 bg-white"
+                        aria-label="대분류"
+                      >
+                        <SelectValue placeholder="대분류" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COSMETIC_CATEGORIES.map((c) => (
+                          <SelectItem key={c.value} value={c.value}>
+                            {c.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={formData.sub_category}
+                      onValueChange={(value) =>
+                        handleChange('sub_category', value)
+                      }
+                      disabled={
+                        !formData.main_category ||
+                        formData.main_category === 'Etc'
+                      }
+                    >
+                      <SelectTrigger
+                        className={cn(
+                          'h-8 w-full min-w-0 rounded-lg border-zinc-200 bg-white',
+                          (!formData.main_category ||
+                            formData.main_category === 'Etc') &&
+                            'opacity-50',
+                        )}
+                        aria-label="소분류"
+                      >
+                        <SelectValue
+                          placeholder={
+                            formData.main_category
+                              ? '소분류'
+                              : '대분류를 먼저 선택해 주세요'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subOptions.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <Image
+                  src="/icons/PenNewSquare.svg"
+                  alt=""
+                  width={24}
+                  height={24}
+                  unoptimized
+                  className="mt-9 shrink-0"
+                  aria-hidden
+                />
+              </div>
+
+              <WishFieldRow label="특징">
+                <Input
+                  value={formData.features || ''}
+                  onChange={(e) => handleChange('features', e.target.value)}
+                  placeholder="특징"
+                  aria-label="특징"
+                />
+              </WishFieldRow>
+
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <WishFieldLabel>메모</WishFieldLabel>
+                  <textarea
+                    value={formData.memo || ''}
+                    maxLength={MEMO_MAX_LEN}
+                    onChange={(e) => handleChange('memo', e.target.value)}
+                    placeholder="메모는 최대 60자까지 입력할 수 있습니다."
+                    rows={4}
+                    className="border-mono-gray focus-visible:border-brand-pink w-full resize-none rounded-sm border px-4 py-3 text-sm outline-none placeholder:text-zinc-400 focus-visible:ring-0"
+                    aria-label="메모"
+                  />
+                  <p className="mt-1 text-xs text-zinc-400">
+                    {String(formData.memo ?? '').length}/{MEMO_MAX_LEN}
+                  </p>
+                </div>
+                <Image
+                  src="/icons/PenNewSquare.svg"
+                  alt=""
+                  width={24}
+                  height={24}
+                  unoptimized
+                  className="mt-9 shrink-0"
+                  aria-hidden
+                />
+              </div>
+
+              <div>
+                <WishFieldLabel>원본 사진</WishFieldLabel>
+                <button
+                  type="button"
+                  onClick={() => setShowCapture(true)}
+                  className="relative aspect-square w-28 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50"
+                >
+                  <Image
+                    src={capturePreviewSrc}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    unoptimized={
+                      capturePreviewSrc.startsWith('data:') ||
+                      capturePreviewSrc.startsWith('blob:') ||
+                      capturePreviewSrc.endsWith('.svg')
+                    }
+                  />
+                </button>
+                {!disableManualImageUpload ? (
+                  <>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mt-2 text-sm font-semibold text-[var(--brand-pink)]"
+                    >
+                      사진 변경
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </div>
           )}
-        </section>
+
+          {!isDirectRegisterLayout ? (
+            <section className="mt-10 border-t border-zinc-100 pt-6">
+              <WishFieldLabel>연관 리뷰 영상</WishFieldLabel>
+
+              {isYoutubeLoading ? (
+                <Carousel
+                  opts={{
+                    align: 'start',
+                    containScroll: 'trimSnaps',
+                  }}
+                  className="w-full"
+                >
+                  <CarouselContent className="-ml-4">
+                    {[1, 2, 3].map((n) => (
+                      <CarouselItem key={n} className="basis-[38%] pl-4">
+                        <div className="h-40 w-full animate-pulse rounded-xl bg-zinc-100" />
+                        <div className="mt-2 h-4 w-3/4 animate-pulse rounded bg-zinc-100" />
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                </Carousel>
+              ) : youtubeData?.items && youtubeData.items.length > 0 ? (
+                <Carousel
+                  opts={{
+                    align: 'start',
+                    containScroll: 'trimSnaps',
+                  }}
+                  className="w-full"
+                >
+                  <CarouselContent className="-ml-4">
+                    {youtubeData.items.map((video) => (
+                      <CarouselItem
+                        key={video.id.videoId}
+                        className="basis-[38%] pl-4"
+                      >
+                        <a
+                          href={`https://www.youtube.com/watch?v=${video.id.videoId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group block"
+                        >
+                          <div className="relative aspect-video w-full overflow-hidden rounded-xl">
+                            <Image
+                              src={video.snippet.thumbnails.high.url}
+                              alt={video.snippet.title}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <p className="mt-2 line-clamp-2 text-sm font-semibold text-zinc-900">
+                            {video.snippet.title}
+                          </p>
+                          <p className="text-xs text-zinc-400">
+                            {video.snippet.channelTitle}
+                          </p>
+                        </a>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                </Carousel>
+              ) : (
+                <p className="text-sm text-[var(--mono-dark-gray)]">
+                  연관 리뷰 영상을 찾을 수 없어요.
+                </p>
+              )}
+            </section>
+          ) : null}
+        </div>
       </div>
 
       <div className="pointer-events-none fixed right-[20px] bottom-20 left-[20px] z-40 flex justify-center">
-        <div className="pointer-events-auto w-full max-w-120">
+        <div
+          className={cn(
+            'pointer-events-auto w-full',
+            isDirectRegisterLayout ? 'max-w-[440px]' : 'max-w-120',
+          )}
+        >
           <button
             type="button"
             onClick={() => void handleSaveClick()}
             disabled={isSubmitting}
             className={cn(
               'h-12 w-full transition-opacity disabled:opacity-60',
-              isScanEditLayout
+              isScanEditLayout || isDirectRegisterLayout
                 ? 'h-14 rounded-full bg-[#FF93DB] text-base font-bold text-[#161618] shadow-none'
                 : 'rounded-2xl bg-[var(--brand-pink)] text-base font-bold text-white shadow-[0_8px_24px_rgba(255,96,202,0.35)]',
             )}
