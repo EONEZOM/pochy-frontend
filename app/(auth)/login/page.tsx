@@ -144,74 +144,69 @@ function LoginContent() {
   };
 
   return (
-    <div className="relative h-[calc(100dvh-56px-var(--safe-area-bottom))] w-full overflow-hidden bg-white">
-      {/* 배경 일러스트 (Figma absolute) */}
-      <div className="pointer-events-none absolute inset-0 md:origin-top lg:scale-[1.1]">
-        {/* 뒤 배경 지퍼 */}
+    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-white">
+      {/* 배경 일러스트 — 스케일 없이 영역 안에서만 잘림 */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <Image
           src="/figma/login/bg-zip.svg"
           alt=""
           width={525}
           height={69}
-          className="absolute top-0 left-0 h-auto w-full object-cover md:top-[-80px] md:left-[19px] md:h-[150px] md:w-[74px] lg:top-[500px] lg:left-[24px] lg:h-[136px] lg:w-[67px]"
+          className="absolute top-[-20px] left-0 h-auto w-full object-cover"
           unoptimized
           priority
         />
-        {/* 블러셔 */}
         <Image
           src="/figma/login/hero-4.png"
           alt=""
           width={269}
           height={189}
-          className="absolute top-[260px] left-[-85px] h-[170px] w-[269px] rotate-[-20deg] object-cover md:top-[280px] md:left-[-70px] md:h-[180px] md:w-[285px] lg:top-[300px] lg:left-[-56px] lg:h-[190px] lg:w-[300px]"
+          className="absolute top-[min(32dvh,260px)] left-[-85px] h-[min(42vw,170px)] w-[min(72vw,269px)] max-w-none rotate-[-20deg] object-cover sm:left-[-70px]"
           unoptimized
           priority
         />
-        {/* 지퍼 */}
         <Image
           src="/figma/login/sticker.svg"
           alt=""
           width={74}
           height={122}
-          className="absolute top-[475px] left-[19px] h-[150px] w-[74px] object-cover md:top-[500px] md:left-[24px] md:h-[136px] md:w-[67px] lg:top-[520px] lg:left-[30px] lg:h-[128px] lg:w-[64px]"
+          className="absolute top-[min(100dvh,530px)] left-[19px] h-[min(38vw,150px)] w-[min(22vw,74px)] object-cover sm:left-5"
           unoptimized
           priority
         />
-        {/* 팩트 */}
         <Image
           src="/figma/login/hero-3.png"
           alt=""
           width={400}
           height={250}
-          className="absolute top-[0px] right-[-150px] h-[220px] w-[400px] object-cover md:top-[16px] md:right-[-130px] md:h-[230px] md:w-[420px] lg:top-[24px] lg:right-[-116px] lg:h-[240px] lg:w-[440px]"
+          className="absolute top-0 right-[-min(42vw,150px)] h-[min(58vw,220px)] w-[min(110vw,400px)] object-cover sm:right-[-130px]"
           unoptimized
           priority
         />
-        {/* 립스틱 */}
         <Image
           src="/figma/login/hero-2.png"
           alt=""
           width={431}
           height={350}
-          className="absolute top-[350px] right-[-120px] h-[170px] w-[431px] rotate-[30deg] object-cover md:top-[372px] md:right-[-104px] md:h-[176px] md:w-[446px] lg:top-[392px] lg:right-[-90px] lg:h-[184px] lg:w-[460px]"
+          className="absolute top-[min(42dvh,350px)] right-[-min(32vw,120px)] h-[min(48vw,170px)] w-[min(120vw,431px)] rotate-[30deg] object-cover sm:right-[-104px]"
           unoptimized
           priority
         />
       </div>
 
-      <main className="relative mx-auto flex h-full w-full max-w-[360px] flex-col overflow-hidden px-5 pt-[var(--safe-area-top)] pb-8 md:origin-top md:scale-[1.06] lg:scale-[1.1]">
-        <div className="0 mx-auto mt-40 w-fit">
+      <main className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-[360px] flex-1 flex-col justify-between px-5 pt-[max(1rem,var(--safe-area-top))] pb-[max(1.25rem,var(--safe-area-bottom))]">
+        <div className="mx-auto flex w-full shrink-0 flex-col items-center pt-20 sm:pt-30">
           <Image
             src={mainLogo}
-            alt="main-logo"
-            width={120}
-            height={80}
-            className="h-[190px] w-[230px]"
+            alt="POCHY"
+            width={144}
+            height={96}
+            className="h-auto w-[min(200px,52vw)] object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
             priority
           />
         </div>
 
-        <div className="mt-auto w-full shrink-0">
+        <div className="w-full shrink-0 pt-6">
           <div className="mx-auto flex w-full max-w-[319px] flex-col gap-4">
             <BottomSheet
               trigger={
@@ -299,7 +294,7 @@ export default function Home() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-[calc(100dvh-56px-var(--safe-area-bottom))] flex-col items-center justify-center overflow-hidden bg-white">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-white px-5 py-16">
           <p className="text-sm text-zinc-500">확인 중...</p>
         </div>
       }

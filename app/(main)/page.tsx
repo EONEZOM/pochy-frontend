@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Suspense } from 'react';
 import { AxiosError } from 'axios';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { HomeSectionCarousel } from '@/components/main/HomeSectionCarousel';
 import { MainHomeListHeader } from '@/components/main/MainHomeListHeader';
 import { MainHomeEmptyView } from '@/components/main/MainHomeEmptyView';
@@ -122,6 +122,7 @@ function MainHomeListView({
 
 function MainPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [isNicknameModalDismissed, setIsNicknameModalDismissed] =
     React.useState(false);
@@ -133,6 +134,21 @@ function MainPageContent() {
     string | null
   >(null);
   const nicknameInputRef = React.useRef<HTMLInputElement>(null);
+  const setupNicknameHandledRef = React.useRef(false);
+
+  /** `/success` 이후 `/?setupNickname=1` — 닉네임 모달을 열고 쿼리는 바로 정리 */
+  React.useEffect(() => {
+    if (searchParams.get('setupNickname') !== '1') {
+      return;
+    }
+    if (setupNicknameHandledRef.current) {
+      return;
+    }
+    setupNicknameHandledRef.current = true;
+    setIsNicknameModalDismissed(false);
+    router.replace('/', { scroll: false });
+  }, [router, searchParams]);
+
   const {
     data: homeResponse,
     isLoading: isHomeLoading,

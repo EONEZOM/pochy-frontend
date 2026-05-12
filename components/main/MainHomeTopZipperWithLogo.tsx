@@ -17,14 +17,6 @@ export function MainHomeTopZipperWithLogo() {
         sizes="(max-width: 480px) 100vw, 480px"
         priority
       />
-      <Image
-        src="/figma/main/윗지퍼찍찍.svg"
-        alt=""
-        fill
-        unoptimized
-        className="object-cover object-bottom"
-        sizes="(max-width: 480px) 100vw, 480px"
-      />
       <div className="absolute inset-0 flex items-center justify-center px-4 pt-1 pb-5">
         <Image
           src="/figma/login/hero-1.svg"
