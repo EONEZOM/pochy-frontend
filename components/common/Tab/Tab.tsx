@@ -29,17 +29,17 @@ export const Tab = memo(
     scrollable = false,
     className,
   }: TabProps) => {
-    const {
-      registerRef,
-      onDragStart,
-      onDragMove,
-      onDragEnd,
-      checkIsClickForbidden,
-    } = useDragScroll();
+    const { registerRef, onDragStart, isDrag, checkIsClickForbidden } =
+      useDragScroll();
 
     const containerClass = cn(
       'flex',
-      scrollable ? 'overflow-x-auto scrollbar-hide select-none' : 'flex-wrap',
+      scrollable
+        ? cn(
+            'scrollbar-hide select-none overflow-x-auto',
+            isDrag ? 'cursor-grabbing' : 'cursor-grab',
+          )
+        : 'flex-wrap',
       variant === 'underline' && [
         'gap-6',
         bordered
@@ -54,9 +54,6 @@ export const Tab = memo(
       ? {
           ref: registerRef,
           onMouseDown: onDragStart,
-          onMouseMove: onDragMove,
-          onMouseUp: onDragEnd,
-          onMouseLeave: onDragEnd,
         }
       : {};
 

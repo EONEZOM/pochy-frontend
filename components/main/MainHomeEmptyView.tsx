@@ -76,7 +76,7 @@ export function MainHomeEmptyView() {
             className="mx-auto grid w-full max-w-full grid-cols-2 gap-x-3 gap-y-10 sm:gap-x-8 sm:gap-y-14"
             aria-label="빈 홈 빠른 이동"
           >
-            {EMPTY_NAV_TILES.map((tile) => (
+            {EMPTY_NAV_TILES.map((tile, tileIndex) => (
               <Link
                 key={tile.href}
                 href={tile.href}
@@ -96,6 +96,10 @@ export function MainHomeEmptyView() {
                     fill
                     sizes="(max-width: 640px) 38vw, 156px"
                     unoptimized
+                    priority={tileIndex < 2}
+                    loading={tileIndex < 3 ? 'eager' : 'lazy'}
+                    {...(tileIndex === 0 ? { fetchPriority: 'high' as const } : {})}
+                    decoding="async"
                     className="object-contain p-1"
                   />
                 </span>

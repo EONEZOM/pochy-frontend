@@ -12,9 +12,11 @@ import { cn } from '@/lib/utils';
  * 앱 레이아웃 셸(`max-w-120` · `layout.tsx`와 동일) 안에서만 덮음.
  * `WishScanAnalyzeLoading`과 동일: `fixed` + 가운데 정렬 컬럼, `bottom-14`로 하단 내비 구역 비움.
  * 카트 탭 → `/wish/register/scan`
+ * 카트 일러스트 위에 `public/icons/touch.svg` 터치 유도 오버레이
  */
 
 const CART_SRC = '/figma/wish/카트.svg';
+const TOUCH_HINT_SRC = '/icons/touch.svg';
 
 export function WishlistEmptyView() {
   return (
@@ -55,6 +57,20 @@ export function WishlistEmptyView() {
             className="pointer-events-none h-auto w-full object-contain drop-shadow-[0_6px_20px_rgba(255,96,202,0.25)]"
             priority
           />
+
+          <div
+            className="pointer-events-none absolute top-[50%] left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 select-none"
+            aria-hidden
+          >
+            <Image
+              src={TOUCH_HINT_SRC}
+              alt=""
+              width={70}
+              height={90}
+              unoptimized
+              className="pointer-events-none h-auto w-40 max-w-[min(18vw,72px)] object-contain"
+            />
+          </div>
         </Link>
       </div>
     </div>

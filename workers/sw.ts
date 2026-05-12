@@ -13,7 +13,38 @@ declare global {
 }
 
 declare const self: ServiceWorkerGlobalScope;
-  
+
+/**
+ * 1×1 투명 PNG — 교차 출처 이미지 요청이 SW 안에서 실패할 때 Workbox `no-response` 대신 반환.
+ * (COEP·CORS·오프라인 등으로 `fetch`가 깨져도 SW가 거부 Promise를 던지지 않게 함)
+ */
+const TRANSPARENT_PNG = new Uint8Array([
+  137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0,
+  0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 10, 73, 68, 65, 84, 120, 156,
+  99, 0, 1, 0, 0, 5, 0, 1, 13, 10, 45, 180, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66,
+  96, 130,
+]);
+
+/** `defaultCache`보다 먼저 매칭 — 외부 오리진은 캐시 전략을 섞지 않고 네트워크만 시도 */
+const crossOriginNetworkOnly = new NetworkOnly({
+  plugins: [
+    {
+      handlerDidError: async ({ request }) => {
+        if (request.destination === "image") {
+          return new Response(TRANSPARENT_PNG, {
+            status: 200,
+            headers: {
+              "Content-Type": "image/png",
+              "Cache-Control": "no-store",
+            },
+          });
+        }
+        return new Response(null, { status: 204 });
+      },
+    },
+  ],
+});
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
@@ -33,6 +64,10 @@ const serwist = new Serwist({
           },
         ],
       }),
+    },
+    {
+      matcher: ({ url }) => url.origin !== self.location.origin,
+      handler: crossOriginNetworkOnly,
     },
     ...defaultCache,
   ],

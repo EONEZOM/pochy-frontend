@@ -99,13 +99,14 @@ function MainHomeListView({
         </div>
 
         <div className="relative z-20 mx-auto mt-6 w-full max-w-[360px] shrink-0 space-y-8 pb-4">
-          {sections.map((section) => (
+          {sections.map((section, sectionIndex) => (
             <section key={section.title}>
               <h2 className="text-[18px] leading-6 font-bold text-[#161618]">
                 {section.title}
               </h2>
               <div className="mt-3">
                 <HomeSectionCarousel
+                  sectionIndex={sectionIndex}
                   sectionTitle={section.title}
                   showSkeleton={showSkeleton}
                   items={section.items}

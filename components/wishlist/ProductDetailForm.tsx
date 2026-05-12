@@ -508,7 +508,7 @@ export default function ProductDetailForm({
                   className="mt-px shrink-0"
                   aria-hidden
                 />
-                <p className="text-[11px] leading-[150%] font-normal text-[#FF60CA]">
+                <p className="whitespace-pre-line text-[11px] leading-[150%] font-normal text-[#FF60CA]">
                   {SCAN_EDIT_AI_BANNER_COPY}
                 </p>
               </div>
