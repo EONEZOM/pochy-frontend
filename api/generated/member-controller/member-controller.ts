@@ -25,8 +25,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ApiResponseDTOProfileDto,
   ApiResponseDTOString,
-  NicknameRequest
+  NicknameRequest,
+  UpdateMyProfileBody
 } from '../../model';
 
 import { customInstance } from '../../axios-instance';
@@ -36,6 +38,229 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 
+/**
+ * 마이 프로필 정보를 조회합니다.
+ * @summary 마이 프로필 조회
+ */
+export const getMyProfile = (
+
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ApiResponseDTOProfileDto>(
+      {url: `/api/member`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetMyProfileQueryKey = () => {
+    return [
+    `/api/member`
+    ] as const;
+    }
+
+
+export const getGetMyProfileQueryOptions = <TData = Awaited<ReturnType<typeof getMyProfile>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyProfile>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyProfile>>> = ({ signal }) => getMyProfile(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyProfile>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMyProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getMyProfile>>>
+export type GetMyProfileQueryError = unknown
+
+
+export function useGetMyProfile<TData = Awaited<ReturnType<typeof getMyProfile>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyProfile>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getMyProfile>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyProfile<TData = Awaited<ReturnType<typeof getMyProfile>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyProfile>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getMyProfile>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMyProfile<TData = Awaited<ReturnType<typeof getMyProfile>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyProfile>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary 마이 프로필 조회
+ */
+
+export function useGetMyProfile<TData = Awaited<ReturnType<typeof getMyProfile>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyProfile>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMyProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+/**
+ * 마이 프로필에서 프로필 사진, 닉네임, 이메일을 수정할 수 있습니다.
+ * @summary 마이 프로필 수정
+ */
+export const updateMyProfile = (
+    updateMyProfileBody?: UpdateMyProfileBody,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ApiResponseDTOString>(
+      {url: `/api/member`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: updateMyProfileBody, signal
+    },
+      options);
+    }
+
+
+
+export const getUpdateMyProfileMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyProfile>>, TError,{data?: UpdateMyProfileBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMyProfile>>, TError,{data?: UpdateMyProfileBody}, TContext> => {
+
+const mutationKey = ['updateMyProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMyProfile>>, {data?: UpdateMyProfileBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMyProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMyProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateMyProfile>>>
+    export type UpdateMyProfileMutationBody = UpdateMyProfileBody | undefined
+    export type UpdateMyProfileMutationError = unknown
+
+    /**
+ * @summary 마이 프로필 수정
+ */
+export const useUpdateMyProfile = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyProfile>>, TError,{data?: UpdateMyProfileBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateMyProfile>>,
+        TError,
+        {data?: UpdateMyProfileBody},
+        TContext
+      > => {
+      return useMutation(getUpdateMyProfileMutationOptions(options), queryClient);
+    }
+    /**
+ * 회원 탈퇴를 진행합니다. isActive를 false로 변경합니다
+ * @summary 회원 탈퇴
+ */
+export const withdraw = (
+
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ApiResponseDTOString>(
+      {url: `/api/member/withdraw`, method: 'PATCH', signal
+    },
+      options);
+    }
+
+
+
+export const getWithdrawMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof withdraw>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof withdraw>>, TError,void, TContext> => {
+
+const mutationKey = ['withdraw'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof withdraw>>, void> = () => {
+
+
+          return  withdraw(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WithdrawMutationResult = NonNullable<Awaited<ReturnType<typeof withdraw>>>
+
+    export type WithdrawMutationError = unknown
+
+    /**
+ * @summary 회원 탈퇴
+ */
+export const useWithdraw = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof withdraw>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof withdraw>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getWithdrawMutationOptions(options), queryClient);
+    }
+    /**
+ * 닉네임을 수정합니다.
+ * @summary 닉네임 수정
+ */
 export const updateNickname = (
     nicknameRequest: NicknameRequest,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
@@ -83,7 +308,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateNicknameMutationBody = NicknameRequest
     export type UpdateNicknameMutationError = unknown
 
-    export const useUpdateNickname = <TError = unknown,
+    /**
+ * @summary 닉네임 수정
+ */
+export const useUpdateNickname = <TError = unknown,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateNickname>>, TError,{data: NicknameRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateNickname>>,
@@ -93,7 +321,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getUpdateNicknameMutationOptions(options), queryClient);
     }
-    export const autoNickname = (
+    /**
+ * 닉네임을 랜덤으로 생성합니다.
+ * @summary 닉네임 랜덤 생성
+ */
+export const autoNickname = (
 
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
@@ -161,6 +393,9 @@ export function useAutoNickname<TData = Awaited<ReturnType<typeof autoNickname>>
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof autoNickname>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary 닉네임 랜덤 생성
+ */
 
 export function useAutoNickname<TData = Awaited<ReturnType<typeof autoNickname>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof autoNickname>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}

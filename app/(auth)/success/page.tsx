@@ -1,29 +1,59 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
-import mainLogo from '@/public/logo/main-logo.png';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 
+const SUCCESS_GRADIENT_BG =
+  'linear-gradient(180deg, #FFFFFF 0%, #FFF5FC 42%, #FFC6EC 100%)';
+
+/** 완료 화면을 보여 준 뒤 홈(닉네임 설정)으로 넘기기까지 (ms) */
+const SUCCESS_DISPLAY_MS = 1400;
+
+/**
+ * 첫 로그인 직후 완료 화면 (매직링크·소셜 로그인 후 `/success`)
+ * Figma: `포치 임시` — 체크 완료 (1:2668), `public/icons/check.svg`만 사용
+ * https://www.figma.com/design/ozRGHFE4rnqkqnikqCh7Pg/%ED%8F%AC%EC%B9%98-%EC%9E%84%EC%8B%9C?node-id=1-2668
+ *
+ * 잠시 노출 후 닉네임 설정을 위해 `/?setupNickname=1`로 자동 이동합니다.
+ */
 export default function AuthSuccessPage() {
+  const router = useRouter();
+  const didScheduleRef = useRef(false);
+
+  useEffect(() => {
+    if (didScheduleRef.current) {
+      return;
+    }
+    didScheduleRef.current = true;
+    const id = window.setTimeout(() => {
+      router.replace('/?setupNickname=1');
+    }, SUCCESS_DISPLAY_MS);
+    return () => window.clearTimeout(id);
+  }, [router]);
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-white px-6">
-      <h1 className="text-2xl font-bold text-zinc-900">로그인 완료</h1>
-      <p className="mt-3 text-sm text-zinc-600">
-        반가워요! 당신의 포치가 만들어졌어요.
-      </p>
-      <Image
-        src={mainLogo}
-        alt="main-logo"
-        width={200}
-        height={200}
-        className="mx-auto mt-10 mb-10"
-      />
-      <Link
-        href="/?setupNickname=1"
-        className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-zinc-900 px-5 text-sm font-semibold text-white"
-      >
-        메인으로 이동
-      </Link>
+    <main
+      className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden px-6 pt-[max(2.5rem,var(--safe-area-top))] pb-[max(2rem,var(--safe-area-bottom))]"
+      style={{ background: SUCCESS_GRADIENT_BG }}
+    >
+      <div className="mx-auto flex w-full max-w-[320px] flex-1 flex-col items-center justify-center text-center">
+        <Image
+          src="/icons/check.svg"
+          alt="완료"
+          width={63}
+          height={63}
+          className="size-[100px] shrink-0 object-contain"
+          unoptimized
+          priority
+        />
+        <h1 className="text-mono-jet mt-8 text-xl leading-7 font-bold">
+          회원가입 완료
+        </h1>
+        <p className="text-mono-dark-gray mt-2 text-sm leading-relaxed font-normal">
+          잠시 후 닉네임을 설정할게요.
+        </p>
+      </div>
     </main>
   );
 }

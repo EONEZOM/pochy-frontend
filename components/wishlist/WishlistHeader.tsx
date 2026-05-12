@@ -1,125 +1,95 @@
 'use client';
-
-/**
- * 위시리스트 헤더 컴포넌트
- *
- * 검색 UX 패턴:
- *   isSearchOpen 상태로 타이틀 헤더 ↔ 검색 헤더를 토글합니다.
- *   검색어는 URL searchParams(?q=)에 동기화되어,
- *   useReadWishCosmeticsList의 keyword 파라미터로 서버 검색이 수행됩니다.
- *   검색창을 닫으면 q 파라미터를 삭제해 자동으로 전체 목록이 복원됩니다.
- *
- * 내 화장품의 MyCosmeticsHeader도 동일한 패턴을 따릅니다.
- */
-
-import { useState } from 'react';
+import Image from 'next/image';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Header } from '@/components/layout/Header';
-import { ExtraNav } from '@/components/common/ExtraNav';
+import Input from '@/components/common/Input/Input';
+import { useDebounce } from '@/hooks/useDebounce';
 
 export function WishlistHeader() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const queryFromUrl = searchParams.get('q') || '';
+  const [localSearchQuery, setLocalSearchQuery] = useState(queryFromUrl);
+  const debouncedSearchQuery = useDebounce(localSearchQuery, 350);
 
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [localSearchQuery, setLocalSearchQuery] = useState(
-    searchParams.get('q') || '',
+  const updateSearchQuery = useCallback(
+    (value: string) => {
+      const normalized = value.trim();
+      const currentQuery = searchParams.get('q') || '';
+      if (normalized === currentQuery) {
+        return;
+      }
+      const params = new URLSearchParams(searchParams.toString());
+      if (normalized) {
+        params.set('q', normalized);
+      } else {
+        params.delete('q');
+      }
+      const queryString = params.toString();
+      router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
+        scroll: false,
+      });
+    },
+    [pathname, router, searchParams],
   );
 
-  const replaceWithParams = (params: URLSearchParams) => {
-    const queryString = params.toString();
-    router.replace(queryString ? `${pathname}?${queryString}` : pathname, {
-      scroll: false,
-    });
-  };
+  useEffect(() => {
+    updateSearchQuery(debouncedSearchQuery);
+  }, [debouncedSearchQuery, updateSearchQuery]);
 
-  const executeSearch = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value.trim()) {
-      params.set('q', value.trim());
-    } else {
-      params.delete('q');
-    }
-    replaceWithParams(params);
-  };
-
-  const handleSort = (sort: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('sort', sort);
-    replaceWithParams(params);
-  };
-
-  const filterTrigger = (
-    <button type="button">
-      <img src="/icons/filter.svg" alt="필터" width={24} height={24} />
-    </button>
-  );
-
-  const handleClose = () => {
-    setIsSearchOpen(false);
-    executeSearch('');
-  };
-
-  if (isSearchOpen) {
-    return (
-      <Header
-        variant="search"
-        sticky
-        onSearch={() => executeSearch(localSearchQuery)}
-        onBack={handleClose}
-        searchProps={{
-          placeholder: '제품명 또는 브랜드 검색',
-          autoFocus: true,
-          value: localSearchQuery,
-          onChange: (e) => setLocalSearchQuery(e.target.value),
-          onKeyDown: (e) => {
-            if (e.key === 'Escape') handleClose();
-          },
-        }}
-        right={
-          <ExtraNav
-            side="bottom"
-            align="end"
-            trigger={filterTrigger}
-            items={[
-              { label: '최신순', onClick: () => handleSort('latest') },
-              { label: '오래된순', onClick: () => handleSort('oldest') },
-              { label: '가격 높은순', onClick: () => handleSort('price-desc') },
-              { label: '가격 낮은순', onClick: () => handleSort('price-asc') },
-            ]}
-          />
-        }
-      />
-    );
-  }
+  /** 브라우저 뒤로가기·외부 링크 등으로 `q`만 바뀐 경우 입력값과 맞춥니다. */
+  useEffect(() => {
+    setLocalSearchQuery(queryFromUrl);
+  }, [queryFromUrl]);
 
   return (
-    <Header
-      title="위시리스트"
-      sticky
-      rightIcons={[
-        {
-          kind: 'search',
-          onClick: () => {
-            setLocalSearchQuery(searchParams.get('q') || '');
-            setIsSearchOpen(true);
-          },
-        },
-      ]}
-      right={
-        <ExtraNav
-          side="bottom"
-          align="end"
-          trigger={filterTrigger}
-          items={[
-            { label: '최신순', onClick: () => handleSort('latest') },
-            { label: '오래된순', onClick: () => handleSort('oldest') },
-            { label: '가격 높은순', onClick: () => handleSort('price-desc') },
-            { label: '가격 낮은순', onClick: () => handleSort('price-asc') },
-          ]}
-        />
-      }
-    />
+    <div className="sticky top-0 z-30 bg-white/95 px-3 pt-3 pb-2 backdrop-blur-sm">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="flex size-10 shrink-0 items-center justify-center text-zinc-900"
+          aria-label="뒤로 가기"
+          onClick={() => router.back()}
+        >
+          <Image
+            src="/icons/back.svg"
+            alt=""
+            width={24}
+            height={24}
+            unoptimized
+          />
+        </button>
+        <div className="min-w-0 flex-1">
+          <Input
+            type="search"
+            placeholder="검색"
+            value={localSearchQuery}
+            onChange={(e) => {
+              setLocalSearchQuery(e.target.value);
+            }}
+            className="h-11 rounded-lg border-zinc-700 bg-transparent px-4 py-2 text-sm"
+            rightElement={
+              <button
+                type="button"
+                aria-label="검색"
+                className="text-zinc-700"
+                onClick={() => {
+                  updateSearchQuery(localSearchQuery);
+                }}
+              >
+                <Image
+                  src="/icons/search.svg"
+                  alt="돋보기아이콘"
+                  width={24}
+                  height={24}
+                  unoptimized
+                />
+              </button>
+            }
+          />
+        </div>
+      </div>
+    </div>
   );
 }

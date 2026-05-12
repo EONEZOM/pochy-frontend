@@ -5,7 +5,9 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
+import type { Member } from './member';
 
 export type RequestMagicLinkParams = {
 email: string;
+member: Member;
 };

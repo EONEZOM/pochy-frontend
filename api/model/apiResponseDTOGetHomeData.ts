@@ -11,4 +11,5 @@ export interface ApiResponseDTOGetHomeData {
   code?: string;
   message?: string;
   result?: GetHomeData;
+  success?: boolean;
 }

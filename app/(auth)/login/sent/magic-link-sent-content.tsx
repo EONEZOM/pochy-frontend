@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/common/Button';
+import type { RequestMagicLinkParams } from '@/api/model';
 import { useRequestMagicLink } from '@/api/generated/login-controller/login-controller';
 import { Header } from '@/components/layout/Header';
 
@@ -71,7 +72,7 @@ export function MagicLinkSentContent() {
       alert('올바른 이메일 형식이 아니에요. 다시 로그인해 주세요.');
       return;
     }
-    requestMagicLink({ params: { email } });
+    requestMagicLink({ params: { email } as RequestMagicLinkParams });
   };
 
   if (!email) {

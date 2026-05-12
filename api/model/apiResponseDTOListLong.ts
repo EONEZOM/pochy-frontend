@@ -10,4 +10,5 @@ export interface ApiResponseDTOListLong {
   code?: string;
   message?: string;
   result?: number[];
+  success?: boolean;
 }

@@ -63,6 +63,8 @@ type HeaderRightIconBase = {
   onClick?: () => void;
   className?: string;
   text?: string;
+  /** `register` 등 텍스트 버튼 왼쪽 아이콘 (`public` 기준 경로, 예: `/icons/PenNewSquare.svg`) */
+  iconSrc?: string;
 };
 
 export type HeaderRightIcons = HeaderRightIconBase[];
@@ -213,7 +215,21 @@ export default function Header({
           const isRegister = item.kind === 'register';
           const content =
             isRegister && item.text ? (
-              <span className="text-sm font-semibold">{item.text}</span>
+              item.iconSrc ? (
+                <span className="flex items-center gap-1.5">
+                  <Image
+                    src={item.iconSrc}
+                    alt=""
+                    width={18}
+                    height={18}
+                    unoptimized
+                    className="shrink-0"
+                  />
+                  <span className="text-sm font-semibold">{item.text}</span>
+                </span>
+              ) : (
+                <span className="text-sm font-semibold">{item.text}</span>
+              )
             ) : (
               config.element
             );

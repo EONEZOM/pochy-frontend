@@ -115,10 +115,22 @@ export async function DELETE(request: NextRequest) {
     : BACKEND_URL;
 
   try {
-    const response = await fetch(targetUrl, {
+    const headers = forwardHeaders(request);
+    const init: RequestInit = {
       method: 'DELETE',
-      headers: forwardHeaders(request),
-    });
+      headers,
+    };
+
+    // 일괄 삭제: 클라이언트가 `DeleteDto` JSON 본문을 보냅니다. 본문을 그대로 백엔드로 전달해야 합니다.
+    if (!wishCosmeticsId) {
+      const payload = await request.text();
+      if (payload.length > 0) {
+        headers.set('Content-Type', 'application/json');
+        init.body = payload;
+      }
+    }
+
+    const response = await fetch(targetUrl, init);
     return parseResponse(response);
   } catch (error) {
     console.error('[wish-cosmetics][DELETE] proxy error:', error);

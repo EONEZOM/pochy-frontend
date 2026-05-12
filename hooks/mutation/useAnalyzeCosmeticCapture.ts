@@ -15,6 +15,22 @@
 import { useMutation } from '@tanstack/react-query'
 import { convertBlobToBase64, resizeImageFile } from '@/utils/image-utils'
 
+const normalizeNaverLowestPrice = (value: unknown): string | number => {
+  if (value == null || value === '') {
+    return '';
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  const raw = String(value).trim();
+  if (raw === '' || raw === '정보 없음') {
+    return '';
+  }
+  const cleaned = raw.replace(/,/g, '').replace(/원/g, '').trim();
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : '';
+};
+
 export const useAnalyzeCosmeticCapture = () => {
   return useMutation({
     mutationFn: async (imageFiles: File[]) => {
@@ -42,7 +58,7 @@ export const useAnalyzeCosmeticCapture = () => {
       const data = await res.json()
 
       const filteredResults = (data.results ?? []).filter(
-        (item: any) => item.is_cosmetic === true,
+        (item: Record<string, unknown>) => item.is_cosmetic === true,
       )
 
       // Promise.all 병렬 요청은 Naver 레이트 리밋에 걸려 일부가 조용히 실패합니다.
@@ -77,8 +93,11 @@ export const useAnalyzeCosmeticCapture = () => {
           ...item,
           image_url: sourceFile ? URL.createObjectURL(sourceFile) : '',
           official_image: searchData.official_image || null,
-          price: searchData.lowest_price || '정보 없음',
+          price: normalizeNaverLowestPrice(searchData.lowest_price),
           link: searchData.mall_url || '',
+          ...(sourceFile instanceof File
+            ? { captureSourceFile: sourceFile }
+            : {}),
         })
       }
 

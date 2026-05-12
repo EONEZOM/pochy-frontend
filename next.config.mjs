@@ -14,6 +14,29 @@ if (!apiBase) {
   throw new Error('NEXT_PUBLIC_API_URL or OPENAPI_BASE_URL is required');
 }
 
+/** `.env` 의 API 오리진을 이미지 최적화 허용 목록에 넣습니다 (`resolveMediaUrl` 과 대응). */
+function tryRemotePatternFromApiBase(base) {
+  if (!base || !/^https?:\/\//i.test(base)) {
+    return null;
+  }
+  try {
+    const u = new URL(base);
+    const pattern = {
+      protocol: u.protocol.replace(':', ''),
+      hostname: u.hostname,
+      pathname: '/**',
+    };
+    if (u.port) {
+      pattern.port = u.port;
+    }
+    return pattern;
+  } catch {
+    return null;
+  }
+}
+
+const apiOriginRemotePattern = tryRemotePatternFromApiBase(apiBase);
+
 const nextConfig = {
   // Turbopack is the default in Next.js 16. Keep this key to avoid
   // "webpack config with no turbopack config" build errors.
@@ -112,6 +135,7 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      ...(apiOriginRemotePattern ? [apiOriginRemotePattern] : []),
     ],
   },
 

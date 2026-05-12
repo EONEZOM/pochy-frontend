@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import {
   Popover,
   PopoverContent,
@@ -10,8 +11,10 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
 
 export interface ExtraNavItem {
+  key?: string;
   label: string;
   href?: string;
   onClick?: () => void;
@@ -25,6 +28,10 @@ interface ExtraNavProps {
   align?: 'start' | 'center' | 'end';
   side?: 'top' | 'bottom' | 'left' | 'right';
   className?: string;
+  selectedKey?: string;
+  dimBackdrop?: boolean;
+  /** 메뉴(+) 열림 여부 — 부모에서 오버레이·말풍선 등과 동기화할 때 사용 */
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function ExtraNav({
@@ -34,20 +41,118 @@ export function ExtraNav({
   align = 'end',
   side = 'top',
   className,
+  selectedKey,
+  dimBackdrop = false,
+  onOpenChange,
 }: ExtraNavProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  useEffect(() => {
+    onOpenChange?.(isOpen);
+  }, [isOpen, onOpenChange]);
+
+  const shouldRenderBackdrop = dimBackdrop && isOpen;
+  const backdrop =
+    shouldRenderBackdrop && typeof window !== 'undefined'
+      ? createPortal(
+          <button
+            type="button"
+            aria-label="메뉴 닫기"
+            className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[1px]"
+            onClick={() => setIsOpen(false)}
+          />,
+          document.body,
+        )
+      : null;
+
+  if (!trigger) {
+    return (
+      <div className="pointer-events-auto relative">
+        {backdrop}
+
+        <div className="absolute right-0 bottom-0 z-50 flex flex-col items-end gap-2">
+          <div
+            className={cn(
+              'flex flex-col gap-2 transition-all duration-200',
+              isOpen
+                ? 'translate-y-0 opacity-100'
+                : 'pointer-events-none translate-y-1 opacity-0',
+            )}
+          >
+            {items.map((item, index) => {
+              const content = (
+                <>
+                  {item.icon && (
+                    <Image
+                      src={item.icon}
+                      alt=""
+                      width={20}
+                      height={20}
+                      unoptimized
+                    />
+                  )}
+                  <span className="text-sm font-semibold text-zinc-900">
+                    {item.label}
+                  </span>
+                </>
+              );
+
+              const itemClass =
+                'flex h-11 min-w-40 items-center justify-center gap-2 rounded-full bg-[#ffffff] px-4 shadow-sm transition-all hover:bg-[#ffdfe9] active:scale-[0.98]';
+
+              return item.href ? (
+                <Link
+                  key={`${item.label}-${index}`}
+                  href={item.href}
+                  onClick={() => setIsOpen(false)}
+                  className={itemClass}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <button
+                  key={`${item.label}-${index}`}
+                  type="button"
+                  onClick={() => {
+                    item.onClick?.();
+                    setIsOpen(false);
+                  }}
+                  className={itemClass}
+                >
+                  {content}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            className={cn(
+              'bg-mono-jet flex size-12 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200 active:scale-95',
+              isOpen && 'bg-zinc-400',
+            )}
+            aria-label={isOpen ? '닫기' : '등록하기'}
+            onClick={() => setIsOpen((prev) => !prev)}
+          >
+            {isOpen ? <X size={22} /> : <Plus size={22} />}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
+      {backdrop}
       <PopoverTrigger asChild>
         {trigger ?? (
           // 기본 트리거: + / x 버튼
           <button
             type="button"
-            className="bg-mono-jet pointer-events-auto flex size-16 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200 active:scale-95"
+            className="bg-mono-jet pointer-events-auto flex size-12 items-center justify-center rounded-full text-white shadow-lg transition-all duration-200 active:scale-95"
             aria-label={isOpen ? '닫기' : '등록하기'}
           >
-            {isOpen ? <X size={36} /> : <Plus size={36} />}
+            {isOpen ? <X size={24} /> : <Plus size={24} />}
           </button>
         )}
       </PopoverTrigger>
@@ -57,8 +162,7 @@ export function ExtraNav({
         align={align}
         sideOffset={16}
         className={cn(
-          // 피그마 스펙: radius 100px, padding 8px, gap 8px, 배경 연한 회색
-          'bg-mono-bright-gray w-62 rounded-3xl border-0 p-6 shadow-xl ring-0',
+          'w-40 rounded-2xl border-0 bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.12)] ring-0',
           className,
         )}
       >
@@ -68,7 +172,7 @@ export function ExtraNav({
           </p>
         )}
         {/* 아이템 목록 */}
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2">
           {items.map((item, index) => {
             const content = (
               <>
@@ -86,8 +190,15 @@ export function ExtraNav({
               </>
             );
 
-            const itemClass =
-              'group flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white px-2 text-sm font-medium text-mono-jet shadow-[0_9px_15.4px_0_rgba(0,0,0,0.15)] transition-colors hover:bg-black hover:text-white active:scale-95';
+            const isSelected =
+              (item.key && selectedKey && item.key === selectedKey) ||
+              (!item.key && selectedKey && item.label === selectedKey);
+            const itemClass = cn(
+              'group flex h-11 w-full items-center justify-center gap-2 rounded-full px-2 text-sm font-semibold transition-colors active:scale-[0.98]',
+              isSelected
+                ? 'bg-[#ff9dc8] text-white'
+                : 'bg-transparent text-zinc-900 hover:bg-white/70',
+            );
 
             return item.href ? (
               <Link
@@ -99,7 +210,7 @@ export function ExtraNav({
                 {content}
               </Link>
             ) : (
-              <button
+              <Button
                 key={index}
                 type="button"
                 onClick={() => {
@@ -109,7 +220,7 @@ export function ExtraNav({
                 className={itemClass}
               >
                 {content}
-              </button>
+              </Button>
             );
           })}
         </div>

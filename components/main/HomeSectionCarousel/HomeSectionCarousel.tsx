@@ -1,11 +1,20 @@
 'use client';
 
-import * as React from 'react';
+/**
+ * 홈 섹션 가로 리스트
+ * - 데이터 있음 (Default): Figma `홈` 메인 리스트 (1:3190) — 타일 100×100, gap 12px, 라운드 12px, 흰 테두리·소프트 섀도
+ *   https://www.figma.com/design/ozRGHFE4rnqkqnikqCh7Pg/%ED%8F%AC%EC%B9%98-%EC%9E%84%EC%8B%9C?node-id=1-3190
+ * - 데이터 없음 (Empty): 카드 없이 안내 문구만 표시
+ */
+
 import Image from 'next/image';
 import { ImageIcon } from 'lucide-react';
 
 import type { Detail } from '@/api/model';
 import { cn } from '@/lib/utils';
+
+/** 메인 리스트 타일 (Figma 1:3190 기준) */
+const TILE_PX = 100;
 
 type HomeSectionCarouselProps = {
   sectionTitle: string;
@@ -42,11 +51,11 @@ export function HomeSectionCarousel({
 }: HomeSectionCarouselProps) {
   if (showSkeleton) {
     return (
-      <div className="flex gap-2.5 overflow-hidden">
-        {Array.from({ length: 3 }).map((_, index) => (
+      <div className="flex gap-3 overflow-hidden">
+        {Array.from({ length: 5 }).map((_, index) => (
           <div
             key={`${sectionTitle}-skeleton-${index}`}
-            className="border-mono-dark-gray/40 bg-mono-white text-mono-dark-gray/40 flex aspect-square min-w-[calc((100%-1.25rem)/3)] shrink-0 snap-start items-center justify-center rounded-md border"
+            className="bg-mono-white text-mono-dark-gray/40 flex size-[100px] shrink-0 items-center justify-center rounded-xl border-2 border-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
           >
             <ImageIcon className="size-4" />
           </div>
@@ -57,40 +66,34 @@ export function HomeSectionCarousel({
 
   if (items.length === 0) {
     return (
-      <div className="border-mono-dark-gray/70 bg-mono-white flex h-24 items-center justify-center rounded-md border">
-        <p className="text-mono-dark-gray text-xs font-medium">
-          아직 항목이 없어요.
-        </p>
-      </div>
+      <p className="flex h-[100px] items-center justify-center py-3 text-center text-lg leading-5 font-bold text-[#161618]">
+        아직 등록된 화장품이 없어요
+      </p>
     );
   }
 
   return (
-    <div
-      className={cn(
-        'flex snap-x snap-mandatory gap-2.5 overflow-x-auto overflow-y-hidden scroll-smooth pb-1 touch-pan-x',
-        '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-      )}
-    >
-      {items.map((item, index) =>
-        isValidImageUrl(item.imageUrl) ? (
-          <Image
-            key={`${sectionTitle}-${item.id ?? item.imageUrl}-${index}`}
-            src={item.imageUrl as string}
-            alt={`${sectionTitle} item`}
-            width={120}
-            height={120}
-            className="border-mono-dark-gray/70 bg-mono-white aspect-square min-w-[calc((100%-1.25rem)/3)] shrink-0 snap-start rounded-md border object-cover"
-          />
-        ) : (
-          <div
-            key={`${sectionTitle}-${item.id ?? index}`}
-            className="border-mono-dark-gray/70 bg-mono-white text-mono-dark-gray/70 flex aspect-square min-w-[calc((100%-1.25rem)/3)] shrink-0 snap-start items-center justify-center rounded-md border"
-          >
-            <ImageIcon className="size-4" />
-          </div>
-        ),
-      )}
+    <div className="flex gap-3 overflow-hidden">
+      {items.map((item, index) => (
+        <div
+          key={`${sectionTitle}-${item.id ?? item.imageUrl ?? index}`}
+          className="relative size-[100px] shrink-0 overflow-hidden rounded-xl border-2 border-white bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+        >
+          {isValidImageUrl(item.imageUrl) ? (
+            <Image
+              src={item.imageUrl as string}
+              alt={`${sectionTitle} item`}
+              fill
+              sizes={`${TILE_PX}px`}
+              className="object-cover"
+            />
+          ) : (
+            <div className="text-mono-dark-gray/50 flex size-full items-center justify-center bg-[#F3F3F3]">
+              <ImageIcon className="size-5" />
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

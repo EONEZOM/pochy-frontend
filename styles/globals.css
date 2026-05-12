@@ -126,10 +126,20 @@ small {
 
   html,
   body {
-    /* 고정된 화면 높이 (PWA 레이아웃 최적화) */
-    height: 100%;
-    /* 탄력적 스크롤 방지 (선택 사항) */
+    /* 스크롤 시 배경·카드가 뷰포트에만 딱 맞고 아래는 회색으로 보이는 문제 방지:
+       고정 height 대신 최소 높이만 주고, 본문 길이만큼 문서가 자라게 함 */
+    min-height: 100dvh;
     overflow-x: hidden;
+  }
+
+  /* Radix Select 등이 열릴 때 body 스크롤바가 사라지며 가로로 살짝 밀리는 현상 완화 */
+  html {
+    scrollbar-gutter: stable;
+  }
+
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+    padding-right: 0 !important;
   }
 
   /* 입력창 초기화 (아이폰 기본 스타일 제거) */
