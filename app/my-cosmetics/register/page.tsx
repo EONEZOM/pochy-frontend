@@ -17,11 +17,11 @@
  * 사용자가 결과를 확인·수정하고 최종 저장합니다.
  *
  * 저장: lib/my-cosmetics-register.ts의 registerMyCosmeticsMultipart 사용.
- * captureImages는 리뷰 화면과 동일하게 누끼 결과(`NukkiResult.src`)를 File로 변환해 전송합니다.
+ * captureImages: 누끼 성공 시 메모리의 `nukkiBlob`에서 File 생성( blob: fetch 미사용 ).
  * Orval 생성 훅이 아닌 수동 래퍼를 쓰는 이유는 해당 파일 주석 참고.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
@@ -37,10 +37,20 @@ interface PreviewImage {
   previewUrl: string;
 }
 
-/** 리뷰 화면에 보이는 `src`(누끼 blob URL 또는 누끼 실패 시 크롭 data URL) → 업로드용 File */
-const srcToCaptureFile = async (src: string, index: number): Promise<File> => {
-  const res = await fetch(src);
-  const blob = await res.blob();
+/** data URL → 업로드용 File */
+const dataUrlToFile = (dataUrl: string, index: number): File => {
+  const parts = dataUrl.split(',');
+  const mime = parts[0].match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+  const ext = mime.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
+  const binary = atob(parts[1] ?? '');
+  const buffer = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    buffer[i] = binary.charCodeAt(i);
+  }
+  return new File([buffer], `capture-${index}.${ext}`, { type: mime });
+};
+
+const blobToCaptureFile = (blob: Blob, index: number): File => {
   const mime =
     blob.type && blob.type.length > 0 ? blob.type : 'image/png';
   const ext =
@@ -50,6 +60,61 @@ const srcToCaptureFile = async (src: string, index: number): Promise<File> => {
         ? 'webp'
         : 'png';
   return new File([blob], `capture-${index}.${ext}`, { type: mime });
+};
+
+/**
+ * 저장용 캡처 File. 누끼 Blob이 있으면 그대로 사용하고, 없으면 `src`(data URL 등) 또는 크롭 폴백.
+ */
+const nukkiResultToCaptureFile = async (
+  r: NukkiResult,
+  index: number,
+): Promise<File> => {
+  if (r.nukkiBlob instanceof Blob) {
+    return blobToCaptureFile(r.nukkiBlob, index);
+  }
+  return srcToCaptureFile(r.src, r.cropBase64, index);
+};
+
+/**
+ * 리뷰 `src`(누끼 실패 시 data URL 등) → 업로드용 File.
+ * `blob:`는 `nukkiBlob`가 없을 때만 시도하며, 실패 시 `cropBase64`로 폴백합니다.
+ */
+const srcToCaptureFile = async (
+  src: string,
+  cropBase64Fallback: string,
+  index: number,
+): Promise<File> => {
+  const trimmed = String(src ?? '').trim();
+
+  if (trimmed.startsWith('data:')) {
+    return dataUrlToFile(trimmed, index);
+  }
+
+  const fallback = () => dataUrlToFile(cropBase64Fallback, index);
+
+  if (trimmed.startsWith('blob:')) {
+    try {
+      const res = await fetch(trimmed);
+      if (!res.ok) {
+        return fallback();
+      }
+      const blob = await res.blob();
+      return blobToCaptureFile(blob, index);
+    } catch {
+      return fallback();
+    }
+  }
+
+  try {
+    const res = await fetch(trimmed);
+    if (!res.ok) {
+      return fallback();
+    }
+    const blob = await res.blob();
+    return blobToCaptureFile(blob, index);
+  } catch {
+    return fallback();
+  }
 };
 
 const loadImageElement = (src: string): Promise<HTMLImageElement> =>
@@ -69,6 +134,8 @@ export default function MyCosmeticsRegisterPage() {
   const [results, setResults] = useState<NukkiResult[]>([]);
   const [isReviewStep, setIsReviewStep] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  /** 저장 중 재진입 방지 — `isSaving`은 리렌더 전까지 갱신되지 않아 ref로 동기 차단 */
+  const isSaveInFlightRef = useRef(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -155,8 +222,10 @@ export default function MyCosmeticsRegisterPage() {
         setScanStep(`배경 제거 중... (${i + 1}/${cosmeticItems.length})`);
 
         let nukkiSrc = crop;
+        let nukkiBlob: Blob | undefined;
         try {
           const blob = await removeBackground(crop, { model: 'isnet_quint8' });
+          nukkiBlob = blob;
           nukkiSrc = URL.createObjectURL(blob);
         } catch {
           // 누끼 실패 시 원본 크롭 사용
@@ -165,6 +234,7 @@ export default function MyCosmeticsRegisterPage() {
         nukkiResults.push({
           id: idx,
           src: nukkiSrc,
+          nukkiBlob,
           cropBase64: crop,
           brand: item.brand,
           product_name: item.product_name,
@@ -185,26 +255,30 @@ export default function MyCosmeticsRegisterPage() {
   };
 
   const handleSave = async () => {
-    if (results.length === 0 || isSaving) return;
-
-    const captureImages = await Promise.all(
-      results.map((r, i) => srcToCaptureFile(r.src, i)),
-    );
-    const data = results.map((r) => ({
-      name: r.product_name,
-      brand: r.brand,
-      category: r.product_type,
-      feature: r.key_features.join(', '),
-    }));
-
+    if (results.length === 0 || isSaveInFlightRef.current) {
+      return;
+    }
+    isSaveInFlightRef.current = true;
     setIsSaving(true);
+
     try {
+      const captureImages = await Promise.all(
+        results.map((r, i) => nukkiResultToCaptureFile(r, i)),
+      );
+      const data = results.map((r) => ({
+        name: r.product_name,
+        brand: r.brand,
+        category: r.product_type,
+        feature: r.key_features.join(', '),
+      }));
+
       await registerMyCosmeticsMultipart({ captureImages, data });
       alert('내 화장품 파우치에 저장되었습니다!');
       router.push('/my-cosmetics');
     } catch (err) {
       alert('저장 중 오류가 발생했습니다: ' + (err instanceof Error ? err.message : '알 수 없는 오류'));
     } finally {
+      isSaveInFlightRef.current = false;
       setIsSaving(false);
     }
   };

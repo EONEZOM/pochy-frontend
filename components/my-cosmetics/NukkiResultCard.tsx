@@ -5,7 +5,9 @@ import { motion } from 'framer-motion';
 export interface NukkiResult {
   id: number;
   src: string;
-  /** GPT 분석에 사용한 원본 크롭 base64(등록 이미지는 `src` 누끼 결과 사용) */
+  /** 누끼 성공 시 원본 Blob — 저장 시 blob URL fetch 없이 업로드 File 생성에 사용 */
+  nukkiBlob?: Blob;
+  /** GPT 분석에 사용한 원본 크롭 base64(누끼 실패 시 표시·업로드 폴백) */
   cropBase64: string;
   brand: string;
   product_name: string;

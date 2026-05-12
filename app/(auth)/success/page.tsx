@@ -4,9 +4,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 
-const SUCCESS_GRADIENT_BG =
-  'linear-gradient(180deg, #FFFFFF 0%, #FFF5FC 42%, #FFC6EC 100%)';
-
 /** 완료 화면을 보여 준 뒤 홈(닉네임 설정)으로 넘기기까지 (ms) */
 const SUCCESS_DISPLAY_MS = 1400;
 
@@ -33,10 +30,7 @@ export default function AuthSuccessPage() {
   }, [router]);
 
   return (
-    <main
-      className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden px-6 pt-[max(2.5rem,var(--safe-area-top))] pb-[max(2rem,var(--safe-area-bottom))]"
-      style={{ background: SUCCESS_GRADIENT_BG }}
-    >
+    <main className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden px-6 pt-[max(2.5rem,var(--safe-area-top))] pb-[max(2rem,var(--safe-area-bottom))]">
       <div className="mx-auto flex w-full max-w-[320px] flex-1 flex-col items-center justify-center text-center">
         <Image
           src="/icons/check.svg"
