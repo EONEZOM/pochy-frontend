@@ -17,46 +17,43 @@ import { cn } from '@/lib/utils';
 
 type EmptyNavTile = {
   href: string;
+  /** 스크린리더용 짧은 설명 */
   label: string;
+  /** 이미지 아래 표시 이름 */
+  displayName: string;
   illustrationSrc: string;
-  illustrationWidth: number;
-  illustrationHeight: number;
-  illustrationClassName?: string;
 };
 
 const EMPTY_NAV_TILES: EmptyNavTile[] = [
   {
     href: '/wish',
-    label: 'Wish',
+    label: '위시로 이동',
+    displayName: 'Wish List',
     illustrationSrc: '/figma/main/home-empty-wish.svg',
-    illustrationWidth: 300,
-    illustrationHeight: 300,
   },
   {
     href: '/my-cosmetics',
-    label: 'My',
+    label: '내 화장품으로 이동',
+    displayName: 'My Pouch',
     illustrationSrc: '/figma/main/home-empty-my.svg',
-    illustrationWidth: 300,
-    illustrationHeight: 300,
   },
   {
     href: '/feed',
-    label: 'Feed',
+    label: '피드로 이동',
+    displayName: 'Feed',
     illustrationSrc: '/figma/main/home-empty-feed.svg',
-    illustrationWidth: 500,
-    illustrationHeight: 400,
-    illustrationClassName:
-      'max-h-[min(36vw,142px)] max-w-[min(92vw,320px)] sm:max-h-[min(32vw,158px)]',
   },
   {
     href: '/profile',
-    label: 'Profile',
-    illustrationSrc: '/figma/main/home-empty-프로필(없음).svg',
-    illustrationWidth: 400,
-    illustrationHeight: 400,
-    illustrationClassName: 'max-h-[min(40vw,156px)] sm:max-h-[min(36vw,172px)]',
+    label: '마이페이지로 이동',
+    displayName: 'Profile',
+    illustrationSrc: '/figma/main/home-empty-profile.svg',
   },
 ];
+
+/** 2×2 그리드에서 네 칸 일러스트 박스 동일 크기 */
+const TILE_ILLUSTRATION_BOX =
+  'relative mx-auto aspect-square w-[min(38vw,148px)] max-w-[148px] shrink-0 sm:w-[min(34vw,156px)] sm:max-w-[156px]';
 
 const HOME_EMPTY_GRADIENT =
   'linear-gradient(180deg, #FFFFFF 0%, #FFF5FC 42%, #FFC6EC 100%)';
@@ -84,22 +81,26 @@ export function MainHomeEmptyView() {
                 key={tile.href}
                 href={tile.href}
                 aria-label={tile.label}
-                className="group flex min-w-0 flex-col items-center gap-2 overflow-hidden text-center focus-visible:ring-2 focus-visible:ring-[#FF60CA]/50 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="group flex min-w-0 flex-col items-center gap-2.5 overflow-hidden text-center focus-visible:ring-2 focus-visible:ring-[#FF60CA]/50 focus-visible:ring-offset-2 focus-visible:outline-none"
               >
-                <span className="relative flex h-[min(42vw,168px)] min-h-[148px] w-full max-w-full items-center justify-center overflow-hidden sm:h-[min(38vw,196px)] sm:min-h-[164px]">
+                <span
+                  className={cn(
+                    TILE_ILLUSTRATION_BOX,
+                    'overflow-hidden p-2 transition-transform duration-200',
+                    'scale-100 group-active:scale-[0.97] sm:group-active:scale-[0.98]',
+                  )}
+                >
                   <Image
                     src={tile.illustrationSrc}
                     alt=""
-                    width={tile.illustrationWidth}
-                    height={tile.illustrationHeight}
+                    fill
+                    sizes="(max-width: 640px) 38vw, 156px"
                     unoptimized
-                    className={cn(
-                      'mx-auto h-auto w-full max-w-[min(42vw,158px)] origin-center object-contain transition-transform duration-200',
-                      'max-h-[min(40vw,158px)] sm:max-h-[min(36vw,176px)] sm:max-w-[min(38vw,176px)]',
-                      'scale-100 group-active:scale-[0.97] sm:group-active:scale-[0.98]',
-                      tile.illustrationClassName,
-                    )}
+                    className="object-contain p-1"
                   />
+                </span>
+                <span className="text-mono-jet mt-[-10px] max-w-full truncate px-1 text-[20px] leading-5 font-bold">
+                  {tile.displayName}
                 </span>
               </Link>
             ))}
