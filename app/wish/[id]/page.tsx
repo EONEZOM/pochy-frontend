@@ -50,6 +50,10 @@ import {
 } from '@/components/ui/popover';
 import { COSMETIC_CATEGORIES } from '@/constants/category';
 import { cn } from '@/lib/utils';
+import {
+  pickWishCaptureImageUrl,
+  pickWishOfficialImageUrl,
+} from '@/lib/wish-display-image';
 import Input from '@/components/common/Input/Input';
 import { Modal } from '@/components/common/Modal/Modal';
 import type { ReadDetailDto, UpdateDto } from '@/api/model';
@@ -400,8 +404,8 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
                 >
                   <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-2xl bg-zinc-100">
                     <WishCardImage
-                      officialImage={item.productImageUrl ?? ''}
-                      captureImage={item.captureImageUrl ?? ''}
+                      officialImage={pickWishOfficialImageUrl(item)}
+                      captureImage={pickWishCaptureImageUrl(item)}
                       productName={item.productName ?? ''}
                       fill
                       className="object-contain"

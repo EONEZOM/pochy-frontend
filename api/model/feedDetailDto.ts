@@ -8,6 +8,7 @@
 import type { FindMyCosmeticsDto } from './findMyCosmeticsDto';
 
 export interface FeedDetailDto {
+  pouchId?: number;
   profileImageUrl?: string;
   userName?: string;
   pouchName?: string;

@@ -16,6 +16,10 @@ import { WishlistEmptyView } from '@/components/wishlist/WishlistEmptyView';
 import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import type { ReadListDto } from '@/api/model';
 import { WishCardImage } from '@/components/wishlist/WishCardImage';
+import {
+  pickWishCaptureImageUrl,
+  pickWishOfficialImageUrl,
+} from '@/lib/wish-display-image';
 import { cn } from '@/lib/utils';
 
 type WishListItem = {
@@ -47,8 +51,8 @@ const toWishListItem = (item: ReadListDto, id: number): WishListItem => ({
   product_name: item.productName ?? '',
   main_category: item.category ?? '',
   sub_category: item.subCategory ?? '',
-  official_image: item.productImageUrl ?? '',
-  capture_image: item.captureImageUrl ?? '',
+  official_image: pickWishOfficialImageUrl(item),
+  capture_image: pickWishCaptureImageUrl(item),
   price: item.price ?? 0,
 });
 

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
+import { isNaverShoppingCdnUrl } from '@/lib/wish-display-image';
 
 const isRemoteAbsoluteUrl = (src: string): boolean =>
   /^https?:\/\//i.test(src.trim());
@@ -89,7 +90,8 @@ export function WishCardImage({
     );
   }
 
-  const bypassOptimizer = isRemoteAbsoluteUrl(src);
+  const bypassOptimizer =
+    isRemoteAbsoluteUrl(src) && !isNaverShoppingCdnUrl(src);
 
   if (fill) {
     return (

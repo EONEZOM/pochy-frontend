@@ -20,6 +20,7 @@ import {
 import type { ApiResponseDTO } from '@/api/model';
 import type { Detail } from '@/api/model';
 import type { ReadListDto } from '@/api/model';
+import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
 
 /** 메인(리스트·로딩)과 빈 홈 공통 배경 그라데이션 */
 const MAIN_HOME_GRADIENT_BG =
@@ -170,7 +171,7 @@ function MainPageContent() {
       if (id == null) {
         return [];
       }
-      return [{ id, imageUrl: item.productImageUrl } satisfies Detail];
+      return [{ id, imageUrl: pickWishListThumbnailUrl(item) } satisfies Detail];
     },
   );
 

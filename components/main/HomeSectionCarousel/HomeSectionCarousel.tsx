@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { ImageIcon } from 'lucide-react';
 
 import type { Detail } from '@/api/model';
+import { isNaverShoppingCdnUrl } from '@/lib/wish-display-image';
 import { cn } from '@/lib/utils';
 
 /** 메인 리스트 타일 (Figma 1:3190 기준) */
@@ -86,9 +87,10 @@ export function HomeSectionCarousel({
               fill
               sizes={`${TILE_PX}px`}
               className="object-cover"
-              unoptimized={/^https?:\/\//i.test(
-                String(item.imageUrl).trim(),
-              )}
+              unoptimized={(() => {
+                const u = String(item.imageUrl).trim();
+                return /^https?:\/\//i.test(u) && !isNaverShoppingCdnUrl(u);
+              })()}
               priority={index === 0}
               loading={index < 8 ? 'eager' : 'lazy'}
             />

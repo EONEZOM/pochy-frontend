@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './addEmoticonParams';
 export * from './apiResponseDTO';
 export * from './apiResponseDTOCreateDetailDto';
 export * from './apiResponseDTOFavoriteListDto';
@@ -13,6 +14,7 @@ export * from './apiResponseDTOFeedDetailDto';
 export * from './apiResponseDTOFeedListDto';
 export * from './apiResponseDTOGetHomeData';
 export * from './apiResponseDTOListCreateDetailDto';
+export * from './apiResponseDTOListFindFeedCosmeticsDto';
 export * from './apiResponseDTOListLong';
 export * from './apiResponseDTOMemberAuthResponse';
 export * from './apiResponseDTONaverLoginUrl';
@@ -37,6 +39,7 @@ export * from './favoriteListDto';
 export * from './feedDetailDto';
 export * from './feedDto';
 export * from './feedListDto';
+export * from './findFeedCosmeticsDto';
 export * from './findMyCosmeticsDto';
 export * from './getFavoriteListParams';
 export * from './getFeedListParams';
