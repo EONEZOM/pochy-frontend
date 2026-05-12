@@ -16,8 +16,11 @@ export async function GET(request: Request) {
     )
   }
 
+  /** 유사도 상위 N건 중 `lprice` 최솟값을 최저가로 사용 (단일 1건은 변별력이 낮음) */
+  const display = 10
+
   const res = await fetch(
-    `https://openapi.naver.com/v1/search/shop.json?query=${encodeURIComponent(query)}&display=1&sort=sim`,
+    `https://openapi.naver.com/v1/search/shop.json?query=${encodeURIComponent(query)}&display=${display}&sort=sim`,
     {
       headers: {
         'X-Naver-Client-Id': clientId,
@@ -35,12 +38,43 @@ export async function GET(request: Request) {
 
   const data = await res.json()
 
+  const parseLprice = (value: unknown): number | null => {
+    if (value == null || value === '') {
+      return null
+    }
+    const n = Number(String(value).replace(/,/g, '').trim())
+    return Number.isFinite(n) ? n : null
+  }
+
   if (data.items && data.items.length > 0) {
-    const item = data.items[0]
+    const items = data.items as Array<{
+      lprice?: string
+      link?: string
+      image?: string
+      category1?: string
+      category2?: string
+      category3?: string
+      category4?: string
+    }>
+    const item = items[0]
+
+    let lowestNumeric: number | null = null
+    for (const row of items) {
+      const p = parseLprice(row.lprice)
+      if (p != null && (lowestNumeric == null || p < lowestNumeric)) {
+        lowestNumeric = p
+      }
+    }
+
+    const lowest_price =
+      lowestNumeric != null
+        ? lowestNumeric
+        : parseLprice(item.lprice) ?? item.lprice
+
     return NextResponse.json({
-      lowest_price: item.lprice, // 최저가
-      mall_url: item.link, // 쇼핑몰 링크
-      official_image: item.image, // 네이버 제공 상품 이미지
+      lowest_price,
+      mall_url: item.link,
+      official_image: item.image,
       category_list: [
         item.category1,
         item.category2,

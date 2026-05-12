@@ -247,6 +247,27 @@ export default function ProductDetailForm({
           }
           return nextData as ProductDetailFormData;
         }
+
+        const priceRaw = data.lowest_price;
+        const hasPrice =
+          priceRaw !== undefined &&
+          priceRaw !== null &&
+          String(priceRaw).trim() !== '' &&
+          String(priceRaw).trim() !== '정보 없음';
+
+        if (hasPrice) {
+          const nextData = {
+            ...sourceData,
+            price: priceRaw,
+            ...(data.mall_url ? { mall_url: data.mall_url } : {}),
+          } as ProductDetailFormData;
+          setFormData(nextData);
+          if (showSuccessAlert) {
+            alert('네이버 쇼핑 최저가를 반영했습니다.');
+          }
+          return nextData;
+        }
+
         if (showFailureAlert) {
           alert('검색 결과가 없습니다. 정보를 직접 확인해주세요.');
         }

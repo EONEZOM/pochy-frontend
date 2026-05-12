@@ -17,6 +17,7 @@
  * 사용자가 결과를 확인·수정하고 최종 저장합니다.
  *
  * 저장: lib/my-cosmetics-register.ts의 registerMyCosmeticsMultipart 사용.
+ * captureImages는 리뷰 화면과 동일하게 누끼 결과(`NukkiResult.src`)를 File로 변환해 전송합니다.
  * Orval 생성 훅이 아닌 수동 래퍼를 쓰는 이유는 해당 파일 주석 참고.
  */
 
@@ -36,16 +37,19 @@ interface PreviewImage {
   previewUrl: string;
 }
 
-const base64ToFile = (base64: string, index: number): File => {
-  const parts = base64.split(',');
-  const mime = parts[0].match(/:(.*?);/)?.[1] ?? 'image/jpeg';
-  const ext = mime.split('/')[1] ?? 'jpg';
-  const binary = atob(parts[1]);
-  const buffer = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    buffer[i] = binary.charCodeAt(i);
-  }
-  return new File([buffer], `capture-${index}.${ext}`, { type: mime });
+/** 리뷰 화면에 보이는 `src`(누끼 blob URL 또는 누끼 실패 시 크롭 data URL) → 업로드용 File */
+const srcToCaptureFile = async (src: string, index: number): Promise<File> => {
+  const res = await fetch(src);
+  const blob = await res.blob();
+  const mime =
+    blob.type && blob.type.length > 0 ? blob.type : 'image/png';
+  const ext =
+    mime === 'image/jpeg' || mime === 'image/jpg'
+      ? 'jpg'
+      : mime === 'image/webp'
+        ? 'webp'
+        : 'png';
+  return new File([blob], `capture-${index}.${ext}`, { type: mime });
 };
 
 const loadImageElement = (src: string): Promise<HTMLImageElement> =>
@@ -183,7 +187,9 @@ export default function MyCosmeticsRegisterPage() {
   const handleSave = async () => {
     if (results.length === 0 || isSaving) return;
 
-    const captureImages = results.map((r, i) => base64ToFile(r.cropBase64, i));
+    const captureImages = await Promise.all(
+      results.map((r, i) => srcToCaptureFile(r.src, i)),
+    );
     const data = results.map((r) => ({
       name: r.product_name,
       brand: r.brand,

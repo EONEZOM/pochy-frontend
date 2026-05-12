@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 export interface NukkiResult {
   id: number;
   src: string;
-  /** 백엔드 등록 시 captureImages로 전송할 원본 크롭 base64 */
+  /** GPT 분석에 사용한 원본 크롭 base64(등록 이미지는 `src` 누끼 결과 사용) */
   cropBase64: string;
   brand: string;
   product_name: string;
