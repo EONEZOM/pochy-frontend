@@ -18,6 +18,8 @@ import {
   reissue,
   useRequestMagicLink,
 } from '@/api/generated/login-controller/login-controller';
+import { getState } from '@/api/generated/oauth/oauth';
+import { isAxiosError } from 'axios';
 import Image from 'next/image';
 import mainLogo from '@/public/figma/login/hero-1.svg';
 
@@ -98,20 +100,27 @@ function LoginContent() {
 
     setIsNaverLoginPending(true);
     try {
-      const res = await fetch('/api/oauth/naver/authorize-url');
-      const data = (await res.json()) as { url?: string; message?: string };
-      const loginUrl = data.url?.trim() ?? '';
-      if (!res.ok || !loginUrl) {
+      const data = await getState();
+      const loginUrl = data.result?.url?.trim() ?? '';
+      if (!loginUrl) {
         alert(
           data.message ??
-            '네이버 로그인 URL을 가져오지 못했어요. 서버 환경 변수(NAVER_OAUTH_CLIENT_ID, NAVER_OAUTH_REDIRECT_URI)를 확인해 주세요.',
+            '네이버 로그인 URL을 가져오지 못했어요. 잠시 후 다시 시도해 주세요.',
         );
         return;
       }
 
       window.location.assign(loginUrl);
-    } catch {
-      alert('네이버 로그인 연결에 실패했어요. 잠시 후 다시 시도해 주세요.');
+    } catch (error) {
+      const apiMessage = isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+      const trimmed = typeof apiMessage === 'string' ? apiMessage.trim() : '';
+      alert(
+        trimmed.length > 0
+          ? trimmed
+          : '네이버 로그인 연결에 실패했어요. 잠시 후 다시 시도해 주세요.',
+      );
     } finally {
       setIsNaverLoginPending(false);
     }

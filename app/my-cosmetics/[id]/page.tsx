@@ -123,6 +123,12 @@ export default function MyCosmeticsDetailPage() {
                         captureImage={item.captureUrl ?? ''}
                         productName={item.name ?? ''}
                         fill
+                        priority={index === safeInitialIndex}
+                        loading={
+                          Math.abs(index - safeInitialIndex) <= 1
+                            ? 'eager'
+                            : 'lazy'
+                        }
                       />
                     </div>
                   </div>

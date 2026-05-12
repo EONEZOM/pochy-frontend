@@ -556,6 +556,7 @@ export default function ProductDetailForm({
                       productName={String(formData.product_name ?? '')}
                       fill
                       className="object-contain"
+                      priority
                     />
                   </div>
                 )}
@@ -611,6 +612,7 @@ export default function ProductDetailForm({
                   productName={String(formData.product_name ?? '')}
                   fill
                   className="object-contain"
+                  priority
                 />
               </div>
             )}

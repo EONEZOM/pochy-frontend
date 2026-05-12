@@ -393,7 +393,7 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
             className="w-full"
           >
             <CarouselContent className="-ml-0">
-              {wishItems.map((item) => (
+              {wishItems.map((item, index) => (
                 <CarouselItem
                   key={item.wishCosmeticsId}
                   className="basis-full pl-0"
@@ -405,6 +405,12 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
                       productName={item.productName ?? ''}
                       fill
                       className="object-contain"
+                      priority={index === safeInitialIndex}
+                      loading={
+                        Math.abs(index - safeInitialIndex) <= 1
+                          ? 'eager'
+                          : 'lazy'
+                      }
                     />
                   </div>
                 </CarouselItem>

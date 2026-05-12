@@ -86,6 +86,11 @@ export function HomeSectionCarousel({
               fill
               sizes={`${TILE_PX}px`}
               className="object-cover"
+              unoptimized={/^https?:\/\//i.test(
+                String(item.imageUrl).trim(),
+              )}
+              priority={index === 0}
+              loading={index < 8 ? 'eager' : 'lazy'}
             />
           ) : (
             <div className="text-mono-dark-gray/50 flex size-full items-center justify-center bg-[#F3F3F3]">

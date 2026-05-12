@@ -50,7 +50,9 @@ function MyCosmeticsListContent() {
               <div key={colIndex} className="flex min-w-0 flex-1 flex-col gap-3">
                 {items
                   .filter((_, i) => i % 2 === colIndex)
-                  .map((item) => (
+                  .map((item, rowIndex) => {
+                    const globalIndex = rowIndex * 2 + colIndex;
+                    return (
                     <Link
                       key={item.id}
                       href={`/my-cosmetics/${item.id}`}
@@ -61,6 +63,8 @@ function MyCosmeticsListContent() {
                           officialImage={item.imgUrl ?? ''}
                           captureImage={item.captureUrl ?? ''}
                           productName={item.name ?? ''}
+                          priority={globalIndex === 0}
+                          loading={globalIndex < 10 ? 'eager' : 'lazy'}
                         />
                       </div>
                       <div className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
@@ -72,7 +76,8 @@ function MyCosmeticsListContent() {
                         </span>
                       </div>
                     </Link>
-                  ))}
+                    );
+                  })}
               </div>
             ))}
           </div>

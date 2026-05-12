@@ -29,8 +29,8 @@ const EMPTY_NAV_TILES: EmptyNavTile[] = [
     href: '/wish',
     label: 'Wish',
     illustrationSrc: '/figma/main/home-empty-wish.svg',
-    illustrationWidth: 400,
-    illustrationHeight: 400,
+    illustrationWidth: 300,
+    illustrationHeight: 300,
   },
   {
     href: '/my-cosmetics',
@@ -43,7 +43,7 @@ const EMPTY_NAV_TILES: EmptyNavTile[] = [
     href: '/feed',
     label: 'Feed',
     illustrationSrc: '/figma/main/home-empty-feed.svg',
-    illustrationWidth: 400,
+    illustrationWidth: 500,
     illustrationHeight: 400,
     illustrationClassName:
       'max-h-[min(36vw,142px)] max-w-[min(92vw,320px)] sm:max-h-[min(32vw,158px)]',
@@ -54,8 +54,7 @@ const EMPTY_NAV_TILES: EmptyNavTile[] = [
     illustrationSrc: '/figma/main/home-empty-프로필(없음).svg',
     illustrationWidth: 400,
     illustrationHeight: 400,
-    illustrationClassName:
-      'max-h-[min(40vw,156px)] sm:max-h-[min(36vw,172px)]',
+    illustrationClassName: 'max-h-[min(40vw,156px)] sm:max-h-[min(36vw,172px)]',
   },
 ];
 

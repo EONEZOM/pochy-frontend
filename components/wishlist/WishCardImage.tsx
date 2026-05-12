@@ -4,6 +4,9 @@ import Image from 'next/image';
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 
+const isRemoteAbsoluteUrl = (src: string): boolean =>
+  /^https?:\/\//i.test(src.trim());
+
 interface WishCardImageProps {
   officialImage: string;
   captureImage: string;
@@ -11,6 +14,9 @@ interface WishCardImageProps {
   /** true일 때 Next.js Image의 fill 모드로 렌더링합니다 (캐러셀 등 절대 위치 컨테이너용). */
   fill?: boolean;
   className?: string;
+  /** LCP·첫 카드 등에만 사용 (남용 시 역효과) */
+  priority?: boolean;
+  loading?: 'lazy' | 'eager';
 }
 
 /**
@@ -24,6 +30,8 @@ export function WishCardImage({
   productName,
   fill = false,
   className,
+  priority = false,
+  loading,
 }: WishCardImageProps) {
   const resolvedOfficial = useMemo(
     () => resolveMediaUrl(officialImage),
@@ -81,6 +89,8 @@ export function WishCardImage({
     );
   }
 
+  const bypassOptimizer = isRemoteAbsoluteUrl(src);
+
   if (fill) {
     return (
       <Image
@@ -89,6 +99,9 @@ export function WishCardImage({
         fill
         className={className ?? 'object-cover'}
         onError={handleError}
+        unoptimized={bypassOptimizer}
+        priority={priority}
+        loading={loading}
       />
     );
   }
@@ -103,6 +116,9 @@ export function WishCardImage({
       style={{ width: '100%', height: 'auto' }}
       className={className ?? 'block object-contain'}
       onError={handleError}
+      unoptimized={bypassOptimizer}
+      priority={priority}
+      loading={loading}
     />
   );
 }

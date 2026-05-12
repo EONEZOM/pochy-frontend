@@ -222,7 +222,9 @@ function WishlistPageContent() {
               >
                 {filteredItems
                   .filter((_, i) => i % 2 === colIndex)
-                  .map((item) => (
+                  .map((item, rowIndex) => {
+                    const globalIndex = rowIndex * 2 + colIndex;
+                    return (
                     <Link
                       key={item.id}
                       href={`/wish/${item.id}`}
@@ -235,6 +237,8 @@ function WishlistPageContent() {
                           captureImage={item.capture_image}
                           productName={item.product_name}
                           className="object-contain"
+                          priority={globalIndex === 0}
+                          loading={globalIndex < 10 ? 'eager' : 'lazy'}
                         />
                       </div>
 
@@ -247,7 +251,8 @@ function WishlistPageContent() {
                         </span>
                       </div>
                     </Link>
-                  ))}
+                    );
+                  })}
               </div>
             ))}
           </div>
