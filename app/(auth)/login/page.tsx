@@ -10,9 +10,14 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Button as SolidButton } from '@/components/common/Button';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/common/BottomSheet';
 import { Input } from '@/components/ui/input';
+import {
+  ConsentCheckboxControl,
+  LoginPrivacyConsentModal,
+} from '@/components/login/LoginPrivacyConsentModal';
 import type { RequestMagicLinkParams } from '@/api/model';
 import {
   reissue,
@@ -22,6 +27,16 @@ import { getState } from '@/api/generated/oauth/oauth';
 import { isAxiosError } from 'axios';
 import Image from 'next/image';
 import mainLogo from '@/public/figma/login/hero-1.svg';
+
+const emailFormatRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const isValidEmailFormat = (value: string) => {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return false;
+  }
+  return emailFormatRegex.test(trimmedValue);
+};
 
 function LoginContent() {
   const router = useRouter();
@@ -33,6 +48,9 @@ function LoginContent() {
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [isNaverLoginPending, setIsNaverLoginPending] = useState(false);
   const [isKakaoLoginPending, setIsKakaoLoginPending] = useState(false);
+  const [isPrivacyConsentModalOpen, setIsPrivacyConsentModalOpen] =
+    useState(false);
+  const [hasPrivacyConsent, setHasPrivacyConsent] = useState(false);
 
   useEffect(() => {
     if (isFromLogout) return;
@@ -43,7 +61,7 @@ function LoginContent() {
       try {
         await reissue();
         if (!isMounted) return;
-        router.replace('/?setupNickname=1');
+        router.replace('/nickname');
       } catch {
         if (!isMounted) return;
         setIsCheckingSession(false);
@@ -74,12 +92,14 @@ function LoginContent() {
 
   const handleLogin = async () => {
     const trimmedEmail = email.trim();
-    if (!trimmedEmail) return;
+    if (!trimmedEmail || !hasPrivacyConsent || !isValidEmailFormat(trimmedEmail)) {
+      return;
+    }
 
     setIsCheckingAutoLogin(true);
     try {
       await reissue();
-      router.replace('/?setupNickname=1');
+      router.replace('/nickname');
       return;
     } catch {
       // refresh token이 없거나 만료된 경우 기존 매직링크 로그인으로 fallback
@@ -152,6 +172,12 @@ function LoginContent() {
     window.location.assign(authUrl.toString());
   };
 
+  const trimmedEmail = email.trim();
+  const shouldShowEmailError =
+    trimmedEmail.length > 0 && !isValidEmailFormat(trimmedEmail);
+  const canSubmitLogin =
+    hasPrivacyConsent && isValidEmailFormat(trimmedEmail);
+
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-white">
       {/* 배경 일러스트 — 스케일 없이 영역 안에서만 잘림 */}
@@ -218,6 +244,7 @@ function LoginContent() {
         <div className="w-full shrink-0 pt-6">
           <div className="mx-auto flex w-full max-w-[319px] flex-col gap-4">
             <BottomSheet
+              dismissible={!isPrivacyConsentModalOpen}
               trigger={
                 <Button
                   type="button"
@@ -239,28 +266,70 @@ function LoginContent() {
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                       setEmail(e.target.value);
                     }}
+                    aria-invalid={shouldShowEmailError}
+                    aria-describedby={
+                      shouldShowEmailError ? 'login-email-error' : undefined
+                    }
                     className="h-14 rounded-xl border-zinc-200 bg-zinc-50 text-base font-medium focus:ring-zinc-900"
                     autoFocus
                   />
+                  {shouldShowEmailError ? (
+                    <p
+                      id="login-email-error"
+                      role="alert"
+                      className="text-sm leading-5 text-red-500"
+                    >
+                      올바른 이메일 형식이 아니에요.
+                    </p>
+                  ) : null}
                 </div>
-                <Button
-                  className="h-14 w-full rounded-xl bg-zinc-900 text-base font-bold text-white shadow-lg transition-transform active:scale-[0.98]"
+                <button
+                  type="button"
+                  className="flex w-full items-start gap-2 px-0.5 py-1 text-left"
+                  onClick={() => setIsPrivacyConsentModalOpen(true)}
+                >
+                  <ConsentCheckboxControl
+                    checked={hasPrivacyConsent}
+                    className="mt-0.5"
+                  />
+                  <span className="text-mono-jet text-sm leading-5 font-bold">
+                    서비스 이용을 위해 개인정보 처리방침에 동의해주세요.
+                  </span>
+                </button>
+                <SolidButton
+                  type="button"
+                  variant="solid"
+                  size="lg"
+                  className="h-14 w-full rounded-full text-base shadow-none transition-transform active:scale-[0.98] enabled:border-0 enabled:bg-[#FF93DB] enabled:text-mono-jet enabled:hover:bg-[#FF85D5]"
                   onClick={handleLogin}
                   disabled={
-                    isPending || isCheckingSession || isCheckingAutoLogin
+                    isPending ||
+                    isCheckingSession ||
+                    isCheckingAutoLogin ||
+                    !canSubmitLogin
                   }
                 >
                   {isPending || isCheckingSession || isCheckingAutoLogin ? (
                     <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-mono-dark-gray border-t-transparent" />
                       {isCheckingSession || isCheckingAutoLogin
                         ? '확인 중...'
                         : '발송 중...'}
                     </span>
                   ) : (
-                    '로그인 하기'
+                    '다음'
                   )}
-                </Button>
+                </SolidButton>
+                <LoginPrivacyConsentModal
+                  open={isPrivacyConsentModalOpen}
+                  onOpenChange={setIsPrivacyConsentModalOpen}
+                  onAgree={() => {
+                    setHasPrivacyConsent(true);
+                  }}
+                  onCancelIncomplete={() => {
+                    setHasPrivacyConsent(false);
+                  }}
+                />
               </div>
             </BottomSheet>
 

@@ -117,22 +117,22 @@ export function MagicLinkSentContent() {
           type="button"
           variant="solid"
           size="lg"
-          className="h-14 w-full max-w-full rounded-full text-base"
+          className="h-14 w-full max-w-full rounded-full text-base shadow-none transition-transform active:scale-[0.98] enabled:border-0 enabled:bg-[#FF93DB] enabled:text-mono-jet enabled:hover:bg-[#FF85D5]"
           onClick={handleOpenInbox}
         >
           내 메일함 가기
         </Button>
         <Button
           type="button"
-          variant="solid"
+          variant="default"
           size="lg"
-          className="h-14 w-full max-w-full rounded-full text-base"
+          className="h-14 w-full max-w-full rounded-full border-mono-bright-gray bg-white text-base text-mono-jet shadow-none hover:border-mono-bright-gray hover:bg-white hover:text-mono-jet disabled:bg-white disabled:text-mono-jet"
           onClick={handleResend}
           disabled={isResending || !isValidEmail}
         >
           {isResending ? (
             <span className="flex items-center justify-center gap-2">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-mono-dark-gray border-t-transparent" />
               발송 중...
             </span>
           ) : (
