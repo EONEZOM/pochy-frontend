@@ -38,20 +38,20 @@ export const CategoryFilterArea = memo(
 
     return (
       <div className="flex flex-col">
-        <div className="flex items-center">
+        <div className="border-mono-bright-gray flex items-end gap-4 border-b px-3">
           {leftControl ? (
-            <div className="border-mono-bright-gray mr-5 flex h-12 w-11 shrink-0 items-center justify-center border-b">
+            <div className="flex h-12 w-11 shrink-0 items-center justify-center">
               {leftControl}
             </div>
           ) : null}
-          {/* 대분류 - 언더라인형 스크롤 */}
+          {/* 대분류 - 언더라인형 스크롤 (하단 구분선은 부모 한 줄로 통일) */}
           <Tab
             items={mainCategories}
             value={currentCategory}
             onChange={(val) => onMainChange(val as FilterMainCategory)}
             variant="underline"
             scrollable
-            className="min-w-0 flex-1"
+            className="min-w-0 flex-1 border-b-0 px-0 pt-3"
           />
         </div>
 

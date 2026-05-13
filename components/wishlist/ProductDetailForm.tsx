@@ -325,18 +325,31 @@ export default function ProductDetailForm({
       return;
     }
     const file = e.target.files?.[0];
-    if (file) {
-      if (formData.image_url?.startsWith('blob:')) {
-        URL.revokeObjectURL(formData.image_url);
-      }
-      const previewUrl = URL.createObjectURL(file);
+    if (!file) {
+      return;
+    }
+    if (formData.image_url?.startsWith('blob:')) {
+      URL.revokeObjectURL(formData.image_url);
+    }
+    const previewUrl = URL.createObjectURL(file);
+    const hasNaverOfficial =
+      String(formData.official_image ?? '').trim().length > 0;
+
+    if (isDirectRegisterLayout && hasNaverOfficial) {
       setFormData((prev) => ({
         ...prev,
-        official_image: null,
         image_url: previewUrl,
         imageFile: file,
       }));
+      return;
     }
+
+    setFormData((prev) => ({
+      ...prev,
+      official_image: null,
+      image_url: previewUrl,
+      imageFile: file,
+    }));
   };
 
   const handleSubmit = async () => {
@@ -883,6 +896,11 @@ export default function ProductDetailForm({
                 <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
                   원본 사진
                 </div>
+                {isDirectRegisterLayout ? (
+                  <p className="mb-2 text-[10px] leading-[150%] text-[#B7B7B7]">
+                    직접 찍은 사진·캡처를 올리면 공식 이미지와 함께 저장돼요.
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {

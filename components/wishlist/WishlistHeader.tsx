@@ -1,6 +1,6 @@
 'use client';
 import Image from 'next/image';
-import { useCallback, useEffect, useState } from 'react';
+import { startTransition, useCallback, useEffect, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Input from '@/components/common/Input/Input';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -40,7 +40,9 @@ export function WishlistHeader() {
 
   /** 브라우저 뒤로가기·외부 링크 등으로 `q`만 바뀐 경우 입력값과 맞춥니다. */
   useEffect(() => {
-    setLocalSearchQuery(queryFromUrl);
+    startTransition(() => {
+      setLocalSearchQuery(queryFromUrl);
+    });
   }, [queryFromUrl]);
 
   return (

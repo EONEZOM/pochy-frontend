@@ -69,7 +69,7 @@ function WishlistPageContent() {
   const sortOrder = searchParams.get('sort') || 'latest';
 
   const { data, isLoading, isError } = useReadWishCosmeticsList({
-    keyword: searchQuery || undefined,
+    keyword: searchQuery.trim() || undefined,
     category: currentCategory !== 'All' ? currentCategory : undefined,
     subCategory: currentSub !== 'All' ? currentSub : undefined,
     // 가격순은 클라이언트 정렬이므로 서버에는 최신순(desc)으로 전체를 받아옵니다.
@@ -158,7 +158,7 @@ function WishlistPageContent() {
               trigger={
                 <button
                   type="button"
-                  className="text-mono-dark-gray ml-5 flex size-8 items-center justify-center"
+                  className="text-mono-dark-gray flex size-8 items-center justify-center"
                   aria-label="정렬 필터"
                 >
                   <Image

@@ -64,12 +64,38 @@ export default function DirectRegisterPage() {
     }
 
     const hasLocalImage = imageFile instanceof File;
-    const captureImages = hasLocalImage ? [imageFile] : ([] as File[]);
-    const directImages = hasLocalImage ? [imageFile] : ([] as File[]);
+    const hasNaverImage = Boolean(naverUrl);
 
-    const productImage = hasLocalImage
-      ? { type: ProductImageType.DIRECT, directImageIndex: 0 }
-      : { type: ProductImageType.NAVER, naverImageUrl: naverUrl! };
+    let captureImages: File[] = [];
+    let directImages: File[] = [];
+    let productImage: {
+      type: ProductImageType;
+      naverImageUrl?: string;
+      directImageIndex?: number;
+    };
+
+    if (hasNaverImage && hasLocalImage) {
+      productImage = {
+        type: ProductImageType.NAVER,
+        naverImageUrl: naverUrl!,
+      };
+      captureImages = [imageFile];
+      directImages = [];
+    } else if (hasLocalImage) {
+      productImage = {
+        type: ProductImageType.DIRECT,
+        directImageIndex: 0,
+      };
+      captureImages = [imageFile];
+      directImages = [imageFile];
+    } else {
+      productImage = {
+        type: ProductImageType.NAVER,
+        naverImageUrl: naverUrl!,
+      };
+      captureImages = [];
+      directImages = [];
+    }
 
     /** 캡처 파일이 없으면 인덱스 0으로 두면 백엔드가 빈 목록 접근으로 실패할 수 있음 */
     const captureImageIndex = captureImages.length > 0 ? 0 : -1;
