@@ -5,6 +5,7 @@ import QueryProvider from '@/providers/query-provider';
 import '@/styles/reset.css';
 import '@/styles/globals.css';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { NavRouteDataPrefetch } from '@/components/layout/NavRouteDataPrefetch';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -40,6 +41,7 @@ export default function RootLayout({
             vaul-drawer-wrapper=""
             className="relative flex min-h-dvh w-full max-w-120 min-w-90 flex-col bg-white shadow-xl"
           >
+            <NavRouteDataPrefetch />
             <main className="flex min-h-0 flex-1 flex-col bg-white pb-14">
               {children}
             </main>

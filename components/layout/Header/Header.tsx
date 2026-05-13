@@ -15,6 +15,7 @@ const HEADER_ICON = {
 import { Button } from '@/components/ui/button';
 import Input from '@/components/common/Input/Input';
 import { cn } from '@/lib/utils';
+import { withViewTransition } from '@/lib/view-transition-navigate';
 
 const ICON_CONFIG = {
   search: {
@@ -118,13 +119,14 @@ export default function Header({
 }: HeaderComponentProps) {
   const router = useRouter();
 
-  // 뒤로 가기 핸들러
   const handleBack = React.useCallback(() => {
-    if (onBack) {
-      onBack();
-      return;
-    }
-    router.back();
+    withViewTransition(() => {
+      if (onBack) {
+        onBack();
+        return;
+      }
+      router.back();
+    });
   }, [onBack, router]);
 
   return (

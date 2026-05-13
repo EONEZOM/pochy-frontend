@@ -4,9 +4,11 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { Modal } from '@/components/common/Modal';
 import { cn } from '@/lib/utils';
+import { prefetchQueriesForNavHref } from '@/lib/prefetch-app-tab-queries';
 
 export const BOTTOM_NAV_MAX_WIDTH_CLASS = 'max-w-120';
 
@@ -62,6 +64,7 @@ function isNavActive(pathname: string, href: string) {
 
 export function BottomNav({ className }: { className?: string }) {
   const pathname = usePathname() ?? '/';
+  const queryClient = useQueryClient();
   const [isPreparingModalOpen, setIsPreparingModalOpen] = useState(false);
   const shouldHideBottomNav = BOTTOM_NAV_HIDDEN_PATHS.some((path) => {
     return pathname === path || pathname.startsWith(`${path}/`);
@@ -95,6 +98,12 @@ export function BottomNav({ className }: { className?: string }) {
                   prefetch={!isPreparingPath}
                   className="flex min-h-14 flex-col items-center justify-center gap-1 py-1.5"
                   aria-current={active ? 'page' : undefined}
+                  onPointerEnter={() => {
+                    if (isPreparingPath) {
+                      return;
+                    }
+                    void prefetchQueriesForNavHref(queryClient, item.href);
+                  }}
                   onClick={(event) => {
                     if (isPreparingPath) {
                       event.preventDefault();

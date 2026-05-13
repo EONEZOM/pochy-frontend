@@ -176,3 +176,38 @@ small {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* 헤더 뒤로가기 등 클라이언트 라우팅 시 View Transitions (Chromium 등) */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: app-vt-back-old 0.28s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: app-vt-back-new 0.32s cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+}
+
+@keyframes app-vt-back-old {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0.88;
+    transform: translateX(min(12px, 3vw));
+  }
+}
+
+@keyframes app-vt-back-new {
+  from {
+    opacity: 0.92;
+    transform: translateX(max(-14px, -3vw));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
