@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { prefetchMainAppTabQueries } from '@/lib/prefetch-app-tab-queries';
 
-const AUTH_PATH_PREFIXES = ['/login', '/verify', '/success', '/auth'] as const;
+const AUTH_PATH_PREFIXES = ['/login', '/verify', '/success', '/nickname', '/auth'] as const;
 
 const isAuthLikePath = (pathname: string): boolean => {
   return AUTH_PATH_PREFIXES.some(

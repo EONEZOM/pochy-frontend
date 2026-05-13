@@ -12,7 +12,7 @@ const SUCCESS_DISPLAY_MS = 1400;
  * Figma: `포치 임시` — 체크 완료 (1:2668), `public/icons/check.svg`만 사용
  * https://www.figma.com/design/ozRGHFE4rnqkqnikqCh7Pg/%ED%8F%AC%EC%B9%98-%EC%9E%84%EC%8B%9C?node-id=1-2668
  *
- * 잠시 노출 후 닉네임 설정을 위해 `/?setupNickname=1`로 자동 이동합니다.
+ * 잠시 노출 후 닉네임 설정을 위해 `/nickname`으로 자동 이동합니다.
  */
 export default function AuthSuccessPage() {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function AuthSuccessPage() {
     }
     didScheduleRef.current = true;
     const id = window.setTimeout(() => {
-      router.replace('/?setupNickname=1');
+      router.replace('/nickname');
     }, SUCCESS_DISPLAY_MS);
     return () => window.clearTimeout(id);
   }, [router]);
