@@ -20,8 +20,31 @@ export async function GET(request: Request) {
   try {
     const res = await fetch(url)
     if (!res.ok) {
+      let googleMessage: string | undefined
+      try {
+        const errBody = (await res.json()) as {
+          error?: { message?: string; errors?: { reason?: string }[] }
+        }
+        googleMessage = errBody?.error?.message
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[api/youtube] Google YouTube Data API:', res.status, errBody)
+        }
+      } catch {
+        // 본문이 JSON이 아닐 수 있음
+      }
+
+      const hint =
+        res.status === 403
+          ? ' API 키 제한·할당량·YouTube Data API v3 비활성화 등을 확인하세요.'
+          : ''
+
       return NextResponse.json(
-        { error: 'YouTube API 호출에 실패했습니다.' },
+        {
+          error: `YouTube API 호출에 실패했습니다.${hint}`,
+          ...(process.env.NODE_ENV === 'development' && googleMessage
+            ? { detail: googleMessage }
+            : {}),
+        },
         { status: res.status },
       )
     }
