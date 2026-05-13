@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import RegisterPWA from '../workers/register-pwa';
 import QueryProvider from '@/providers/query-provider';
 import '@/styles/reset.css';
@@ -48,6 +49,7 @@ export default function RootLayout({
             <BottomNav />
           </div>
         </QueryProvider>
+        <Analytics />
       </body>
     </html>
   );
