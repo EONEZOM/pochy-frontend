@@ -9,6 +9,8 @@ import {
 declare global {
   interface ServiceWorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
+    /** SW 스코프 오리진 비교용 — `self.location`은 일부 TS lib에서 SW 전역에 없음 */
+    readonly registration: ServiceWorkerRegistration;
   }
 }
 
@@ -45,6 +47,8 @@ const crossOriginNetworkOnly = new NetworkOnly({
   ],
 });
 
+const SAME_ORIGIN = new URL(self.registration.scope).origin;
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
@@ -66,7 +70,7 @@ const serwist = new Serwist({
       }),
     },
     {
-      matcher: ({ url }) => url.origin !== self.location.origin,
+      matcher: ({ url }) => url.origin !== SAME_ORIGIN,
       handler: crossOriginNetworkOnly,
     },
     ...defaultCache,
