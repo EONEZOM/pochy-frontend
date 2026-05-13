@@ -62,7 +62,7 @@ export function MainHomeEmptyView() {
   return (
     <div
       className={cn(
-        'relative flex min-h-0 w-full flex-1 flex-col overflow-hidden',
+        'relative flex min-h-0 w-full flex-1 flex-col overflow-hidden overscroll-none',
         'min-h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))]',
       )}
       style={{ background: HOME_EMPTY_GRADIENT }}

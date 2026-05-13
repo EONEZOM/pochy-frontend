@@ -27,7 +27,7 @@ const MAIN_HOME_GRADIENT_BG =
   'linear-gradient(180deg, #FFFFFF 0%, #FFF5FC 42%, #FFC6EC 100%)';
 
 const MAIN_HOME_LIST_LAYOUT =
-  'flex min-h-0 flex-1 flex-col overflow-hidden';
+  'flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden overscroll-none';
 
 const parseWishCosmeticsId = (item: ReadListDto): number | null => {
   const raw = item.wishCosmeticsId;
@@ -89,7 +89,7 @@ function MainHomeListView({
     >
       <MainHomeTopZipperWithLogo />
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-4 pb-1">
         <div className="mx-auto w-full max-w-[360px] shrink-0">
           <MainHomeListHeader
             nickname={nickname}
@@ -98,13 +98,16 @@ function MainHomeListView({
           />
         </div>
 
-        <div className="relative z-20 mx-auto mt-6 w-full max-w-[360px] shrink-0 space-y-8 pb-4">
+        <div className="relative z-20 mx-auto mt-3 grid min-h-0 w-full max-w-[360px] flex-1 grid-rows-3 gap-2 overflow-hidden sm:gap-2.5">
           {sections.map((section, sectionIndex) => (
-            <section key={section.title}>
-              <h2 className="text-[18px] leading-6 font-bold text-[#161618]">
+            <section
+              key={section.title}
+              className="flex min-h-0 min-w-0 flex-col gap-0.5 overflow-hidden"
+            >
+              <h2 className="shrink-0 text-[15px] leading-5 font-bold text-[#161618] sm:text-[17px]">
                 {section.title}
               </h2>
-              <div className="mt-3">
+              <div className="flex min-h-0 flex-1 items-center overflow-hidden">
                 <HomeSectionCarousel
                   sectionIndex={sectionIndex}
                   sectionTitle={section.title}
@@ -172,14 +175,16 @@ function MainPageContent() {
       if (id == null) {
         return [];
       }
-      return [{ id, imageUrl: pickWishListThumbnailUrl(item) } satisfies Detail];
+      return [
+        { id, imageUrl: pickWishListThumbnailUrl(item) } satisfies Detail,
+      ];
     },
   );
 
   const sections: Array<{ title: string; items: Detail[] }> = [
-    { title: '위시', items: wishItems },
-    { title: '마이', items: homeData?.myList ?? [] },
-    { title: '피드', items: homeData?.feed ?? [] },
+    { title: 'Wish List', items: wishItems },
+    { title: 'My Pouch', items: homeData?.myList ?? [] },
+    { title: 'Feed', items: homeData?.feed ?? [] },
   ];
 
   const showHomeSkeleton = isHomeLoading || isWishListLoading;
@@ -262,7 +267,7 @@ function MainPageContent() {
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden overscroll-none">
         {showHomeSkeleton ? (
           <MainHomeListView
             showSkeleton
@@ -271,7 +276,7 @@ function MainPageContent() {
             profileUrl={homeData?.profileUrl}
           />
         ) : isAllSectionsEmpty ? (
-          <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white p-0">
+          <main className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-none bg-white p-0">
             <MainHomeEmptyView />
           </main>
         ) : (
@@ -353,14 +358,16 @@ export default function MainPage() {
     <Suspense
       fallback={
         <main
-          className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-8 pb-8"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-none px-5 pt-8 pb-8"
           style={{ background: MAIN_HOME_GRADIENT_BG }}
         >
           <p className="text-mono-dark-gray text-sm">불러오는 중...</p>
         </main>
       }
     >
-      <MainPageContent />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-none">
+        <MainPageContent />
+      </div>
     </Suspense>
   );
 }
