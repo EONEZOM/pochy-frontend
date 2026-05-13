@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
-import { BottomNav } from '@/components/layout/BottomNav';
 import { WithdrawConfirmModal } from '@/components/common/WithdrawConfirmModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -121,115 +120,120 @@ export default function MyPage() {
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = React.useState(false);
 
   return (
-    <>
+    <div className="bg-mono-white flex min-h-0 flex-1 flex-col overflow-hidden">
       <Header
         title="프로필 수정"
         onBack={() => router.back()}
-        className="border-mono-bright-gray border-b"
+        className="border-mono-bright-gray shrink-0 border-b"
       />
-      <main className="bg-mono-white flex min-h-full flex-col px-5 pt-4 pb-28">
-        <div className="flex flex-col items-center">
-          <div className="border-mono-white relative size-[100px] shrink-0 rounded-full border-4 shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
-            {profileImageUrl ? (
-              <Image
-                src={profileImageUrl}
-                alt=""
-                width={100}
-                height={100}
-                unoptimized
-                className="bg-mono-gray size-[92px] rounded-full object-cover"
-              />
-            ) : (
-              <div className="bg-mono-gray size-[92px] rounded-full" />
-            )}
+      <div
+        className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-3 pb-1"
+        role="main"
+      >
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex shrink-0 flex-col items-center">
+            <div className="border-mono-white relative size-20 shrink-0 rounded-full border-[3px] shadow-[0_3px_3px_rgba(0,0,0,0.2)]">
+              {profileImageUrl ? (
+                <Image
+                  src={profileImageUrl}
+                  alt=""
+                  width={80}
+                  height={80}
+                  unoptimized
+                  className="bg-mono-gray size-[74px] rounded-full object-cover"
+                />
+              ) : (
+                <div className="bg-mono-gray size-[74px] rounded-full" />
+              )}
+            </div>
+            <p className="text-mono-jet mt-2 line-clamp-1 text-center text-sm leading-5 font-bold sm:text-base">
+              {isLoading ? '불러오는 중...' : (profile?.nickname ?? '포치')}
+            </p>
           </div>
-          <p className="text-mono-jet mt-[20px] text-base leading-5 font-bold">
-            {isLoading ? '불러오는 중...' : (profile?.nickname ?? '포치')}
-          </p>
-        </div>
 
-        <div className="mt-10 flex w-full flex-col gap-9">
-          <div className="flex w-full flex-col gap-1.5">
-            <label
-              htmlFor="nickname"
-              className="text-mono-jet text-base leading-5 font-normal"
-            >
-              닉네임
-            </label>
-            <Input
-              id="nickname"
-              value={nickname}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-                setNicknameInput(event.target.value);
-                if (!isNicknameTouched) {
-                  setIsNicknameTouched(true);
-                }
-              }}
-              maxLength={10}
-              placeholder="닉네임을 입력해 주세요."
-              disabled={isSaving}
-              className="border-mono-jet text-mono-jet placeholder:text-mono-dark-gray h-12 w-full rounded border px-4 py-3 text-sm leading-[150%] font-normal"
-            />
+          <div className="mt-4 flex w-full shrink-0 flex-col gap-4">
+            <div className="flex w-full flex-col gap-1">
+              <label
+                htmlFor="nickname"
+                className="text-mono-jet text-sm leading-5 font-normal sm:text-base"
+              >
+                닉네임
+              </label>
+              <Input
+                id="nickname"
+                value={nickname}
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                  setNicknameInput(event.target.value);
+                  if (!isNicknameTouched) {
+                    setIsNicknameTouched(true);
+                  }
+                }}
+                maxLength={10}
+                placeholder="닉네임을 입력해 주세요."
+                disabled={isSaving}
+                className="border-mono-jet text-mono-jet placeholder:text-mono-dark-gray h-11 w-full rounded border px-3 py-2 text-sm leading-[150%] font-normal sm:h-12 sm:px-4 sm:py-3"
+              />
+              <button
+                type="button"
+                onClick={handleAutoNickname}
+                disabled={isSaving}
+                className="text-mono-dark-gray self-start text-xs underline-offset-2 hover:underline disabled:opacity-50 sm:text-sm"
+              >
+                랜덤 닉네임 적용
+              </button>
+            </div>
+
+            <div className="flex w-full flex-col gap-1">
+              <span className="text-mono-jet text-sm leading-5 font-normal sm:text-base">
+                이메일
+              </span>
+              <div
+                className="border-mono-jet text-mono-jet flex h-11 w-full items-center rounded border bg-white px-3 py-2 text-sm leading-[150%] font-normal sm:h-12 sm:px-4 sm:py-3"
+                aria-readonly
+              >
+                {isLoading
+                  ? '불러오는 중...'
+                  : displayEmail || '등록된 이메일이 없습니다.'}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 flex w-full shrink-0 justify-end">
             <button
               type="button"
-              onClick={handleAutoNickname}
-              disabled={isSaving}
-              className="text-mono-dark-gray self-start text-sm underline-offset-2 hover:underline disabled:opacity-50"
+              className="text-mono-dark-gray text-sm leading-5 font-normal underline-offset-2 hover:underline disabled:opacity-50 sm:text-base"
+              disabled={isDeleting}
+              onClick={() => {
+                setIsWithdrawModalOpen(true);
+              }}
             >
-              랜덤 닉네임 적용
+              {isDeleting ? '삭제 중...' : '회원탈퇴'}
             </button>
           </div>
 
-          <div className="flex w-full flex-col gap-1.5">
-            <span className="text-mono-jet text-base leading-5 font-normal">
-              이메일
-            </span>
-            <div
-              className="border-mono-jet text-mono-jet flex h-12 w-full items-center rounded border bg-white px-4 py-3 text-sm leading-[150%] font-normal"
-              aria-readonly
+          <div className="mt-auto flex w-full max-w-[400px] shrink-0 flex-col gap-3 self-center pt-3">
+            <button
+              type="button"
+              className="text-center text-sm leading-5 font-normal text-[#FF0000] underline-offset-2 hover:underline disabled:opacity-50 sm:text-base"
+              disabled={isLoggingOut}
+              onClick={() => {
+                logout();
+              }}
             >
-              {isLoading
-                ? '불러오는 중...'
-                : displayEmail || '등록된 이메일이 없습니다.'}
-            </div>
+              {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
+            </button>
+
+            <Button
+              type="button"
+              onClick={handleComplete}
+              disabled={isSaving}
+              className="border-mono-bright-gray text-mono-jet hover:bg-brand-lavender/90 bg-brand-lavender mb-[10px] h-12 w-full rounded-full border text-sm leading-5 font-bold shadow-none sm:h-14 sm:text-base"
+            >
+              {isSaving ? '저장 중...' : '완료'}
+            </Button>
           </div>
         </div>
-
-        <div className="mt-6 flex w-full justify-end self-center">
-          <button
-            type="button"
-            className="text-mono-dark-gray text-base leading-5 font-normal underline-offset-2 hover:underline disabled:opacity-50"
-            disabled={isDeleting}
-            onClick={() => {
-              setIsWithdrawModalOpen(true);
-            }}
-          >
-            {isDeleting ? '삭제 중...' : '회원탈퇴'}
-          </button>
-        </div>
-
-        <div className="mt-60 flex w-full max-w-[400px] flex-col gap-6 self-center">
-          <button
-            type="button"
-            className="text-center text-base leading-5 font-normal text-[#FF0000] underline-offset-2 hover:underline disabled:opacity-50"
-            disabled={isLoggingOut}
-            onClick={() => {
-              logout();
-            }}
-          >
-            {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
-          </button>
-
-          <Button
-            type="button"
-            onClick={handleComplete}
-            disabled={isSaving}
-            className="border-mono-bright-gray text-mono-jet hover:bg-brand-lavender/90 bg-brand-lavender h-14 w-full rounded-full border text-base leading-5 font-bold shadow-none"
-          >
-            {isSaving ? '저장 중...' : '완료'}
-          </Button>
-        </div>
-      </main>
+      </div>
 
       <WithdrawConfirmModal
         open={isWithdrawModalOpen}
@@ -243,8 +247,6 @@ export default function MyPage() {
           withdraw();
         }}
       />
-
-      <BottomNav />
-    </>
+    </div>
   );
 }
