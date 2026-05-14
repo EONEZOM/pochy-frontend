@@ -81,7 +81,7 @@ const nextConfig = {
     return [
       { source: '/auth/verify', destination: '/verify', permanent: false },
       { source: '/auth/success', destination: '/success', permanent: false },
-      { source: '/favicon.ico', destination: '/logo/logo-192.svg', permanent: false },
+      { source: '/favicon.ico', destination: '/logo/nobg-logo-192.svg', permanent: false },
     ];
   },
 

@@ -24,9 +24,9 @@ export const metadata: Metadata = {
   description: '나만의 화장대를 만들고 공유해보세요!',
   manifest: '/manifest.json',
   icons: {
-    icon: '/logo/logo-192.svg',
-    shortcut: '/logo/logo-192.svg',
-    apple: '/logo/logo-192.svg',
+    icon: '/logo/nobg-logo-192.svg',
+    shortcut: '/logo/nobg-logo-192.svg',
+    apple: '/logo/nobg-logo-192.svg',
   },
 };
 
