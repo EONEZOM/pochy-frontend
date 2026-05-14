@@ -135,6 +135,16 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'd3m6etzsbqm4vo.cloudfront.net',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cloudfront.net',
+        pathname: '/**',
+      },
       ...(apiOriginRemotePattern ? [apiOriginRemotePattern] : []),
     ],
   },
