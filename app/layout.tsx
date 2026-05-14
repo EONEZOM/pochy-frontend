@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import RegisterPWA from '../workers/register-pwa';
 import QueryProvider from '@/providers/query-provider';
 import '@/styles/reset.css';
@@ -50,6 +51,7 @@ export default function RootLayout({
           </div>
         </QueryProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
