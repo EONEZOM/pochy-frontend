@@ -1,5 +1,19 @@
 import { NextResponse } from 'next/server'
 
+type NaverApiErrorBody = {
+  errorCode?: string
+  errorMessage?: string
+}
+
+const getNaverShoppingOperatorHint = (
+  errorCode: string | null,
+): string | null => {
+  if (errorCode !== '024') {
+    return null
+  }
+  return 'NAVER_CLIENT_ID·NAVER_CLIENT_SECRET은 검색 API가 사용 설정된 쇼핑용 애플리케이션 값이어야 합니다. 네이버 로그인(OAuth) 키를 넣었는지 Vercel Production 환경 변수를 확인하세요.';
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const query = searchParams.get('query')
@@ -10,18 +24,11 @@ export async function GET(request: Request) {
   const clientId = process.env.NAVER_CLIENT_ID?.trim() ?? ''
   const clientSecret = process.env.NAVER_CLIENT_SECRET?.trim() ?? ''
   if (!clientId || !clientSecret) {
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/5a029fea-afe4-4ab8-a8b7-fb154c62fb7a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'52df02'},body:JSON.stringify({sessionId:'52df02',runId:'pre-fix',hypothesisId:'H1',location:'app/api/naver/search/route.ts:missing-env',message:'naver credentials missing',data:{hasClientId:Boolean(clientId),hasClientSecret:Boolean(clientSecret),vercelEnv:process.env.VERCEL_ENV??null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     return NextResponse.json(
       { error: 'NAVER API 환경 변수가 설정되지 않았습니다.' },
       { status: 500 },
     )
   }
-
-  // #region agent log
-  fetch('http://127.0.0.1:7243/ingest/5a029fea-afe4-4ab8-a8b7-fb154c62fb7a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'52df02'},body:JSON.stringify({sessionId:'52df02',runId:'pre-fix',hypothesisId:'H1-H2',location:'app/api/naver/search/route.ts:env-snapshot',message:'naver credentials present',data:{hasClientId:true,hasClientSecret:true,clientIdLength:clientId.length,clientSecretLength:clientSecret.length,clientIdTrimmedOk:clientId===clientId.trim(),clientSecretTrimmedOk:clientSecret===clientSecret.trim(),vercelEnv:process.env.VERCEL_ENV??null,nodeEnv:process.env.NODE_ENV??null},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
 
   /** 유사도 상위 N건 중 `lprice` 최솟값을 최저가로 사용 (단일 1건은 변별력이 낮음) */
   const display = 10
@@ -40,27 +47,14 @@ export async function GET(request: Request) {
     let naverErrorCode: string | null = null
     let naverErrorMessage: string | null = null
     try {
-      const errorBody = (await res.json()) as {
-        errorCode?: string
-        errorMessage?: string
-      }
+      const errorBody = (await res.json()) as NaverApiErrorBody
       naverErrorCode = errorBody.errorCode ?? null
       naverErrorMessage = errorBody.errorMessage ?? null
     } catch {
       naverErrorMessage = null
     }
 
-    // #region agent log
-    console.error('[naver-search] upstream rejected', {
-      naverStatus: res.status,
-      naverErrorCode,
-      naverErrorMessage,
-      vercelEnv: process.env.VERCEL_ENV ?? null,
-      clientIdLength: clientId.length,
-      clientSecretLength: clientSecret.length,
-    })
-    fetch('http://127.0.0.1:7243/ingest/5a029fea-afe4-4ab8-a8b7-fb154c62fb7a',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'52df02'},body:JSON.stringify({sessionId:'52df02',runId:'pre-fix',hypothesisId:'H3-H5',location:'app/api/naver/search/route.ts:naver-error',message:'naver upstream rejected request',data:{naverStatus:res.status,naverErrorCode,naverErrorMessage,vercelEnv:process.env.VERCEL_ENV??null},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
+    const operatorHint = getNaverShoppingOperatorHint(naverErrorCode)
 
     return NextResponse.json(
       {
@@ -69,6 +63,7 @@ export async function GET(request: Request) {
           naverStatus: res.status,
           naverErrorCode,
           naverErrorMessage,
+          ...(operatorHint ? { operatorHint } : {}),
         },
       },
       { status: res.status },

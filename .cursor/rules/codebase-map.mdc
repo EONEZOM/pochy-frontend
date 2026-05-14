@@ -162,7 +162,7 @@ sequenceDiagram
 | `NEXT_PUBLIC_API_URL` | `axios-instance.ts`, `next.config.mjs` |
 | `OPENAPI_BASE_URL` | `next.config.mjs`, `orval.config.js` |
 | `OPENAI_API_KEY` | `app/api/vision/extract/route.ts` |
-| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | `app/api/naver/search/route.ts` |
+| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | `app/api/naver/search/route.ts` (검색·쇼핑 Open API; 네이버 로그인 `NAVER_OAUTH_*`와 별도) |
 | `YOUTUBE_API_KEY` | `app/api/youtube/route.ts` |
 
 > `.env*`는 `.gitignore`에 포함되어 있어 `.env.example`이 없음. 신규 환경 구성 시 위 표 참고.
