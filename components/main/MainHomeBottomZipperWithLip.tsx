@@ -16,6 +16,8 @@ export function MainHomeBottomZipperWithLip() {
           unoptimized
           className="absolute top-0 left-0 z-0 h-full w-full object-cover object-top sm:top-1"
           sizes="(max-width: 480px) 100vw, 480px"
+          priority
+          fetchPriority="high"
         />
         <Image
           src="/figma/main/지퍼꼬다리.svg"
