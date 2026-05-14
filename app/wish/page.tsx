@@ -234,7 +234,14 @@ function WishlistPageContent() {
                       href={`/wish/${item.id}`}
                       className="group flex w-full min-w-0 flex-col"
                     >
-                      <div className="relative aspect-square w-full shrink-0 overflow-hidden">
+                      <div
+                        className={cn(
+                          'relative aspect-square w-full shrink-0 overflow-hidden',
+                          rowIndex % 2 === colIndex
+                            ? 'bg-[#FFF7FC]'
+                            : 'bg-[#F3F3F3]',
+                        )}
+                      >
                         <WishCardImage
                           fill
                           officialImage={item.official_image}
