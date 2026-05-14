@@ -92,7 +92,11 @@ function LoginContent() {
 
   const handleLogin = async () => {
     const trimmedEmail = email.trim();
-    if (!trimmedEmail || !hasPrivacyConsent || !isValidEmailFormat(trimmedEmail)) {
+    if (
+      !trimmedEmail ||
+      !hasPrivacyConsent ||
+      !isValidEmailFormat(trimmedEmail)
+    ) {
       return;
     }
 
@@ -175,8 +179,7 @@ function LoginContent() {
   const trimmedEmail = email.trim();
   const shouldShowEmailError =
     trimmedEmail.length > 0 && !isValidEmailFormat(trimmedEmail);
-  const canSubmitLogin =
-    hasPrivacyConsent && isValidEmailFormat(trimmedEmail);
+  const canSubmitLogin = hasPrivacyConsent && isValidEmailFormat(trimmedEmail);
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-white">
@@ -223,14 +226,14 @@ function LoginContent() {
           alt=""
           width={431}
           height={350}
-          className="absolute top-[min(42dvh,350px)] right-[-min(32vw,120px)] h-[min(48vw,170px)] w-[min(120vw,431px)] rotate-[30deg] object-cover sm:right-[-104px]"
+          className="absolute top-[min(42dvh,350px)] right-[-min(42vw,140px)] h-[min(48vw,170px)] w-[min(120vw,431px)] rotate-[30deg] object-cover sm:right-[-140px] md:right-[-140px]"
           unoptimized
           priority
         />
       </div>
 
       <main className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-[360px] flex-1 flex-col justify-between px-5 pt-[max(1rem,var(--safe-area-top))] pb-[max(1.25rem,var(--safe-area-bottom))]">
-        <div className="mx-auto flex w-full shrink-0 flex-col items-center pt-20 sm:pt-30">
+        <div className="mx-auto flex w-full shrink-0 flex-col items-center pt-40 sm:pt-40">
           <Image
             src={mainLogo}
             alt="POCHY"
@@ -300,7 +303,7 @@ function LoginContent() {
                   type="button"
                   variant="solid"
                   size="lg"
-                  className="h-14 w-full rounded-full text-base shadow-none transition-transform active:scale-[0.98] enabled:border-0 enabled:bg-[#FF93DB] enabled:text-mono-jet enabled:hover:bg-[#FF85D5]"
+                  className="enabled:text-mono-jet h-14 w-full rounded-full text-base shadow-none transition-transform active:scale-[0.98] enabled:border-0 enabled:bg-[#FF93DB] enabled:hover:bg-[#FF85D5]"
                   onClick={handleLogin}
                   disabled={
                     isPending ||
@@ -311,7 +314,7 @@ function LoginContent() {
                 >
                   {isPending || isCheckingSession || isCheckingAutoLogin ? (
                     <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-mono-dark-gray border-t-transparent" />
+                      <span className="border-mono-dark-gray h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
                       {isCheckingSession || isCheckingAutoLogin
                         ? '확인 중...'
                         : '발송 중...'}
