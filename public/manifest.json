@@ -1,7 +1,7 @@
 ﻿{
-  "name": "Eonezom App",
-  "short_name": "Eonezom",
-  "description": "Eonezom Frontend PWA",
+  "name": "POCHY",
+  "short_name": "POCHY",
+  "description": "나만의 화장대를 만들고 공유해보세요!",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
