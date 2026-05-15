@@ -2,39 +2,56 @@
 
 import Image from 'next/image';
 
+import { cn } from '@/lib/utils';
+
+type MainHomeBottomZipperWithLipProps = {
+  className?: string;
+  panelClassName?: string;
+  imageClassName?: string;
+};
+
 /**
  * `MainHomeEmptyView` 하단과 동일 — 아래지퍼·꼬다리·립 (`public/figma/main/*`)
  */
-export function MainHomeBottomZipperWithLip() {
+export function MainHomeBottomZipperWithLip({
+  className,
+  panelClassName,
+  imageClassName,
+}: MainHomeBottomZipperWithLipProps) {
   return (
-    <div className="relative z-10 mt-2 w-full shrink-0 overflow-hidden sm:mt-3">
-      <div className="relative h-[min(28dvh,168px)] w-full overflow-hidden">
+    <div
+      className={cn(
+        'relative z-10 mt-2 w-full shrink-0 overflow-hidden sm:mt-3',
+        className,
+      )}
+    >
+      <div
+        className={cn(
+          'relative w-full overflow-hidden',
+          'h-[min(calc(var(--app-height)*0.28),168px)]',
+          panelClassName,
+        )}
+      >
         <Image
           src="/figma/main/아래지퍼.svg"
           alt=""
           fill
           unoptimized
-          className="absolute top-0 left-0 z-0 h-full w-full object-cover object-top sm:top-1"
+          className={cn('object-cover object-top', imageClassName)}
           sizes="(max-width: 480px) 100vw, 480px"
           priority
           fetchPriority="high"
         />
-        <Image
-          src="/figma/main/지퍼꼬다리.svg"
-          alt=""
-          width={72}
-          height={72}
-          unoptimized
-          className="absolute bottom-9 left-3 z-10 h-auto w-[min(18vw,68px)] object-contain drop-shadow-[0_1px_4px_rgba(0,0,0,0.12)]"
-        />
-        <Image
-          src="/figma/main/hero-2.png"
-          alt=""
-          width={420}
-          height={420}
-          unoptimized
-          className="absolute -right-24 bottom-[-30px] z-10 max-h-[min(32dvh,180px)] w-auto origin-bottom-right rotate-[8deg] object-contain object-bottom drop-shadow-[0_4px_14px_rgba(0,0,0,0.18)] sm:-right-20"
-        />
+        <div className="pointer-events-none absolute right-2 bottom-2 z-10 w-[min(28vw,112px)] sm:right-3 sm:bottom-3">
+          <Image
+            src="/figma/main/립스틱.svg"
+            alt=""
+            width={112}
+            height={112}
+            unoptimized
+            className="h-auto w-full object-contain object-bottom"
+          />
+        </div>
       </div>
     </div>
   );
