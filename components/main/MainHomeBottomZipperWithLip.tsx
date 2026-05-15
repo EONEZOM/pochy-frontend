@@ -42,7 +42,6 @@ export function MainHomeBottomZipperWithLip({
           priority
           fetchPriority="high"
         />
-        <div className="pointer-events-none absolute right-2 bottom-[-10px] z-10 w-[min(28vw,112px)] sm:right-3 sm:bottom-3">
         <div className="pointer-events-none absolute right-2 bottom-0 z-10 w-[min(28vw,112px)] sm:right-3 sm:bottom-3">
           <Image
             src="/figma/main/립스틱.svg"
