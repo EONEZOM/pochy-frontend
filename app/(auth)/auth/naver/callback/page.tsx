@@ -71,7 +71,7 @@ function NaverCallbackContent() {
   }, [code, router, state]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white">
+    <main className="flex min-h-(--app-height) items-center justify-center bg-white">
       <p className="text-sm text-zinc-600">네이버 로그인 처리 중...</p>
     </main>
   );
@@ -81,7 +81,7 @@ export default function NaverCallbackPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-white">
+        <main className="flex min-h-(--app-height) items-center justify-center bg-white">
           <p className="text-sm text-zinc-600">네이버 로그인 처리 중...</p>
         </main>
       }

@@ -114,7 +114,7 @@ function NicknameSetupContent() {
 
   if (isHomeLoading || hasServerNickname) {
     return (
-      <div className="flex min-h-screen flex-col bg-white px-5 pb-[max(1.25rem,var(--safe-area-bottom))]">
+      <div className="flex min-h-(--app-height) flex-col bg-white px-5 pb-[max(1.25rem,var(--safe-area-bottom))]">
         <Header
           className="border-none bg-white pt-[var(--safe-area-top)]"
           onBack={() => router.push('/login')}
@@ -127,7 +127,7 @@ function NicknameSetupContent() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white pb-[max(1.25rem,var(--safe-area-bottom))]">
+    <div className="flex min-h-(--app-height) flex-col bg-white pb-[max(1.25rem,var(--safe-area-bottom))]">
       <Header
         className="border-none bg-white pt-[var(--safe-area-top)]"
         onBack={() => router.push('/login')}
@@ -247,7 +247,7 @@ export default function NicknameSetupPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-white px-5">
+        <div className="flex min-h-(--app-height) items-center justify-center bg-white px-5">
           <p className="text-mono-dark-gray text-sm">확인 중...</p>
         </div>
       }

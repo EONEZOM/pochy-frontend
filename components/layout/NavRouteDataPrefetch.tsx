@@ -5,10 +5,8 @@ import { usePathname } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { prefetchMainAppTabQueries } from '@/lib/prefetch-app-tab-queries';
+import { preloadMainHomeAssets } from '@/lib/preload-main-home-assets';
 
-<<<<<<< Updated upstream
-const AUTH_PATH_PREFIXES = ['/login', '/verify', '/success', '/nickname', '/auth'] as const;
-=======
 const AUTH_PATH_PREFIXES = [
   '/opening',
   '/login',
@@ -18,10 +16,15 @@ const AUTH_PATH_PREFIXES = [
   '/auth',
 ] as const;
 const PRE_HOME_PATH_PREFIXES = ['/success', '/nickname'] as const;
->>>>>>> Stashed changes
 
 const isAuthLikePath = (pathname: string): boolean => {
   return AUTH_PATH_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+};
+
+const isPreHomePath = (pathname: string): boolean => {
+  return PRE_HOME_PATH_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );
 };
@@ -43,7 +46,10 @@ export function NavRouteDataPrefetch() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (isAuthLikePath(pathname)) {
+    const shouldPrefetchTabs = !isAuthLikePath(pathname);
+    const shouldPreloadMainHome =
+      shouldPrefetchTabs || isPreHomePath(pathname);
+    if (!shouldPreloadMainHome && !shouldPrefetchTabs) {
       return;
     }
     let cancelled = false;
@@ -51,7 +57,12 @@ export function NavRouteDataPrefetch() {
       if (cancelled) {
         return;
       }
-      void prefetchMainAppTabQueries(queryClient);
+      if (shouldPreloadMainHome) {
+        preloadMainHomeAssets();
+      }
+      if (shouldPrefetchTabs) {
+        void prefetchMainAppTabQueries(queryClient);
+      }
     });
     return () => {
       cancelled = true;

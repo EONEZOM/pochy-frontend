@@ -70,6 +70,7 @@
   /* 모바일 안전 영역 대응 */
   --safe-area-top: env(safe-area-inset-top);
   --safe-area-bottom: env(safe-area-inset-bottom);
+  --app-height: 100dvh;
 }
 
 body {
@@ -128,7 +129,7 @@ small {
   body {
     /* 스크롤 시 배경·카드가 뷰포트에만 딱 맞고 아래는 회색으로 보이는 문제 방지:
        고정 height 대신 최소 높이만 주고, 본문 길이만큼 문서가 자라게 함 */
-    min-height: 100dvh;
+    min-height: var(--app-height);
     overflow-x: hidden;
   }
 

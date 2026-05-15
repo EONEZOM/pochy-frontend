@@ -26,7 +26,6 @@ import {
 import { getState } from '@/api/generated/oauth/oauth';
 import { isAxiosError } from 'axios';
 import Image from 'next/image';
-import mainLogo from '@/public/figma/login/hero-1.svg';
 
 const emailFormatRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -88,7 +87,11 @@ function LoginContent() {
 
   const handleLogin = async () => {
     const trimmedEmail = email.trim();
-    if (!trimmedEmail || !hasPrivacyConsent || !isValidEmailFormat(trimmedEmail)) {
+    if (
+      !trimmedEmail ||
+      !hasPrivacyConsent ||
+      !isValidEmailFormat(trimmedEmail)
+    ) {
       return;
     }
 
@@ -171,12 +174,10 @@ function LoginContent() {
   const trimmedEmail = email.trim();
   const shouldShowEmailError =
     trimmedEmail.length > 0 && !isValidEmailFormat(trimmedEmail);
-  const canSubmitLogin =
-    hasPrivacyConsent && isValidEmailFormat(trimmedEmail);
+  const canSubmitLogin = hasPrivacyConsent && isValidEmailFormat(trimmedEmail);
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-white">
-      {/* 배경 일러스트 — 스케일 없이 영역 안에서만 잘림 */}
+    <div className="relative flex h-full min-h-(--app-height) min-h-0 w-full flex-1 flex-col overflow-x-hidden bg-white">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <Image
           src="/figma/login/bg-zip.svg"
@@ -187,57 +188,10 @@ function LoginContent() {
           unoptimized
           priority
         />
-        <Image
-          src="/figma/login/hero-4.png"
-          alt=""
-          width={269}
-          height={189}
-          className="absolute top-[min(32dvh,260px)] left-[-85px] h-[min(42vw,170px)] w-[min(72vw,269px)] max-w-none rotate-[-20deg] object-cover sm:left-[-70px]"
-          unoptimized
-          priority
-        />
-        <Image
-          src="/figma/login/sticker.svg"
-          alt=""
-          width={74}
-          height={122}
-          className="absolute top-[min(100dvh,530px)] left-[19px] h-[min(38vw,150px)] w-[min(22vw,74px)] object-cover sm:left-5"
-          unoptimized
-          priority
-        />
-        <Image
-          src="/figma/login/hero-3.png"
-          alt=""
-          width={400}
-          height={250}
-          className="absolute top-0 right-[-min(42vw,150px)] h-[min(58vw,220px)] w-[min(110vw,400px)] object-cover sm:right-[-130px]"
-          unoptimized
-          priority
-        />
-        <Image
-          src="/figma/login/hero-2.png"
-          alt=""
-          width={431}
-          height={350}
-          className="absolute top-[min(42dvh,350px)] right-[-min(32vw,120px)] h-[min(48vw,170px)] w-[min(120vw,431px)] rotate-[30deg] object-cover sm:right-[-104px]"
-          unoptimized
-          priority
-        />
       </div>
 
-      <main className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-[360px] flex-1 flex-col justify-between px-5 pt-[max(1rem,var(--safe-area-top))] pb-[max(1.25rem,var(--safe-area-bottom))]">
-        <div className="mx-auto flex w-full shrink-0 flex-col items-center pt-20 sm:pt-30">
-          <Image
-            src={mainLogo}
-            alt="POCHY"
-            width={144}
-            height={96}
-            className="h-auto w-[min(200px,52vw)] object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.12)]"
-            priority
-          />
-        </div>
-
-        <div className="w-full shrink-0 pt-6">
+      <main className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-[360px] flex-1 flex-col px-5 pt-[max(1rem,var(--safe-area-top))] pb-[max(1.25rem,var(--safe-area-bottom))]">
+        <div className="mt-auto w-full shrink-0">
           <div className="mx-auto flex w-full max-w-[319px] flex-col gap-4">
             <BottomSheet
               dismissible={!isPrivacyConsentModalOpen}
@@ -296,7 +250,7 @@ function LoginContent() {
                   type="button"
                   variant="solid"
                   size="lg"
-                  className="h-14 w-full rounded-full text-base shadow-none transition-transform active:scale-[0.98] enabled:border-0 enabled:bg-[#FF93DB] enabled:text-mono-jet enabled:hover:bg-[#FF85D5]"
+                  className="enabled:text-mono-jet h-14 w-full rounded-full text-base shadow-none transition-transform active:scale-[0.98] enabled:border-0 enabled:bg-[#FF93DB] enabled:hover:bg-[#FF85D5]"
                   onClick={handleLogin}
                   disabled={
                     isPending ||
@@ -307,7 +261,7 @@ function LoginContent() {
                 >
                   {isPending || isCheckingSession || isCheckingAutoLogin ? (
                     <span className="flex items-center gap-2">
-                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-mono-dark-gray border-t-transparent" />
+                      <span className="border-mono-dark-gray h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
                       {isCheckingSession || isCheckingAutoLogin
                         ? '확인 중...'
                         : '발송 중...'}

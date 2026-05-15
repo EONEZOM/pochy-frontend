@@ -54,24 +54,27 @@ const nextConfig = {
     return config;
   },
 
-  // 2) Security headers for SharedArrayBuffer-enabled workloads.
+  // 2) COOP/COEP — ONNX Runtime Web(WASM) 등 크로스 오리진 격리가 필요한 화면만.
+  // 전역 `/(.*)`에 두면 프로덕션에서 네이버 프로필·pstatic CDN 이미지가 CORP 미제공으로 차단됨.
+  // 배포에서 원인 확인: 문서 응답 `cross-origin-embedder-policy`, Network에서 이미지 blocked reason.
   async headers() {
     if (process.env.NODE_ENV !== 'production') {
       return [];
     }
+    const crossOriginIsolationHeaders = [
+      {
+        key: 'Cross-Origin-Opener-Policy',
+        value: 'same-origin',
+      },
+      {
+        key: 'Cross-Origin-Embedder-Policy',
+        value: 'require-corp',
+      },
+    ];
     return [
       {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin',
-          },
-          {
-            key: 'Cross-Origin-Embedder-Policy',
-            value: 'require-corp',
-          },
-        ],
+        source: '/my-cosmetics/register',
+        headers: crossOriginIsolationHeaders,
       },
     ];
   },
@@ -81,11 +84,8 @@ const nextConfig = {
     return [
       { source: '/auth/verify', destination: '/verify', permanent: false },
       { source: '/auth/success', destination: '/success', permanent: false },
-<<<<<<< Updated upstream
-=======
       { source: '/auth/opening', destination: '/opening', permanent: false },
       { source: '/favicon.ico', destination: '/logo/nobg-logo-192.svg', permanent: false },
->>>>>>> Stashed changes
     ];
   },
 
@@ -140,10 +140,19 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'd3m6etzsbqm4vo.cloudfront.net',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cloudfront.net',
+        pathname: '/**',
+      },
       ...(apiOriginRemotePattern ? [apiOriginRemotePattern] : []),
     ],
   },
-
   reactStrictMode: true,
 };
 

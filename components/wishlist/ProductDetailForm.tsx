@@ -8,9 +8,10 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import { Search, Loader2, X, Share2, Download, ImagePlus } from 'lucide-react';
+import { Loader2, X, Share2, Download } from 'lucide-react';
 import Image from 'next/image';
 import { COSMETIC_CATEGORIES } from '@/constants/category';
+import { WISH_PLACEHOLDER_IMAGE_SRC } from '@/constants/wish-placeholders';
 import {
   Select,
   SelectContent,
@@ -48,6 +49,59 @@ const scanSelectTriggerClassName =
 
 const scanTextInputClassName =
   'h-auto min-h-[37px] rounded-[4px] border-[0.5px] border-[#DCDCDC] px-2.5 py-2.5 text-xs font-bold text-[#161618] placeholder:font-normal placeholder:text-[#B7B7B7] focus-visible:border-[#DCDCDC] focus-visible:ring-0';
+
+function WishCapturePreviewImage({
+  previewSrc,
+  alt = '',
+  variant = 'thumb',
+}: {
+  previewSrc: string;
+  alt?: string;
+  variant?: 'thumb' | 'modal';
+}) {
+  if (previewSrc === WISH_PLACEHOLDER_IMAGE_SRC) {
+    const iconSize = variant === 'modal' ? 48 : 28;
+    return (
+      <span className="pointer-events-none flex size-full items-center justify-center">
+        <Image
+          src={WISH_PLACEHOLDER_IMAGE_SRC}
+          alt=""
+          width={iconSize}
+          height={iconSize}
+          unoptimized
+          className="object-contain"
+        />
+      </span>
+    );
+  }
+
+  const unoptimized =
+    previewSrc.startsWith('data:') ||
+    previewSrc.startsWith('blob:') ||
+    previewSrc.endsWith('.svg');
+
+  if (variant === 'modal') {
+    return (
+      <Image
+        src={previewSrc}
+        alt={alt}
+        fill
+        className="object-contain"
+        unoptimized={unoptimized}
+      />
+    );
+  }
+
+  return (
+    <Image
+      src={previewSrc}
+      alt={alt}
+      fill
+      className="object-cover"
+      unoptimized={unoptimized}
+    />
+  );
+}
 
 function WishFieldLabel({ children }: { children: ReactNode }) {
   return (
@@ -427,7 +481,7 @@ export default function ProductDetailForm({
     if (captureFilePreviewSrc) {
       return captureFilePreviewSrc;
     }
-    return '/icons/imgplus.svg';
+    return WISH_PLACEHOLDER_IMAGE_SRC;
   }, [captureFilePreviewSrc, formData.image_url]);
 
   /** 직접 등록 상단 카드: 네이버 공식 이미지·직접 촬영·업로드 파일 중 하나라도 있으면 미리보기 표시 */
@@ -449,7 +503,7 @@ export default function ProductDetailForm({
     : (headerTitle ?? '제품 상세보기');
 
   const handleCaptureShare = async () => {
-    if (!capturePreviewSrc || capturePreviewSrc === '/icons/imgplus.svg') {
+    if (!capturePreviewSrc || capturePreviewSrc === WISH_PLACEHOLDER_IMAGE_SRC) {
       return;
     }
     try {
@@ -470,7 +524,7 @@ export default function ProductDetailForm({
   };
 
   const handleCaptureDownload = async () => {
-    if (!capturePreviewSrc || capturePreviewSrc === '/icons/imgplus.svg') {
+    if (!capturePreviewSrc || capturePreviewSrc === WISH_PLACEHOLDER_IMAGE_SRC) {
       return;
     }
     try {
@@ -521,7 +575,7 @@ export default function ProductDetailForm({
                   className="mt-px shrink-0"
                   aria-hidden
                 />
-                <p className="whitespace-pre-line text-[11px] leading-[150%] font-normal text-[#FF60CA]">
+                <p className="text-[11px] leading-[150%] font-normal whitespace-pre-line text-[#FF60CA]">
                   {SCAN_EDIT_AI_BANNER_COPY}
                 </p>
               </div>
@@ -555,16 +609,20 @@ export default function ProductDetailForm({
                   <label
                     htmlFor="wish-direct-register-photo-input"
                     className={cn(
-                      'relative mx-auto flex aspect-square w-full max-w-[260px] cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[#FF93DB] bg-white px-4 transition-colors',
-                      'hover:bg-[#FFF8FD]',
+                      'relative mx-auto flex aspect-square w-full max-w-[260px] cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-[0.5px] border-[#DCDCDC] bg-[#F3F3F3] px-4 transition-colors',
+                      'hover:bg-[#EAEAEA]',
                     )}
                   >
-                    <ImagePlus
-                      className="size-6 shrink-0 text-[#FF60CA]"
-                      strokeWidth={1.5}
+                    <Image
+                      src={WISH_PLACEHOLDER_IMAGE_SRC}
+                      alt=""
+                      width={56}
+                      height={56}
+                      unoptimized
+                      className="object-contain"
                       aria-hidden
                     />
-                    <span className="text-center text-sm leading-[150%] font-normal text-[#FF60CA]">
+                    <span className="text-center text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
                       터치하여 사진을 추가해 주세요.
                     </span>
                   </label>
@@ -896,11 +954,6 @@ export default function ProductDetailForm({
                 <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
                   원본 사진
                 </div>
-                {isDirectRegisterLayout ? (
-                  <p className="mb-2 text-[10px] leading-[150%] text-[#B7B7B7]">
-                    직접 찍은 사진·캡처를 올리면 공식 이미지와 함께 저장돼요.
-                  </p>
-                ) : null}
                 <button
                   type="button"
                   onClick={() => {
@@ -920,17 +973,7 @@ export default function ProductDetailForm({
                       : '사진 변경'
                   }
                 >
-                  <Image
-                    src={capturePreviewSrc}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    unoptimized={
-                      capturePreviewSrc.startsWith('data:') ||
-                      capturePreviewSrc.startsWith('blob:') ||
-                      capturePreviewSrc.endsWith('.svg')
-                    }
-                  />
+                  <WishCapturePreviewImage previewSrc={capturePreviewSrc} />
                 </button>
                 {!disableManualImageUpload && !isDirectRegisterLayout ? (
                   <input
@@ -1088,17 +1131,7 @@ export default function ProductDetailForm({
                   onClick={() => setShowCapture(true)}
                   className="relative aspect-square w-28 overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50"
                 >
-                  <Image
-                    src={capturePreviewSrc}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    unoptimized={
-                      capturePreviewSrc.startsWith('data:') ||
-                      capturePreviewSrc.startsWith('blob:') ||
-                      capturePreviewSrc.endsWith('.svg')
-                    }
-                  />
+                  <WishCapturePreviewImage previewSrc={capturePreviewSrc} />
                 </button>
                 {!disableManualImageUpload ? (
                   <>
@@ -1227,16 +1260,10 @@ export default function ProductDetailForm({
           </button>
 
           <div className="relative aspect-1/2 w-full max-w-[480px]">
-            <Image
-              src={capturePreviewSrc}
+            <WishCapturePreviewImage
+              previewSrc={capturePreviewSrc}
               alt="원본 캡처 화면"
-              fill
-              className="object-contain"
-              unoptimized={
-                capturePreviewSrc.startsWith('data:') ||
-                capturePreviewSrc.startsWith('blob:') ||
-                capturePreviewSrc.endsWith('.svg')
-              }
+              variant="modal"
             />
           </div>
 

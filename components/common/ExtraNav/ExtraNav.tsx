@@ -114,8 +114,8 @@ export function ExtraNav({
                   key={`${item.label}-${index}`}
                   type="button"
                   onClick={() => {
-                    item.onClick?.();
                     setIsOpen(false);
+                    item.onClick?.();
                   }}
                   className={itemClass}
                 >
@@ -214,8 +214,8 @@ export function ExtraNav({
                 key={index}
                 type="button"
                 onClick={() => {
-                  item.onClick?.();
                   setIsOpen(false);
+                  item.onClick?.();
                 }}
                 className={itemClass}
               >

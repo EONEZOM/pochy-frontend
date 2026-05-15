@@ -63,12 +63,15 @@ export function MainHomeEmptyView() {
     <div
       className={cn(
         'relative flex min-h-0 w-full flex-1 flex-col overflow-hidden overscroll-none',
-        'min-h-[calc(100dvh-3.5rem-env(safe-area-inset-bottom))]',
+        'min-h-[calc(var(--app-height)-env(safe-area-inset-bottom))]',
       )}
       style={{ background: HOME_EMPTY_GRADIENT }}
     >
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        <MainHomeTopZipperWithLogo />
+        <MainHomeTopZipperWithLogo
+          panelClassName="h-[min(calc(var(--app-height)*0.44),224px)]"
+          imageClassName="scale-x-[1.32] scale-y-[1.16] sm:scale-x-[1.36] sm:scale-y-[1.2]"
+        />
 
         {/* 중단: 2×2 */}
         <div className="relative z-20 flex min-h-0 flex-1 flex-col justify-center overflow-hidden px-3 py-4 sm:px-5">
@@ -86,7 +89,7 @@ export function MainHomeEmptyView() {
                 <span
                   className={cn(
                     TILE_ILLUSTRATION_BOX,
-                    'overflow-hidden p-2 transition-transform duration-200',
+                    'overflow-hidden p-1 transition-transform duration-200',
                     'scale-100 group-active:scale-[0.97] sm:group-active:scale-[0.98]',
                   )}
                 >
@@ -94,13 +97,15 @@ export function MainHomeEmptyView() {
                     src={tile.illustrationSrc}
                     alt=""
                     fill
-                    sizes="(max-width: 640px) 38vw, 156px"
+                    sizes="(max-width: 640px) 38vw, 522px"
                     unoptimized
                     priority={tileIndex < 2}
                     loading={tileIndex < 3 ? 'eager' : 'lazy'}
-                    {...(tileIndex === 0 ? { fetchPriority: 'high' as const } : {})}
+                    {...(tileIndex === 0
+                      ? { fetchPriority: 'high' as const }
+                      : {})}
                     decoding="async"
-                    className="object-contain p-1"
+                    className="scale-110 object-contain"
                   />
                 </span>
                 <span className="text-mono-jet mt-[-10px] max-w-full truncate px-1 text-[20px] leading-5 font-bold">
@@ -111,7 +116,11 @@ export function MainHomeEmptyView() {
           </nav>
         </div>
 
-        <MainHomeBottomZipperWithLip />
+        <MainHomeBottomZipperWithLip
+          className="-mt-1 sm:-mt-5"
+          panelClassName="h-[min(calc(var(--app-height)*0.32),220px)]"
+          imageClassName="scale-110"
+        />
       </div>
     </div>
   );

@@ -12,7 +12,7 @@ import Image from 'next/image';
 import { ImageIcon } from 'lucide-react';
 
 import type { Detail } from '@/api/model';
-import { isNaverShoppingCdnUrl } from '@/lib/wish-display-image';
+import { shouldBypassNextImageOptimizer } from '@/lib/next-image-src';
 import { cn } from '@/lib/utils';
 import { useDragScroll } from '@/hooks/useDragScroll';
 
@@ -116,10 +116,9 @@ export function HomeSectionCarousel({
                 fill
                 sizes={`${TILE_PX}px`}
                 className="object-cover"
-                unoptimized={(() => {
-                  const u = String(item.imageUrl).trim();
-                  return /^https?:\/\//i.test(u) && !isNaverShoppingCdnUrl(u);
-                })()}
+                unoptimized={shouldBypassNextImageOptimizer(
+                  String(item.imageUrl),
+                )}
                 priority={priority}
                 loading={eager ? 'eager' : 'lazy'}
                 {...(fetchHigh ? { fetchPriority: 'high' as const } : {})}

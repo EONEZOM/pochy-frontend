@@ -3,10 +3,8 @@
 import Image from 'next/image';
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
-import { isNaverShoppingCdnUrl } from '@/lib/wish-display-image';
-
-const isRemoteAbsoluteUrl = (src: string): boolean =>
-  /^https?:\/\//i.test(src.trim());
+import { shouldBypassNextImageOptimizer } from '@/lib/next-image-src';
+import { WISH_PLACEHOLDER_IMAGE_SRC } from '@/constants/wish-placeholders';
 
 interface WishCardImageProps {
   officialImage: string;
@@ -21,7 +19,7 @@ interface WishCardImageProps {
 }
 
 /**
- * officialImage → captureImage → imgplus.svg 순으로 fallback합니다.
+ * officialImage → captureImage → Figma `img.svg` 플레이스홀더 순으로 fallback합니다.
  * onError 핸들러로 URL이 깨진 경우(엑박)도 처리합니다.
  * 백엔드 상대 경로(`wish_capture_img/…`)는 `resolveMediaUrl`로 절대 URL로 만듭니다.
  */
@@ -64,34 +62,33 @@ export function WishCardImage({
   if (failed) {
     if (fill) {
       return (
-        <div className="absolute inset-0 flex items-center justify-center bg-zinc-100">
+        <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]">
           <Image
-            src="/icons/imgplus.svg"
+            src={WISH_PLACEHOLDER_IMAGE_SRC}
             alt=""
-            width={32}
-            height={32}
+            width={48}
+            height={48}
             unoptimized
-            className="opacity-30"
+            className="object-contain"
           />
         </div>
       );
     }
     return (
-      <div className="flex aspect-square w-full items-center justify-center">
+      <div className="flex aspect-square w-full items-center justify-center bg-[#F3F3F3]">
         <Image
-          src="/icons/imgplus.svg"
+          src={WISH_PLACEHOLDER_IMAGE_SRC}
           alt=""
-          width={32}
-          height={32}
+          width={48}
+          height={48}
           unoptimized
-          className="opacity-30"
+          className="object-contain"
         />
       </div>
     );
   }
 
-  const bypassOptimizer =
-    isRemoteAbsoluteUrl(src) && !isNaverShoppingCdnUrl(src);
+  const bypassOptimizer = shouldBypassNextImageOptimizer(src);
 
   if (fill) {
     return (

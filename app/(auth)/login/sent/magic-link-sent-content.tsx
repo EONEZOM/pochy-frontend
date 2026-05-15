@@ -80,7 +80,7 @@ export function MagicLinkSentContent() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-white pb-[calc(1.25rem+var(--safe-area-bottom))]">
+    <div className="flex min-h-(--app-height) flex-col bg-white pb-[calc(1.25rem+var(--safe-area-bottom))]">
       <Header
         className="border-none bg-white pt-[var(--safe-area-top)]"
         onBack={() => router.push('/login')}

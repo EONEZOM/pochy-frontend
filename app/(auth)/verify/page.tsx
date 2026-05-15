@@ -16,7 +16,7 @@ function VerifyStatusView({
   isError?: boolean;
 }) {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-white px-6 text-center">
+    <main className="flex min-h-(--app-height) flex-col items-center justify-center bg-white px-6 text-center">
       <h1 className="text-2xl font-bold text-zinc-900">{title}</h1>
       <p className="mt-3 text-sm text-zinc-600">{description}</p>
       <Image
