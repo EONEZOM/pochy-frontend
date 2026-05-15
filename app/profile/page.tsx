@@ -64,7 +64,7 @@ export default function MyPage() {
   const { mutate: logout, isPending: isLoggingOut } = useLogout({
     mutation: {
       onSuccess: () => {
-        router.replace('/login?fromLogout=1');
+        router.replace('/opening');
       },
       onError: () => {
         alert('로그아웃 처리에 실패했어요. 다시 시도해 주세요.');
@@ -77,7 +77,7 @@ export default function MyPage() {
       onSuccess: () => {
         window.localStorage.removeItem('ACCESS_TOKEN');
         alert('회원탈퇴가 완료되었습니다.');
-        router.replace('/login?fromLogout=1');
+        router.replace('/opening');
       },
       onError: () => {
         alert('회원탈퇴에 실패했습니다. 잠시 후 다시 시도해 주세요.');

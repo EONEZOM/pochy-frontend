@@ -212,3 +212,52 @@ small {
     transform: translateX(0);
   }
 }
+
+/* 오프닝 — Figma 862-9063: 파우치 상승 · 슬라이드 무한 낙하 */
+@keyframes openingPouchRise {
+  from {
+    opacity: 0;
+    transform: translateY(28%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes openingSlideFall {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.opening-pouch-rise {
+  animation: openingPouchRise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.opening-pouch-rise--delay {
+  animation-delay: 0.55s;
+}
+
+.opening-slide-fall {
+  animation: openingSlideFall 14s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opening-pouch-rise,
+  .opening-pouch-rise--delay {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .opening-slide-fall {
+    animation: none;
+    transform: translateY(-25%);
+  }
+}
