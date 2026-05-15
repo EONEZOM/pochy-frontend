@@ -151,7 +151,7 @@ sequenceDiagram
 | `styles/globals.css` | Tailwind v4 진입점 + CSS 디자인 토큰 |
 | `components.json` | shadcn/ui 설정 |
 | `orval.config.js` | API 클라이언트 생성 규칙 |
-| `next.config.mjs` | `/api/:path*` → 백엔드 프록시, COOP/COEP 헤더, 이미지 도메인 |
+| `next.config.mjs` | `/api/:path*` → 백엔드 프록시, 프로덕션 COOP/COEP는 `/my-cosmetics/register`만, 이미지 도메인 |
 
 ---
 
