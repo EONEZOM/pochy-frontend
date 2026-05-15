@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
       Boolean(request.cookies.get(key)?.value),
     );
     if (!hasSessionCookie) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      return NextResponse.redirect(new URL('/opening', request.url));
     }
   }
 

@@ -9,7 +9,7 @@
  */
 
 import React, { Suspense, useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button as SolidButton } from '@/components/common/Button';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/common/BottomSheet';
@@ -40,10 +40,8 @@ const isValidEmailFormat = (value: string) => {
 
 function LoginContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isFromLogout = searchParams.get('fromLogout') === '1';
   const [email, setEmail] = useState('');
-  const [isCheckingSession, setIsCheckingSession] = useState(!isFromLogout);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isCheckingAutoLogin, setIsCheckingAutoLogin] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
   const [isNaverLoginPending, setIsNaverLoginPending] = useState(false);
@@ -53,8 +51,6 @@ function LoginContent() {
   const [hasPrivacyConsent, setHasPrivacyConsent] = useState(false);
 
   useEffect(() => {
-    if (isFromLogout) return;
-
     let isMounted = true;
 
     const checkSession = async () => {
@@ -73,7 +69,7 @@ function LoginContent() {
     return () => {
       isMounted = false;
     };
-  }, [isFromLogout, router]);
+  }, [router]);
 
   const { mutate: requestMagicLink, isPending } = useRequestMagicLink({
     mutation: {

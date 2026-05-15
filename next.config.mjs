@@ -81,6 +81,11 @@ const nextConfig = {
     return [
       { source: '/auth/verify', destination: '/verify', permanent: false },
       { source: '/auth/success', destination: '/success', permanent: false },
+<<<<<<< Updated upstream
+=======
+      { source: '/auth/opening', destination: '/opening', permanent: false },
+      { source: '/favicon.ico', destination: '/logo/nobg-logo-192.svg', permanent: false },
+>>>>>>> Stashed changes
     ];
   },
 

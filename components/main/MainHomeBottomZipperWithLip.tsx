@@ -17,6 +17,7 @@ export function MainHomeBottomZipperWithLip() {
           className="absolute top-0 left-0 z-0 h-full w-full object-cover object-top sm:top-1"
           sizes="(max-width: 480px) 100vw, 480px"
         />
+<<<<<<< Updated upstream
         <Image
           src="/figma/main/지퍼꼬다리.svg"
           alt=""
@@ -33,6 +34,18 @@ export function MainHomeBottomZipperWithLip() {
           unoptimized
           className="absolute -right-24 bottom-[-30px] z-10 max-h-[min(32dvh,180px)] w-auto origin-bottom-right rotate-[8deg] object-contain object-bottom drop-shadow-[0_4px_14px_rgba(0,0,0,0.18)] sm:-right-20"
         />
+=======
+        <div className="pointer-events-none absolute right-2 bottom-[-10px] z-10 w-[min(28vw,112px)] sm:right-3 sm:bottom-3">
+          <Image
+            src="/figma/main/립스틱.svg"
+            alt=""
+            width={112}
+            height={112}
+            unoptimized
+            className="h-auto w-full object-contain object-bottom"
+          />
+        </div>
+>>>>>>> Stashed changes
       </div>
     </div>
   );
