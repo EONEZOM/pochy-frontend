@@ -67,7 +67,7 @@ function KakaoCallbackContent() {
   }, [code, router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white">
+    <main className="flex min-h-(--app-height) items-center justify-center bg-white">
       <p className="text-sm text-zinc-600">카카오 로그인 처리 중...</p>
     </main>
   );
@@ -77,7 +77,7 @@ export default function KakaoCallbackPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-white">
+        <main className="flex min-h-(--app-height) items-center justify-center bg-white">
           <p className="text-sm text-zinc-600">카카오 로그인 처리 중...</p>
         </main>
       }
