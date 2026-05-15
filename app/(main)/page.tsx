@@ -13,6 +13,7 @@ import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-co
 import type { Detail } from '@/api/model';
 import type { ReadListDto } from '@/api/model';
 import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
+import { useBottomNavVisibility } from '@/providers/bottom-nav-visibility';
 
 /** 메인(리스트·로딩)과 빈 홈 공통 배경 그라데이션 */
 const MAIN_HOME_GRADIENT_BG =
@@ -96,6 +97,7 @@ function MainHomeListView({
 
 function MainPageContent() {
   const router = useRouter();
+  const { setHomeEmptyViewActive } = useBottomNavVisibility();
 
   const { data: homeResponse, isLoading: isHomeLoading } = useGetHomeData();
   const { data: wishListResponse, isLoading: isWishListLoading } =
@@ -140,6 +142,14 @@ function MainPageContent() {
     wishItems.length === 0 &&
     myListItems.length === 0 &&
     feedListItems.length === 0;
+
+  React.useEffect(() => {
+    setHomeEmptyViewActive(isAllSectionsEmpty);
+
+    return () => {
+      setHomeEmptyViewActive(false);
+    };
+  }, [isAllSectionsEmpty, setHomeEmptyViewActive]);
 
   if (!isHomeLoading && !hasServerNickname) {
     return (

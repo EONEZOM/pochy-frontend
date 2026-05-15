@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { Modal } from '@/components/common/Modal';
 import { cn } from '@/lib/utils';
+import { useBottomNavVisibility } from '@/providers/bottom-nav-visibility';
 import { prefetchQueriesForNavHref } from '@/lib/prefetch-app-tab-queries';
 
 export const BOTTOM_NAV_MAX_WIDTH_CLASS = 'max-w-120';
@@ -66,9 +67,12 @@ export function BottomNav({ className }: { className?: string }) {
   const pathname = usePathname() ?? '/';
   const queryClient = useQueryClient();
   const [isPreparingModalOpen, setIsPreparingModalOpen] = useState(false);
-  const shouldHideBottomNav = BOTTOM_NAV_HIDDEN_PATHS.some((path) => {
-    return pathname === path || pathname.startsWith(`${path}/`);
-  });
+  const { isHomeEmptyViewActive } = useBottomNavVisibility();
+  const shouldHideBottomNav =
+    isHomeEmptyViewActive ||
+    BOTTOM_NAV_HIDDEN_PATHS.some((path) => {
+      return pathname === path || pathname.startsWith(`${path}/`);
+    });
 
   if (shouldHideBottomNav) {
     return null;
