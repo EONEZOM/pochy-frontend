@@ -25,7 +25,7 @@
  *
  * 저장: `POST /api/wish-cosmetics/v2` (`createWishCosmeticsV2Multipart`).
  *
- * 진입 시 안내 모달: Figma node-id 782-7577 (`위시 - 스캔` 오버레이)
+ * 진입 안내 모달: Figma node-id 782-7577 (`위시 - 스캔` 오버레이). 최초 1회만 표시(localStorage), 이후에는 본문이 바로 보입니다.
  *
  * AI 분석 중 로딩: 782-7681 (초반) → 782-7695 (완료 임박) — 동일 레이아웃·로고, 문구만 전환
  *
@@ -53,6 +53,9 @@ import { Modal } from '@/components/common/Modal';
 import { WishScanAnalyzeLoading } from '@/components/wishlist/WishScanAnalyzeLoading';
 
 const MAX_CAPTURE_IMAGES = 9;
+
+const WISH_SCAN_ENTRY_TIP_DISMISSED_KEY =
+  'wish-register-scan-entry-tip-dismissed';
 
 type AnalysisResult = Record<string, unknown>;
 
@@ -95,11 +98,24 @@ export default function WishlistRegisterPage() {
   const [resizedFiles, setResizedFiles] = useState<File[]>([]);
   const [isReviewStep, setIsReviewStep] = useState(false);
   const [isCreatePending, setIsCreatePending] = useState(false);
-  const [isEntryTipModalOpen, setIsEntryTipModalOpen] = useState(true);
+  const [isEntryTipModalOpen, setIsEntryTipModalOpen] = useState(false);
   const [isScanFailModalOpen, setIsScanFailModalOpen] = useState(false);
   const [analyzeLoadingPhase, setAnalyzeLoadingPhase] = useState<0 | 1>(0);
 
   const { mutate: analyze, isPending } = useAnalyzeCosmeticCapture();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      if (window.localStorage.getItem(WISH_SCAN_ENTRY_TIP_DISMISSED_KEY) !== '1') {
+        setIsEntryTipModalOpen(true);
+      }
+    } catch {
+      setIsEntryTipModalOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isPending) {
@@ -258,11 +274,11 @@ export default function WishlistRegisterPage() {
 
           {images.length > 0 ? (
             <div className="flex min-h-0 flex-1 flex-col justify-center">
-              <div className="flex w-full flex-wrap justify-center gap-4">
+              <div className="grid w-full grid-cols-3 gap-3 sm:gap-4">
                 {images.map((img, idx) => (
                   <div
                     key={idx}
-                    className="relative h-[130px] w-[130px] shrink-0 overflow-hidden rounded-lg bg-[#F3F3F3]"
+                    className="relative aspect-square w-full min-w-0 overflow-hidden rounded-lg bg-[#F3F3F3]"
                   >
                     <Image
                       src={img.previewUrl}
@@ -280,7 +296,7 @@ export default function WishlistRegisterPage() {
                   </div>
                 ))}
                 {images.length < MAX_CAPTURE_IMAGES ? (
-                  <label className="flex h-[130px] w-[130px] shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg bg-[#F3F3F3] transition-colors hover:bg-[#EAEAEA]">
+                  <label className="relative flex aspect-square w-full min-w-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-lg bg-[#F3F3F3] transition-colors hover:bg-[#EAEAEA]">
                     <Image
                       src="/icons/imgplus.svg"
                       alt=""
@@ -332,6 +348,13 @@ export default function WishlistRegisterPage() {
         variant="warning"
         confirmText="확인"
         closeOnOverlayClick={false}
+        onConfirm={() => {
+          try {
+            window.localStorage.setItem(WISH_SCAN_ENTRY_TIP_DISMISSED_KEY, '1');
+          } catch {
+            // private mode 등 저장 실패 시 무시
+          }
+        }}
         className="max-w-[340px] rounded-[24px] px-10 py-4 shadow-xl [&_button]:h-10 [&_button]:min-h-10 [&_button]:rounded-full [&_button]:px-8 [&_button]:text-base [&_button]:font-bold"
       >
         <div className="flex flex-col items-center gap-6">
