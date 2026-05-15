@@ -64,7 +64,7 @@ export function Modal({
 }: ModalProps) {
   const [mounted, setMounted] = React.useState(false);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
