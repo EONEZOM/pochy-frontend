@@ -8,6 +8,7 @@
     "predev": "npm run build:sw",
     "prebuild": "npm run build:sw",
     "dev": "next dev --turbopack",
+    "dev:fresh": "npx --yes kill-port 3000 && npm run dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
