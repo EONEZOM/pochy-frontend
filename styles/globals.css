@@ -228,11 +228,11 @@ small {
 
 @keyframes openingSlideFall {
   from {
-    transform: translateY(0);
+    transform: translateY(-50%);
   }
 
   to {
-    transform: translateY(-50%);
+    transform: translateY(0);
   }
 }
 
@@ -245,7 +245,8 @@ small {
 }
 
 .opening-slide-fall {
-  animation: openingSlideFall 14s linear infinite;
+  animation: openingSlideFall 12s linear infinite;
+  will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
