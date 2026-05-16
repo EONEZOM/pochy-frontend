@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Button as SolidButton } from '@/components/common/Button';
 import { Header } from '@/components/layout/Header';
 import { Input } from '@/components/ui/input';
-import { useGetHomeData } from '@/api/generated/home/home';
+import { getGetHomeDataQueryKey, useGetHomeData } from '@/api/generated/home/home';
 import {
   autoNickname,
   useUpdateNickname,
@@ -18,12 +18,15 @@ import {
   isNicknameLengthValid,
   resolveNicknameFromResponse,
 } from '@/lib/nickname';
+import { saveDefaultProfileAfterSignup } from '@/lib/member-profile';
+import { useQueryClient } from '@tanstack/react-query';
 
 const NICKNAME_CTA_CLASSNAME =
   'h-14 w-full max-w-[320px] rounded-full text-base shadow-none transition-transform active:scale-[0.98] enabled:border-0 enabled:bg-[#FF93DB] enabled:text-mono-jet enabled:hover:bg-[#FF85D5]';
 
 function NicknameSetupContent() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [nickname, setNickname] = React.useState('');
   const [isSkipping, setIsSkipping] = React.useState(false);
   const [isDuplicateNickname, setIsDuplicateNickname] = React.useState(false);
@@ -44,11 +47,28 @@ function NicknameSetupContent() {
     router.replace('/');
   }, [hasServerNickname, isHomeLoading, router]);
 
+  const completeSignup = async (savedNickname: string) => {
+    try {
+      await saveDefaultProfileAfterSignup(savedNickname);
+    } catch (error) {
+      console.error('[nickname] default profile save failed', error);
+      alert(
+        '기본 프로필 설정에 실패했어요. 마이페이지에서 다시 설정할 수 있어요.',
+      );
+    } finally {
+      await queryClient.invalidateQueries({
+        queryKey: getGetHomeDataQueryKey(),
+      });
+      router.replace('/');
+    }
+  };
+
   const { mutate: updateNickname, isPending: isSavingNickname } =
     useUpdateNickname({
       mutation: {
-        onSuccess: () => {
-          router.replace('/');
+        onSuccess: (_data, variables) => {
+          const savedNickname = variables.data?.nickname?.trim() ?? '';
+          void completeSignup(savedNickname);
         },
         onError: (error) => {
           if (error instanceof AxiosError && error.response?.status === 403) {
