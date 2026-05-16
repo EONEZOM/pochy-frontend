@@ -8,7 +8,7 @@
  * - 배경 일러스트: `public/figma/login/*`
  */
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button as SolidButton } from '@/components/common/Button';
 import { Button } from '@/components/ui/button';
@@ -48,8 +48,14 @@ function LoginContent() {
   const [isPrivacyConsentModalOpen, setIsPrivacyConsentModalOpen] =
     useState(false);
   const [hasPrivacyConsent, setHasPrivacyConsent] = useState(false);
+  const didRunAutoSessionCheck = useRef(false);
 
   useEffect(() => {
+    if (didRunAutoSessionCheck.current) {
+      return;
+    }
+    didRunAutoSessionCheck.current = true;
+
     let isMounted = true;
 
     const checkSession = async () => {
@@ -89,7 +95,7 @@ function LoginContent() {
     return () => {
       isMounted = false;
     };
-  }, [router]);
+  }, []);
 
   const { mutate: requestMagicLink, isPending } = useRequestMagicLink({
     mutation: {

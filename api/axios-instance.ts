@@ -168,9 +168,12 @@ axiosInstance.interceptors.response.use(
       await reissuePromise;
       return axiosInstance(originalRequest);
     } catch (reissueError) {
-      persistAccessToken(null);
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+      const stillHasAccessToken = Boolean(getAccessToken());
+      if (!stillHasAccessToken) {
+        persistAccessToken(null);
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
       }
       return Promise.reject(reissueError);
     }

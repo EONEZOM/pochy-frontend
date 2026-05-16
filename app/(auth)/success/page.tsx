@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { bootstrapClientSession } from '@/lib/bootstrap-client-session';
 import { agentDebugLog, getClientAuthSnapshot } from '@/lib/debug-agent-log';
@@ -29,6 +29,7 @@ export default function AuthSuccessPage() {
   const [phase, setPhase] = useState<SuccessPhase>('loading');
   const [nextPath, setNextPath] = useState<PostAuthPath | null>(null);
   const [hasServerNickname, setHasServerNickname] = useState(false);
+  const didNavigateAfterSuccess = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -57,7 +58,7 @@ export default function AuthSuccessPage() {
         setHasServerNickname(path === '/');
         setNextPath(path);
         setPhase('ready');
-      } catch (error) {
+      } catch {
         // #region agent log
         agentDebugLog({
           hypothesisId: 'H4',
@@ -87,6 +88,18 @@ export default function AuthSuccessPage() {
     }
 
     const id = window.setTimeout(() => {
+      if (didNavigateAfterSuccess.current) {
+        return;
+      }
+      didNavigateAfterSuccess.current = true;
+      // #region agent log
+      agentDebugLog({
+        hypothesisId: 'H6',
+        location: 'success/page.tsx:navigate',
+        message: 'navigate after success',
+        data: { nextPath },
+      });
+      // #endregion
       router.replace(nextPath);
     }, SUCCESS_DISPLAY_MS);
 
