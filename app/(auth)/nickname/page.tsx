@@ -8,7 +8,11 @@ import { useRouter } from 'next/navigation';
 import { Button as SolidButton } from '@/components/common/Button';
 import { Header } from '@/components/layout/Header';
 import { Input } from '@/components/ui/input';
-import { getGetHomeDataQueryKey, useGetHomeData } from '@/api/generated/home/home';
+import {
+  getGetHomeDataQueryKey,
+  getHomeData,
+  useGetHomeData,
+} from '@/api/generated/home/home';
 import {
   autoNickname,
   useUpdateNickname,
@@ -72,27 +76,30 @@ function NicknameSetupContent() {
     }
   };
 
-  const { mutate: updateNickname, isPending: isSavingNickname } =
-    useUpdateNickname({
-      mutation: {
-        onSuccess: (_data, variables) => {
-          const savedNickname = variables.data?.nickname?.trim() ?? '';
-          void completeSignup(savedNickname);
-        },
-        onError: (error) => {
-          if (error instanceof AxiosError && error.response?.status === 403) {
-            setAuthExpiredMessage(getNicknameErrorMessage(error));
-            return;
-          }
-          if (error instanceof AxiosError && error.response?.status === 409) {
-            setIsDuplicateNickname(true);
-            nicknameInputRef.current?.focus();
-            return;
-          }
-          alert(getNicknameErrorMessage(error));
-        },
+  const {
+    mutate: updateNickname,
+    mutateAsync: updateNicknameAsync,
+    isPending: isSavingNickname,
+  } = useUpdateNickname({
+    mutation: {
+      onSuccess: (_data, variables) => {
+        const savedNickname = variables.data?.nickname?.trim() ?? '';
+        void completeSignup(savedNickname);
       },
-    });
+      onError: (error) => {
+        if (error instanceof AxiosError && error.response?.status === 403) {
+          setAuthExpiredMessage(getNicknameErrorMessage(error));
+          return;
+        }
+        if (error instanceof AxiosError && error.response?.status === 409) {
+          setIsDuplicateNickname(true);
+          nicknameInputRef.current?.focus();
+          return;
+        }
+        alert(getNicknameErrorMessage(error));
+      },
+    },
+  });
 
   const trimmedNickname = nickname.trim();
   const canSubmitNickname = isNicknameLengthValid(trimmedNickname);
@@ -123,16 +130,32 @@ function NicknameSetupContent() {
     }
     setIsSkipping(true);
     try {
-      const auto = await autoNickname();
-      const randomNickname = resolveNicknameFromResponse(auto);
+      const autoResponse = await autoNickname();
+      let randomNickname = resolveNicknameFromResponse(autoResponse);
+
+      if (!randomNickname) {
+        const homeAfterAuto = await queryClient.fetchQuery({
+          queryKey: getGetHomeDataQueryKey(),
+          queryFn: () => getHomeData(),
+        });
+        randomNickname = resolveNicknameFromResponse({
+          result: homeAfterAuto?.result?.nickname,
+        });
+      }
+
       if (!randomNickname) {
         alert('랜덤 닉네임을 생성하지 못했어요. 잠시 후 다시 시도해 주세요.');
         return;
       }
-      updateNickname({ data: { nickname: randomNickname } });
+
+      await updateNicknameAsync({ data: { nickname: randomNickname } });
     } catch (error) {
       if (error instanceof AxiosError && error.response?.status === 403) {
         setAuthExpiredMessage(getNicknameErrorMessage(error));
+        return;
+      }
+      if (error instanceof AxiosError && error.response?.status === 409) {
+        setIsDuplicateNickname(true);
         return;
       }
       alert(getNicknameErrorMessage(error));
@@ -167,7 +190,7 @@ function NicknameSetupContent() {
           포치에서 당신을 뭐라고 부를까요?
         </h1>
 
-        <div className="mt-[34px] w-full max-w-[320px] space-y-2">
+        <div className="mt-[34px] w-full space-y-2">
           <Input
             ref={nicknameInputRef}
             value={nickname}
@@ -228,7 +251,7 @@ function NicknameSetupContent() {
           >
             {isSavingNickname ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-mono-dark-gray border-t-transparent" />
+                <span className="border-mono-dark-gray h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
                 저장 중...
               </span>
             ) : (

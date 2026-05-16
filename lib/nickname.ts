@@ -6,12 +6,43 @@ export const isNicknameLengthValid = (nickname: string): boolean => {
   return nickname.length >= 2 && nickname.length <= 10;
 };
 
+const readNicknameCandidate = (value: unknown): string | null => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 export const resolveNicknameFromResponse = (
-  data: ApiResponseDTO,
+  data: ApiResponseDTO | null | undefined,
 ): string | null => {
-  return typeof data?.result === 'string' && data.result.trim().length > 0
-    ? data.result.trim()
-    : null;
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+
+  const directNickname = readNicknameCandidate(
+    (data as { nickname?: unknown }).nickname,
+  );
+  if (directNickname) {
+    return directNickname;
+  }
+
+  const { result } = data;
+  const fromStringResult = readNicknameCandidate(result);
+  if (fromStringResult) {
+    return fromStringResult;
+  }
+
+  if (result && typeof result === 'object') {
+    const record = result as Record<string, unknown>;
+    return (
+      readNicknameCandidate(record.nickname) ??
+      readNicknameCandidate(record.nickName)
+    );
+  }
+
+  return null;
 };
 
 export const getNicknameErrorMessage = (error: unknown): string => {
