@@ -54,6 +54,10 @@ export function OpeningScreen() {
       await reissueWithTimeout();
       markOpeningSeen();
       const nextPath = await resolvePostAuthPath();
+      if (!nextPath) {
+        setIsSessionExpiredModalOpen(true);
+        return;
+      }
       router.replace(nextPath);
     } catch (error) {
       const failureKind = classifyReissueError(error);

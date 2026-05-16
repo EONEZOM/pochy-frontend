@@ -147,6 +147,7 @@ axiosInstance.interceptors.response.use(
       originalRequest._retry ||
       !shouldRetryByStatus ||
       requestUrl.includes('/api/auth/reissue') ||
+      requestUrl.includes('/api/auth/session-check') ||
       requestUrl.includes('/api/auth/logout');
 
     if (requestUrl.includes('/api/auth/logout')) {

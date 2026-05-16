@@ -9,7 +9,7 @@
  */
 
 import React, { Suspense, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button as SolidButton } from '@/components/common/Button';
 import { Button } from '@/components/ui/button';
 import { BottomSheet } from '@/components/common/BottomSheet';
@@ -21,7 +21,7 @@ import {
 import type { RequestMagicLinkParams } from '@/api/model';
 import { useRequestMagicLink } from '@/api/generated/login-controller/login-controller';
 import { bootstrapClientSession } from '@/lib/bootstrap-client-session';
-import { agentDebugLog, getClientAuthSnapshot } from '@/lib/debug-agent-log';
+import { clearClientSession } from '@/lib/clear-client-session';
 import { resolvePostAuthPath } from '@/lib/resolve-post-auth-path';
 import { getState } from '@/api/generated/oauth/oauth';
 import { isAxiosError } from 'axios';
@@ -39,6 +39,7 @@ const isValidEmailFormat = (value: string) => {
 
 function LoginContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const [email, setEmail] = useState('');
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isCheckingAutoLogin, setIsCheckingAutoLogin] = useState(false);
@@ -60,32 +61,28 @@ function LoginContent() {
 
     const checkSession = async () => {
       try {
-        // #region agent log
-        agentDebugLog({
-          hypothesisId: 'H4',
-          location: 'login/page.tsx:checkSession:start',
-          message: 'login auto session check',
-          data: getClientAuthSnapshot(),
-        });
-        // #endregion
-
         await bootstrapClientSession();
-        if (!isMounted) return;
-
-        // #region agent log
-        agentDebugLog({
-          hypothesisId: 'H3',
-          location: 'login/page.tsx:bootstrap:ok',
-          message: 'login bootstrap completed',
-          data: getClientAuthSnapshot(),
-        });
-        // #endregion
+        if (!isMounted) {
+          return;
+        }
 
         const nextPath = await resolvePostAuthPath();
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
+
+        if (!nextPath || nextPath === pathname) {
+          clearClientSession();
+          setIsCheckingSession(false);
+          return;
+        }
+
         router.replace(nextPath);
       } catch {
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
+        clearClientSession();
         setIsCheckingSession(false);
       }
     };
@@ -126,8 +123,10 @@ function LoginContent() {
     try {
       await bootstrapClientSession();
       const nextPath = await resolvePostAuthPath();
-      router.replace(nextPath);
-      return;
+      if (nextPath && nextPath !== pathname) {
+        router.replace(nextPath);
+        return;
+      }
     } catch {
       // refresh token이 없거나 만료된 경우 기존 매직링크 로그인으로 fallback
     } finally {

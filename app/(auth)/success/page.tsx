@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { bootstrapClientSession } from '@/lib/bootstrap-client-session';
-import { agentDebugLog, getClientAuthSnapshot } from '@/lib/debug-agent-log';
+import { clearClientSession } from '@/lib/clear-client-session';
 import { markOpeningSeen } from '@/lib/opening-seen';
 import {
   resolvePostAuthPath,
@@ -35,14 +35,6 @@ export default function AuthSuccessPage() {
     let isMounted = true;
 
     const prepareSession = async () => {
-      // #region agent log
-      agentDebugLog({
-        hypothesisId: 'H4',
-        location: 'success/page.tsx:prepareSession:start',
-        message: 'success page session prep',
-        data: getClientAuthSnapshot(),
-      });
-      // #endregion
       try {
         await bootstrapClientSession();
         if (!isMounted) {
@@ -55,22 +47,22 @@ export default function AuthSuccessPage() {
           return;
         }
 
+        if (!path) {
+          clearClientSession();
+          setNextPath(null);
+          setPhase('error');
+          return;
+        }
+
         setHasServerNickname(path === '/');
         setNextPath(path);
         setPhase('ready');
       } catch {
-        // #region agent log
-        agentDebugLog({
-          hypothesisId: 'H4',
-          location: 'success/page.tsx:prepareSession:catch',
-          message: 'success page prep failed',
-          data: { snapshot: getClientAuthSnapshot() },
-        });
-        // #endregion
         if (!isMounted) {
           return;
         }
-        setNextPath('/login');
+        clearClientSession();
+        setNextPath(null);
         setPhase('error');
       }
     };
@@ -83,7 +75,22 @@ export default function AuthSuccessPage() {
   }, []);
 
   useEffect(() => {
-    if (phase === 'loading' || nextPath === null) {
+    if (phase === 'loading') {
+      return;
+    }
+
+    if (phase === 'error') {
+      if (didNavigateAfterSuccess.current) {
+        return;
+      }
+      didNavigateAfterSuccess.current = true;
+      const id = window.setTimeout(() => {
+        router.replace('/login');
+      }, SUCCESS_DISPLAY_MS);
+      return () => window.clearTimeout(id);
+    }
+
+    if (nextPath === null) {
       return;
     }
 
@@ -92,14 +99,6 @@ export default function AuthSuccessPage() {
         return;
       }
       didNavigateAfterSuccess.current = true;
-      // #region agent log
-      agentDebugLog({
-        hypothesisId: 'H6',
-        location: 'success/page.tsx:navigate',
-        message: 'navigate after success',
-        data: { nextPath },
-      });
-      // #endregion
       router.replace(nextPath);
     }, SUCCESS_DISPLAY_MS);
 
