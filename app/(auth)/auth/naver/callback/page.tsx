@@ -11,7 +11,10 @@ import {
   formatOAuthCallbackError,
   persistOAuthSignupHints,
 } from '@/utils/oauth-session';
-import { isWithdrawnMemberNickname } from '@/lib/is-withdrawn-member';
+import {
+  hasUsableServerNickname,
+  isWithdrawnMemberNickname,
+} from '@/lib/is-withdrawn-member';
 
 function NaverCallbackContent() {
   const router = useRouter();
@@ -70,7 +73,7 @@ function NaverCallbackContent() {
 
         persistOAuthSignupHints({ email: exchangeBody.email });
 
-        const hasExistingNickname = Boolean(exchangeBody.nickname?.trim());
+        const hasExistingNickname = hasUsableServerNickname(exchangeBody.nickname);
         if (
           shouldMarkPendingNicknameSetup(
             exchangeBody.newMember,

@@ -9,6 +9,9 @@ const PENDING_NICKNAME_EXPLICIT_SIGNUP_KEY = 'PENDING_NICKNAME_EXPLICIT_SIGNUP';
 /** 매직링크 등 서버에서만 알 수 있는 신규 가입 (쿠키) */
 export const PENDING_NICKNAME_SETUP_COOKIE_KEY = 'PENDING_NICKNAME_SETUP';
 
+const PENDING_NICKNAME_EXPLICIT_SIGNUP_COOKIE_KEY =
+  'PENDING_NICKNAME_EXPLICIT_SIGNUP';
+
 const PENDING_NICKNAME_COOKIE_MAX_AGE_SEC = 60 * 10;
 
 /** true: 신규 가입, false: 기존 로그인, undefined: 닉네임 유무로 판별 */
@@ -37,12 +40,28 @@ export const markPendingNicknameSetup = (explicitNewMember = false): void => {
   }
 };
 
+const readCookieValue = (name: string): string | null => {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = document.cookie.match(
+    new RegExp(`(?:^|;\\s*)${escapedName}=([^;]*)`),
+  );
+  return match?.[1]?.trim() ?? null;
+};
+
 const isExplicitSignupPending = (): boolean => {
   if (typeof window === 'undefined') {
     return false;
   }
-  return (
+  if (
     window.sessionStorage.getItem(PENDING_NICKNAME_EXPLICIT_SIGNUP_KEY) === '1'
+  ) {
+    return true;
+  }
+  return (
+    readCookieValue(PENDING_NICKNAME_EXPLICIT_SIGNUP_COOKIE_KEY) === '1'
   );
 };
 
@@ -75,16 +94,13 @@ export const clearPendingNicknameSetup = (): void => {
   window.sessionStorage.removeItem(PENDING_NICKNAME_SETUP_STORAGE_KEY);
   window.sessionStorage.removeItem(PENDING_NICKNAME_EXPLICIT_SIGNUP_KEY);
   document.cookie = `${PENDING_NICKNAME_SETUP_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
-};
-
-/** success 등에서 pending 오설정 복구 가능 여부 (명시적 신규 가입이 아닐 때만) */
-export const canClearMisplacedPendingNicknameSetup = (): boolean => {
-  return isPendingNicknameSetup() && !isExplicitSignupPending();
+  document.cookie = `${PENDING_NICKNAME_EXPLICIT_SIGNUP_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
 };
 
 export const applyPendingNicknameSetupCookie = (
   response: NextResponse,
   request: NextRequest,
+  explicitNewMember = false,
 ): void => {
   response.cookies.set({
     name: PENDING_NICKNAME_SETUP_COOKIE_KEY,
@@ -95,4 +111,16 @@ export const applyPendingNicknameSetupCookie = (
     secure: request.nextUrl.protocol === 'https:',
     maxAge: PENDING_NICKNAME_COOKIE_MAX_AGE_SEC,
   });
+
+  if (explicitNewMember) {
+    response.cookies.set({
+      name: PENDING_NICKNAME_EXPLICIT_SIGNUP_COOKIE_KEY,
+      value: '1',
+      path: '/',
+      httpOnly: false,
+      sameSite: 'lax',
+      secure: request.nextUrl.protocol === 'https:',
+      maxAge: PENDING_NICKNAME_COOKIE_MAX_AGE_SEC,
+    });
+  }
 };

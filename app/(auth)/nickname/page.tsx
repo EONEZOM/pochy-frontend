@@ -18,6 +18,7 @@ import {
   isNicknameLengthValid,
   resolveNicknameFromResponse,
 } from '@/lib/nickname';
+import { hasUsableServerNickname } from '@/lib/is-withdrawn-member';
 import { saveDefaultProfileAfterSignup } from '@/lib/member-profile';
 import {
   clearPendingNicknameSetup,
@@ -43,7 +44,7 @@ function NicknameSetupContent() {
 
   const { data: homeResponse, isLoading: isHomeLoading } = useGetHomeData();
   const homeData = homeResponse?.result;
-  const hasServerNickname = Boolean(homeData?.nickname?.trim());
+  const hasServerNickname = hasUsableServerNickname(homeData?.nickname);
   const mustCompleteNicknameSetup = isPendingNicknameSetup();
 
   React.useEffect(() => {

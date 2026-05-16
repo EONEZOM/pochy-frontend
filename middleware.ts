@@ -12,6 +12,7 @@ import {
   applyPendingNicknameSetupCookie,
   shouldMarkPendingNicknameSetup,
 } from '@/lib/pending-nickname-setup';
+import { hasUsableServerNickname } from '@/lib/is-withdrawn-member';
 import { getServerApiBase } from '@/lib/server-api-base';
 
 const API_BASE = getServerApiBase();
@@ -137,13 +138,15 @@ export async function middleware(request: NextRequest) {
   const redirect = NextResponse.redirect(new URL('/success', request.url));
   applyRefreshTokenCookie(redirect, refreshToken, request);
 
+  const newMember = extractNewMemberFromPayload(payload);
+  const verifyNickname = extractNicknameFromPayload(payload);
   if (
     shouldMarkPendingNicknameSetup(
-      extractNewMemberFromPayload(payload),
-      Boolean(extractNicknameFromPayload(payload)?.trim()),
+      newMember,
+      hasUsableServerNickname(verifyNickname),
     )
   ) {
-    applyPendingNicknameSetupCookie(redirect, request);
+    applyPendingNicknameSetupCookie(redirect, request, newMember === true);
   }
 
   console.info('[middleware][verify] success', {

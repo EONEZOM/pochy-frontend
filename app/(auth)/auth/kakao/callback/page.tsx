@@ -16,7 +16,10 @@ import {
   resolveOAuthEmail,
   resolveRefreshToken,
 } from '@/utils/oauth-session';
-import { isWithdrawnMemberNickname } from '@/lib/is-withdrawn-member';
+import {
+  hasUsableServerNickname,
+  isWithdrawnMemberNickname,
+} from '@/lib/is-withdrawn-member';
 
 function KakaoCallbackContent() {
   const router = useRouter();
@@ -50,7 +53,7 @@ function KakaoCallbackContent() {
           email: resolveOAuthEmail(authResult) ?? authResult?.email,
         });
 
-        const hasExistingNickname = Boolean(authResult?.nickname?.trim());
+        const hasExistingNickname = hasUsableServerNickname(authResult?.nickname);
         if (
           shouldMarkPendingNicknameSetup(
             authResult?.newMember,

@@ -7,18 +7,14 @@ import { useEffect, useRef, useState } from 'react';
 import { bootstrapClientSession } from '@/lib/bootstrap-client-session';
 import { clearFullAuthSession } from '@/lib/clear-client-session';
 import { markOpeningSeen } from '@/lib/opening-seen';
-import { getGetHomeDataQueryKey, getHomeData } from '@/api/generated/home/home';
+import { getGetHomeDataQueryKey } from '@/api/generated/home/home';
 import { getGetMyProfileQueryKey } from '@/api/generated/member-controller/member-controller';
 import { ensureDefaultProfileImage } from '@/lib/member-profile';
 import {
   resolvePostAuthPath,
   type PostAuthPath,
 } from '@/lib/resolve-post-auth-path';
-import {
-  canClearMisplacedPendingNicknameSetup,
-  clearPendingNicknameSetup,
-  isPendingNicknameSetup,
-} from '@/lib/pending-nickname-setup';
+import { isPendingNicknameSetup } from '@/lib/pending-nickname-setup';
 import { clearOAuthSignupHints } from '@/utils/oauth-session';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -74,26 +70,8 @@ export default function AuthSuccessPage() {
           return;
         }
 
-        let needsNicknameSetup =
+        const needsNicknameSetup =
           isPendingNicknameSetup() || resolved.path === '/nickname';
-
-        if (canClearMisplacedPendingNicknameSetup()) {
-          try {
-            const homeResponse = await getHomeData();
-            const serverNickname = homeResponse?.result?.nickname?.trim();
-            if (serverNickname) {
-              clearPendingNicknameSetup();
-              needsNicknameSetup = false;
-            }
-          } catch (error) {
-            console.warn(
-              '[success] could not verify nickname for pending clear',
-              error,
-            );
-          }
-        } else if (!isPendingNicknameSetup()) {
-          needsNicknameSetup = resolved.path === '/nickname';
-        }
 
         try {
           if (!needsNicknameSetup) {
