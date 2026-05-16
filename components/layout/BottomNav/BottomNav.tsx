@@ -55,15 +55,21 @@ const BOTTOM_NAV_ITEMS: BottomNavItem[] = [
 ];
 
 const ICON_PX = 24;
-const BOTTOM_NAV_HIDDEN_PATHS = [
+export const BOTTOM_NAV_HIDDEN_PATHS = [
   '/opening',
   '/login',
   '/verify',
   '/success',
   '/nickname',
   '/auth',
-];
+] as const;
 const PREPARING_PATHS = ['/my', '/feed'];
+
+export function isBottomNavHiddenPathname(pathname: string) {
+  return BOTTOM_NAV_HIDDEN_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
 
 function isNavActive(pathname: string, href: string) {
   if (href === '/') return pathname === '/';
@@ -76,10 +82,7 @@ export function BottomNav({ className }: { className?: string }) {
   const [isPreparingModalOpen, setIsPreparingModalOpen] = useState(false);
   const { isHomeEmptyViewActive } = useBottomNavVisibility();
   const shouldHideBottomNav =
-    isHomeEmptyViewActive ||
-    BOTTOM_NAV_HIDDEN_PATHS.some((path) => {
-      return pathname === path || pathname.startsWith(`${path}/`);
-    });
+    isHomeEmptyViewActive || isBottomNavHiddenPathname(pathname);
 
   if (shouldHideBottomNav) {
     return null;
