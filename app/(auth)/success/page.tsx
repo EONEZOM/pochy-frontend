@@ -14,6 +14,7 @@ import {
   resolvePostAuthPath,
   type PostAuthPath,
 } from '@/lib/resolve-post-auth-path';
+import { isPendingNicknameSetup } from '@/lib/pending-nickname-setup';
 import { clearOAuthSignupHints } from '@/utils/oauth-session';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -69,8 +70,13 @@ export default function AuthSuccessPage() {
           return;
         }
 
+        const needsNicknameSetup =
+          isPendingNicknameSetup() || resolved.path === '/nickname';
+
         try {
-          await ensureDefaultProfileImage();
+          if (!needsNicknameSetup) {
+            await ensureDefaultProfileImage();
+          }
           await Promise.all([
             queryClient.invalidateQueries({
               queryKey: getGetHomeDataQueryKey(),
@@ -85,8 +91,8 @@ export default function AuthSuccessPage() {
           clearOAuthSignupHints();
         }
 
-        setHasServerNickname(resolved.path === '/');
-        setNextPath(resolved.path);
+        setHasServerNickname(!needsNicknameSetup);
+        setNextPath(needsNicknameSetup ? '/nickname' : resolved.path);
         setPhase('ready');
       } catch (error) {
         if (!isMounted) {

@@ -3,6 +3,10 @@
 import { Suspense, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
+  markPendingNicknameSetup,
+  shouldMarkPendingNicknameSetup,
+} from '@/lib/pending-nickname-setup';
+import {
   ACCESS_TOKEN_STORAGE_KEY,
   formatOAuthCallbackError,
   persistOAuthSignupHints,
@@ -44,6 +48,7 @@ function NaverCallbackContent() {
         const exchangeBody = (await exchangeRes.json()) as {
           ok?: boolean;
           error?: string;
+          newMember?: boolean;
           accessToken?: string | null;
           nickname?: string | null;
           email?: string | null;
@@ -64,6 +69,10 @@ function NaverCallbackContent() {
         }
 
         persistOAuthSignupHints({ email: exchangeBody.email });
+
+        if (shouldMarkPendingNicknameSetup(exchangeBody.newMember)) {
+          markPendingNicknameSetup();
+        }
 
         const accessToken = exchangeBody.accessToken?.trim();
         if (!accessToken) {

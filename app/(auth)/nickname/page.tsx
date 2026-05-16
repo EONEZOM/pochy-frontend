@@ -19,6 +19,10 @@ import {
   resolveNicknameFromResponse,
 } from '@/lib/nickname';
 import { saveDefaultProfileAfterSignup } from '@/lib/member-profile';
+import {
+  clearPendingNicknameSetup,
+  isPendingNicknameSetup,
+} from '@/lib/pending-nickname-setup';
 import { clearOAuthSignupHints } from '@/utils/oauth-session';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -40,13 +44,14 @@ function NicknameSetupContent() {
   const { data: homeResponse, isLoading: isHomeLoading } = useGetHomeData();
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
+  const mustCompleteNicknameSetup = isPendingNicknameSetup();
 
   React.useEffect(() => {
-    if (isHomeLoading || !hasServerNickname) {
+    if (isHomeLoading || !hasServerNickname || mustCompleteNicknameSetup) {
       return;
     }
     router.replace('/');
-  }, [hasServerNickname, isHomeLoading, router]);
+  }, [hasServerNickname, isHomeLoading, mustCompleteNicknameSetup, router]);
 
   const completeSignup = async (savedNickname: string) => {
     try {
@@ -58,6 +63,7 @@ function NicknameSetupContent() {
       );
     } finally {
       clearOAuthSignupHints();
+      clearPendingNicknameSetup();
       await queryClient.invalidateQueries({
         queryKey: getGetHomeDataQueryKey(),
       });
@@ -134,7 +140,7 @@ function NicknameSetupContent() {
     }
   };
 
-  if (isHomeLoading || hasServerNickname) {
+  if (isHomeLoading || (hasServerNickname && !mustCompleteNicknameSetup)) {
     return (
       <div className="flex min-h-(--app-height) flex-col bg-white px-5 pb-[max(1.25rem,var(--safe-area-bottom))]">
         <Header

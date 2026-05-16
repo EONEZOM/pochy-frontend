@@ -1,6 +1,7 @@
 import { getHomeData } from '@/api/generated/home/home';
 import { getMyProfile } from '@/api/generated/member-controller/member-controller';
 import { isWithdrawnMemberNickname } from '@/lib/is-withdrawn-member';
+import { isPendingNicknameSetup } from '@/lib/pending-nickname-setup';
 
 export type PostAuthPath = '/' | '/nickname';
 
@@ -14,6 +15,10 @@ const resolvePathFromNickname = (nickname?: string | null): PostAuthResolveResul
 
   if (isWithdrawnMemberNickname(trimmedNickname)) {
     return { status: 'withdrawn' };
+  }
+
+  if (isPendingNicknameSetup()) {
+    return { status: 'ok', path: '/nickname' };
   }
 
   return {

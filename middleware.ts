@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import {
   applyRefreshTokenCookie,
+  extractNewMemberFromPayload,
   extractRefreshTokenFromPayload,
   extractRefreshTokenFromSetCookieHeader,
   REFRESH_TOKEN_COOKIE_KEY,
 } from '@/lib/auth-cookie';
+import {
+  applyPendingNicknameSetupCookie,
+  shouldMarkPendingNicknameSetup,
+} from '@/lib/pending-nickname-setup';
 import { getServerApiBase } from '@/lib/server-api-base';
 
 const API_BASE = getServerApiBase();
@@ -130,6 +135,10 @@ export async function middleware(request: NextRequest) {
 
   const redirect = NextResponse.redirect(new URL('/success', request.url));
   applyRefreshTokenCookie(redirect, refreshToken, request);
+
+  if (shouldMarkPendingNicknameSetup(extractNewMemberFromPayload(payload))) {
+    applyPendingNicknameSetupCookie(redirect, request);
+  }
 
   console.info('[middleware][verify] success', {
     status: backendRes.status,

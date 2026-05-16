@@ -1,0 +1,66 @@
+import type { NextRequest, NextResponse } from 'next/server';
+
+/** 회원가입 직후 닉네임 설정 화면을 반드시 거치도록 표시 (sessionStorage) */
+const PENDING_NICKNAME_SETUP_STORAGE_KEY = 'PENDING_NICKNAME_SETUP';
+
+/** 매직링크 등 서버에서만 알 수 있는 신규 가입 (쿠키) */
+export const PENDING_NICKNAME_SETUP_COOKIE_KEY = 'PENDING_NICKNAME_SETUP';
+
+const PENDING_NICKNAME_COOKIE_MAX_AGE_SEC = 60 * 10;
+
+/** true: 신규 가입, false: 기존 로그인, undefined: 백엔드 미전달 → 가입으로 간주 */
+export const shouldMarkPendingNicknameSetup = (
+  newMember?: boolean | null,
+): boolean => newMember !== false;
+
+export const markPendingNicknameSetup = (): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.sessionStorage.setItem(PENDING_NICKNAME_SETUP_STORAGE_KEY, '1');
+};
+
+export const isPendingNicknameSetup = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  if (
+    window.sessionStorage.getItem(PENDING_NICKNAME_SETUP_STORAGE_KEY) === '1'
+  ) {
+    return true;
+  }
+
+  const escapedName = PENDING_NICKNAME_SETUP_COOKIE_KEY.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    '\\$&',
+  );
+  const match = document.cookie.match(
+    new RegExp(`(?:^|;\\s*)${escapedName}=([^;]*)`),
+  );
+  return match?.[1]?.trim() === '1';
+};
+
+export const clearPendingNicknameSetup = (): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.sessionStorage.removeItem(PENDING_NICKNAME_SETUP_STORAGE_KEY);
+  document.cookie = `${PENDING_NICKNAME_SETUP_COOKIE_KEY}=; Path=/; Max-Age=0; SameSite=Lax`;
+};
+
+export const applyPendingNicknameSetupCookie = (
+  response: NextResponse,
+  request: NextRequest,
+): void => {
+  response.cookies.set({
+    name: PENDING_NICKNAME_SETUP_COOKIE_KEY,
+    value: '1',
+    path: '/',
+    httpOnly: false,
+    sameSite: 'lax',
+    secure: request.nextUrl.protocol === 'https:',
+    maxAge: PENDING_NICKNAME_COOKIE_MAX_AGE_SEC,
+  });
+};

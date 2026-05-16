@@ -13,6 +13,7 @@ import { useGetHomeData } from '@/api/generated/home/home';
 import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import type { Detail } from '@/api/model';
 import type { ReadListDto } from '@/api/model';
+import { isPendingNicknameSetup } from '@/lib/pending-nickname-setup';
 import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
 import { useBottomNavVisibility } from '@/providers/bottom-nav-visibility';
 import { cn } from '@/lib/utils';
@@ -166,6 +167,10 @@ function MainPageContent() {
   }, [refetchHome, refetchWish]);
 
   React.useEffect(() => {
+    if (isPendingNicknameSetup()) {
+      router.replace('/nickname');
+      return;
+    }
     if (
       isHomeLoading ||
       isWishListLoading ||

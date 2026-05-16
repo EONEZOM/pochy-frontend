@@ -5,6 +5,7 @@ import {
   extractAccessTokenFromPayload,
   extractBearerTokenFromAuthorizationHeader,
   extractEmailFromPayload,
+  extractNewMemberFromPayload,
   extractNicknameFromPayload,
   extractRefreshTokenFromPayload,
   extractRefreshTokenFromSetCookieHeader,
@@ -16,6 +17,7 @@ type NaverExchangeTokens = {
   accessToken: string | null;
   nickname: string | null;
   email: string | null;
+  newMember: boolean | undefined;
 };
 
 const extractTokensFromResponse = async (
@@ -55,6 +57,7 @@ const extractTokensFromResponse = async (
       accessToken,
       nickname: extractNicknameFromPayload(payload),
       email: extractEmailFromPayload(payload),
+      newMember: extractNewMemberFromPayload(payload),
     },
   };
 };
@@ -170,6 +173,7 @@ export async function GET(request: NextRequest) {
       accessToken: tokens.accessToken ?? null,
       nickname: tokens.nickname ?? null,
       email: tokens.email ?? null,
+      newMember: tokens.newMember,
     });
     applyRefreshTokenCookie(response, tokens.refreshToken, request);
 

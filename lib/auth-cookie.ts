@@ -170,6 +170,55 @@ export const extractEmailFromPayload = (value: unknown): string | null => {
   return extractNamedToken(value, ['email']);
 };
 
+/** 없음(undefined)은 미전달, false만 기존 회원 로그인으로 간주 */
+export const extractNewMemberFromPayload = (
+  value: unknown,
+): boolean | undefined => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
+  }
+
+  const record = value as Record<string, unknown>;
+  const direct = record.newMember ?? record.new_member;
+  if (typeof direct === 'boolean') {
+    return direct;
+  }
+  if (direct === 'true' || direct === 1) {
+    return true;
+  }
+  if (direct === 'false' || direct === 0) {
+    return false;
+  }
+
+  let hasTrue = false;
+  let hasFalse = false;
+  for (const [key, nestedValue] of Object.entries(record)) {
+    if (PAYLOAD_META_KEYS.has(key)) {
+      continue;
+    }
+    const nested = extractNewMemberFromPayload(nestedValue);
+    if (nested === true) {
+      hasTrue = true;
+    }
+    if (nested === false) {
+      hasFalse = true;
+    }
+  }
+
+  if (hasTrue) {
+    return true;
+  }
+  if (hasFalse) {
+    return false;
+  }
+
+  return undefined;
+};
+
 /** reissue 응답 등 토큰 종류가 하나뿐일 때 사용 */
 export const extractTokenFromPayload = (value: unknown): string | null => {
   return (

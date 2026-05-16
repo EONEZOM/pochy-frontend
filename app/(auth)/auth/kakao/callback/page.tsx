@@ -4,6 +4,10 @@ import { Suspense, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { kakaoLogin } from '@/api/generated/oauth/oauth';
 import {
+  markPendingNicknameSetup,
+  shouldMarkPendingNicknameSetup,
+} from '@/lib/pending-nickname-setup';
+import {
   ACCESS_TOKEN_STORAGE_KEY,
   formatOAuthCallbackError,
   persistOAuthSignupHints,
@@ -45,6 +49,10 @@ function KakaoCallbackContent() {
         persistOAuthSignupHints({
           email: resolveOAuthEmail(authResult) ?? authResult?.email,
         });
+
+        if (shouldMarkPendingNicknameSetup(authResult?.newMember)) {
+          markPendingNicknameSetup();
+        }
 
         const accessToken = resolveAccessToken(authResult);
         const refreshToken = resolveRefreshToken(authResult);
