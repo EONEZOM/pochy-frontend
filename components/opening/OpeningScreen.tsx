@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Modal } from '@/components/common/Modal';
+import { OpeningSlideFall } from '@/components/opening/OpeningSlideFall';
 import { classifyReissueError } from '@/lib/reissue-error';
 import { markOpeningSeen } from '@/lib/opening-seen';
 import { preloadOpeningAssets } from '@/lib/preload-opening-assets';
@@ -15,18 +16,7 @@ import { cn } from '@/lib/utils';
 
 const OPENING_TOP_POUCH_SRC = '/figma/opening/위파우치.svg';
 const OPENING_BOTTOM_POUCH_SRC = '/figma/opening/아래파우치.svg';
-const OPENING_SLIDE_SRC = '/figma/opening/opening-슬라이드.svg';
 const OPENING_LOGO_SRC = '/logo/main-logo.png';
-
-const SLIDE_MASK_STYLE = {
-  maskImage:
-    'linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)',
-  WebkitMaskImage:
-    'linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)',
-} as const;
-
-/** 슬라이드 창 — 아래파우치 입구 위쪽에 맞춤 (366×186 SVG 비율 기준) */
-const SLIDE_WINDOW_BOTTOM = 'min(40vw, 148px)';
 
 const POUCH_IMAGE_CLASS =
   'block h-auto w-full max-w-none border-0 outline-none shadow-none [backface-visibility:hidden]';
@@ -38,7 +28,8 @@ export function OpeningScreen() {
   const router = useRouter();
   const [isReissuePending, setIsReissuePending] = useState(false);
   const [isNoAccountModalOpen, setIsNoAccountModalOpen] = useState(false);
-  const [isSessionExpiredModalOpen, setIsSessionExpiredModalOpen] = useState(false);
+  const [isSessionExpiredModalOpen, setIsSessionExpiredModalOpen] =
+    useState(false);
   const [isNetworkErrorModalOpen, setIsNetworkErrorModalOpen] = useState(false);
 
   useEffect(() => {
@@ -82,11 +73,31 @@ export function OpeningScreen() {
   return (
     <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 w-full leading-none"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] w-full leading-none"
+        aria-hidden
+      >
+        <div className="absolute inset-x-0 bottom-[-80px] w-full -translate-y-[calc(min(20vw,100px)+90px)] md:-translate-y-[min(20vw,180px)]">
+          <Image
+            src={OPENING_TOP_POUCH_SRC}
+            alt=""
+            width={366}
+            height={180}
+            unoptimized
+            sizes="100vw"
+            className={cn(POUCH_IMAGE_CLASS, 'opening-pouch-rise -mb-px')}
+            priority
+          />
+        </div>
+      </div>
+
+      <OpeningSlideFall />
+
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[10] w-full leading-none"
         aria-hidden
       >
         <div className="relative w-full">
-          <div className="relative z-[3] w-full">
+          <div className="relative z-[10] w-full">
             <Image
               src={OPENING_BOTTOM_POUCH_SRC}
               alt=""
@@ -98,48 +109,6 @@ export function OpeningScreen() {
                 POUCH_IMAGE_CLASS,
                 'opening-pouch-rise opening-pouch-rise--delay translate-y-px',
               )}
-              priority
-            />
-          </div>
-
-          <div
-            className="absolute inset-x-0 z-[2] h-[min(38vh,300px)] overflow-hidden"
-            style={{
-              ...SLIDE_MASK_STYLE,
-              bottom: SLIDE_WINDOW_BOTTOM,
-            }}
-          >
-            <div className="opening-slide-fall">
-              <Image
-                src={OPENING_SLIDE_SRC}
-                alt=""
-                width={456}
-                height={2398}
-                unoptimized
-                className={cn(POUCH_IMAGE_CLASS, 'shrink-0')}
-                priority
-              />
-              <Image
-                src={OPENING_SLIDE_SRC}
-                alt=""
-                width={456}
-                height={2398}
-                unoptimized
-                className={cn(POUCH_IMAGE_CLASS, 'shrink-0')}
-                aria-hidden
-              />
-            </div>
-          </div>
-
-          <div className="absolute inset-x-0 bottom-[-50px] z-[1] w-full -translate-y-[calc(min(20vw,180px)+50px)] md:-translate-y-[min(20vw,180px)]">
-            <Image
-              src={OPENING_TOP_POUCH_SRC}
-              alt=""
-              width={366}
-              height={180}
-              unoptimized
-              sizes="100vw"
-              className={cn(POUCH_IMAGE_CLASS, 'opening-pouch-rise -mb-px')}
               priority
             />
           </div>
