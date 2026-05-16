@@ -17,6 +17,11 @@ import {
   useGetMyProfile,
 } from '@/api/generated/member-controller/member-controller';
 import { useLogout } from '@/api/generated/login-controller/login-controller';
+import {
+  ensureDefaultProfileImage,
+  extractProfileImageUrl,
+} from '@/lib/member-profile';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof AxiosError) {
@@ -119,7 +124,39 @@ export default function MyPage() {
   };
 
   const displayEmail = profile?.email?.trim() ?? '';
-  const profileImageUrl = profile?.profileImageUrl;
+  const profileImageUrl = extractProfileImageUrl(profile);
+  const resolvedProfileImageUrl = profileImageUrl
+    ? resolveMediaUrl(profileImageUrl)
+    : '';
+
+  const didEnsureProfileImage = React.useRef(false);
+  const [isEnsuringProfileImage, setIsEnsuringProfileImage] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isLoading || profileImageUrl || didEnsureProfileImage.current) {
+      return;
+    }
+
+    didEnsureProfileImage.current = true;
+    setIsEnsuringProfileImage(true);
+
+    const ensureProfile = async () => {
+      try {
+        await ensureDefaultProfileImage();
+        await Promise.all([
+          refetch(),
+          queryClient.invalidateQueries({ queryKey: getGetHomeDataQueryKey() }),
+        ]);
+      } catch (error) {
+        console.error('[profile] default profile save failed', error);
+        didEnsureProfileImage.current = false;
+      } finally {
+        setIsEnsuringProfileImage(false);
+      }
+    };
+
+    void ensureProfile();
+  }, [isLoading, profileImageUrl, queryClient, refetch]);
 
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = React.useState(false);
 
@@ -137,9 +174,9 @@ export default function MyPage() {
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex shrink-0 flex-col items-center">
             <div className="border-mono-white relative size-20 shrink-0 rounded-full border-[3px] shadow-[0_3px_3px_rgba(0,0,0,0.2)]">
-              {profileImageUrl ? (
+              {resolvedProfileImageUrl ? (
                 <Image
-                  src={profileImageUrl}
+                  src={resolvedProfileImageUrl}
                   alt=""
                   width={80}
                   height={80}
@@ -151,7 +188,9 @@ export default function MyPage() {
               )}
             </div>
             <p className="text-mono-jet mt-2 line-clamp-1 text-center text-sm leading-5 font-bold sm:text-base">
-              {isLoading ? '불러오는 중...' : (profile?.nickname ?? '포치')}
+              {isLoading || isEnsuringProfileImage
+                ? '불러오는 중...'
+                : (profile?.nickname ?? '포치')}
             </p>
           </div>
 

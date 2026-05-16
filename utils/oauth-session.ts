@@ -66,6 +66,34 @@ export const resolveAccessToken = (value: unknown): string | null => {
   return null;
 };
 
+export const resolveOAuthEmail = (value: unknown): string | null => {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value.trim();
+  }
+
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const candidateKeys = ['email', 'userEmail', 'accountEmail'];
+  for (const key of candidateKeys) {
+    const candidate = record[key];
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+
+  for (const nestedValue of Object.values(record)) {
+    const nestedEmail = resolveOAuthEmail(nestedValue);
+    if (nestedEmail) {
+      return nestedEmail;
+    }
+  }
+
+  return null;
+};
+
 export const resolveRefreshToken = (value: unknown): string | null => {
   if (typeof value === 'string' && value.trim().length > 0) {
     return value.trim();

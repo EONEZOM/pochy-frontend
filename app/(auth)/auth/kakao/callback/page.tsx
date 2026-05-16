@@ -9,6 +9,7 @@ import {
   persistOAuthSignupHints,
   persistRefreshTokenCookie,
   resolveAccessToken,
+  resolveOAuthEmail,
   resolveRefreshToken,
 } from '@/utils/oauth-session';
 import { isWithdrawnMemberNickname } from '@/lib/is-withdrawn-member';
@@ -41,7 +42,9 @@ function KakaoCallbackContent() {
           return;
         }
 
-        persistOAuthSignupHints({ email: authResult?.email });
+        persistOAuthSignupHints({
+          email: resolveOAuthEmail(authResult) ?? authResult?.email,
+        });
 
         const accessToken = resolveAccessToken(authResult);
         const refreshToken = resolveRefreshToken(authResult);

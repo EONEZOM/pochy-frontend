@@ -11,6 +11,7 @@ import {
 } from '@/lib/clear-client-session';
 import { markOpeningSeen } from '@/lib/opening-seen';
 import { getGetHomeDataQueryKey } from '@/api/generated/home/home';
+import { getGetMyProfileQueryKey } from '@/api/generated/member-controller/member-controller';
 import { ensureDefaultProfileImage } from '@/lib/member-profile';
 import {
   resolvePostAuthPath,
@@ -69,17 +70,20 @@ export default function AuthSuccessPage() {
           return;
         }
 
-        if (resolved.path === '/') {
-          try {
-            await ensureDefaultProfileImage();
-            await queryClient.invalidateQueries({
+        try {
+          await ensureDefaultProfileImage();
+          await Promise.all([
+            queryClient.invalidateQueries({
               queryKey: getGetHomeDataQueryKey(),
-            });
-          } catch (error) {
-            console.error('[success] default profile save failed', error);
-          } finally {
-            clearOAuthSignupHints();
-          }
+            }),
+            queryClient.invalidateQueries({
+              queryKey: getGetMyProfileQueryKey(),
+            }),
+          ]);
+        } catch (error) {
+          console.error('[success] default profile save failed', error);
+        } finally {
+          clearOAuthSignupHints();
         }
 
         setHasServerNickname(resolved.path === '/');

@@ -12,7 +12,32 @@
 import { getMyProfile } from '@/api/generated/member-controller/member-controller';
 import { customInstance } from '@/api/axios-instance';
 import type { ProfileDto, UpdateProfileDto } from '@/api/model';
+import { fetchDefaultProfileImageFile } from '@/lib/default-profile-images';
 import { readOAuthSignupEmail } from '@/utils/oauth-session';
+
+type ProfileLike = ProfileDto & {
+  profileImgUrl?: string;
+  profileUrl?: string;
+};
+
+export const extractProfileImageUrl = (
+  profile: ProfileLike | undefined,
+): string | null => {
+  const candidates = [
+    profile?.profileImageUrl,
+    profile?.profileImgUrl,
+    profile?.profileUrl,
+  ];
+
+  for (const candidate of candidates) {
+    const trimmed = candidate?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+
+  return null;
+};
 
 export const patchMyProfileRequestOnly = async (request: UpdateProfileDto) => {
   const formData = new FormData();
@@ -28,13 +53,40 @@ export const patchMyProfileRequestOnly = async (request: UpdateProfileDto) => {
   });
 };
 
-const resolveProfileEmail = (profile: ProfileDto | undefined): string | null => {
+const patchMyProfileWithImage = async (
+  request: UpdateProfileDto,
+  profileImage: File,
+) => {
+  const formData = new FormData();
+  formData.append(
+    'request',
+    new Blob([JSON.stringify(request)], { type: 'application/json' }),
+  );
+  formData.append('profileImage', profileImage);
+
+  return customInstance({
+    url: '/api/member',
+    method: 'PATCH',
+    data: formData,
+  });
+};
+
+const resolveProfileEmail = (
+  profile: ProfileDto | undefined,
+  nickname: string,
+): string => {
   const fromProfile = profile?.email?.trim();
   if (fromProfile) {
     return fromProfile;
   }
 
-  return readOAuthSignupEmail();
+  const fromOAuth = readOAuthSignupEmail();
+  if (fromOAuth) {
+    return fromOAuth;
+  }
+
+  const safeNickname = nickname.replace(/[^\w가-힣-]/g, '').slice(0, 20) || 'member';
+  return `${safeNickname}@kakao.pochy`;
 };
 
 /**
@@ -45,9 +97,9 @@ export const ensureDefaultProfileImage = async (
   nicknameOverride?: string,
 ): Promise<void> => {
   const profileResponse = await getMyProfile();
-  const profile = profileResponse.result;
+  const profile = profileResponse.result as ProfileLike | undefined;
 
-  if (profile?.profileImageUrl?.trim()) {
+  if (extractProfileImageUrl(profile)) {
     return;
   }
 
@@ -56,15 +108,23 @@ export const ensureDefaultProfileImage = async (
     return;
   }
 
-  const email = resolveProfileEmail(profile);
-  if (!email) {
-    throw new Error('프로필 이메일을 확인할 수 없습니다.');
+  const request: UpdateProfileDto = {
+    nickname,
+    email: resolveProfileEmail(profile, nickname),
+  };
+
+  try {
+    await patchMyProfileRequestOnly(request);
+    return;
+  } catch (requestOnlyError) {
+    console.warn(
+      '[member-profile] request-only default profile failed, trying image upload',
+      requestOnlyError,
+    );
   }
 
-  await patchMyProfileRequestOnly({
-    nickname,
-    email,
-  });
+  const profileImage = await fetchDefaultProfileImageFile();
+  await patchMyProfileWithImage(request, profileImage);
 };
 
 /**
