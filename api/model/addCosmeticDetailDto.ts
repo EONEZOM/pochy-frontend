@@ -6,10 +6,13 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface FindMyCosmeticsDto {
-  productImageUrl?: string;
-  content?: string;
+export interface AddCosmeticDetailDto {
+  myCosmeticId?: number;
+  memo?: string;
   ypoint?: number;
   zindex?: number;
   xpoint?: number;
+  xPoint?: number;
+  yPoint?: number;
+  zIndex?: number;
 }

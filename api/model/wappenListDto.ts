@@ -5,11 +5,9 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
+import type { WappenDto } from './wappenDto';
 
-export interface FindMyCosmeticsDto {
-  productImageUrl?: string;
-  content?: string;
-  ypoint?: number;
-  zindex?: number;
-  xpoint?: number;
+export interface WappenListDto {
+  hasNext?: boolean;
+  wappens?: WappenDto[];
 }

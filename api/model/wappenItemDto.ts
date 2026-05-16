@@ -6,10 +6,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface FindMyCosmeticsDto {
-  productImageUrl?: string;
-  content?: string;
+export interface WappenItemDto {
+  wappenId?: number;
   ypoint?: number;
   zindex?: number;
   xpoint?: number;
+  xPoint?: number;
+  yPoint?: number;
+  zIndex?: number;
 }

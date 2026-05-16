@@ -6,9 +6,15 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface FindMyCosmeticsDto {
-  productImageUrl?: string;
-  content?: string;
+export interface PouchItemDetailDto {
+  id?: number;
+  name?: string;
+  brand?: string;
+  category?: string;
+  subCategory?: string;
+  feature?: string;
+  memo?: string;
+  myCosmeticId?: number;
   ypoint?: number;
   zindex?: number;
   xpoint?: number;

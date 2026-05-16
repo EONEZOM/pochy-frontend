@@ -5,11 +5,8 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
+import type { PouchNameResponseDto } from './pouchNameResponseDto';
 
-export interface FindMyCosmeticsDto {
-  productImageUrl?: string;
-  content?: string;
-  ypoint?: number;
-  zindex?: number;
-  xpoint?: number;
+export interface PouchNameListDto {
+  names?: PouchNameResponseDto[];
 }

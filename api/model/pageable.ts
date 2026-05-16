@@ -6,10 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface FindMyCosmeticsDto {
-  productImageUrl?: string;
-  content?: string;
-  ypoint?: number;
-  zindex?: number;
-  xpoint?: number;
+export interface Pageable {
+  /** @minimum 0 */
+  page?: number;
+  /** @minimum 1 */
+  size?: number;
+  sort?: string[];
 }

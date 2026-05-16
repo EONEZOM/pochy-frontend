@@ -27,8 +27,10 @@ import type {
 import type {
   ApiResponseDTO,
   ApiResponseDTOListLong,
+  ApiResponseDTOLong,
   ApiResponseDTOSliceMyCosmeticsResponseDTO,
   RegisterBody,
+  RegisterDirectBody,
   SearchMyCosmeticsParams
 } from '../../model';
 
@@ -192,6 +194,73 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getRegisterMutationOptions(options), queryClient);
+    }
+    export const registerDirect = (
+    registerDirectBody?: RegisterDirectBody,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+      const formData = new FormData();
+if(registerDirectBody?.directImage !== undefined) {
+ formData.append(`directImage`, registerDirectBody.directImage);
+ }
+if(registerDirectBody?.captureImage !== undefined) {
+ formData.append(`captureImage`, registerDirectBody.captureImage);
+ }
+if(registerDirectBody?.request !== undefined) {
+ formData.append(`request`, JSON.stringify(registerDirectBody.request));
+ }
+
+      return customInstance<ApiResponseDTOLong>(
+      {url: `/api/my-cosmetics/direct`, method: 'POST',
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
+    },
+      options);
+    }
+
+
+
+export const getRegisterDirectMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerDirect>>, TError,{data?: RegisterDirectBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof registerDirect>>, TError,{data?: RegisterDirectBody}, TContext> => {
+
+const mutationKey = ['registerDirect'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof registerDirect>>, {data?: RegisterDirectBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  registerDirect(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterDirectMutationResult = NonNullable<Awaited<ReturnType<typeof registerDirect>>>
+    export type RegisterDirectMutationBody = RegisterDirectBody | undefined
+    export type RegisterDirectMutationError = unknown
+
+    export const useRegisterDirect = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof registerDirect>>, TError,{data?: RegisterDirectBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof registerDirect>>,
+        TError,
+        {data?: RegisterDirectBody},
+        TContext
+      > => {
+      return useMutation(getRegisterDirectMutationOptions(options), queryClient);
     }
     export const getCosmeticDetail = (
     cosmeticId: number,
