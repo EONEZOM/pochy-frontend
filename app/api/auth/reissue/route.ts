@@ -14,6 +14,9 @@ export async function POST(request: NextRequest) {
   const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_KEY)?.value;
 
   if (!refreshToken) {
+    console.info('[api/auth/reissue] REFRESH_MISSING', {
+      referer: request.headers.get('referer'),
+    });
     return NextResponse.json(
       {
         success: false,
@@ -48,6 +51,10 @@ export async function POST(request: NextRequest) {
 
   if (!backendRes.ok) {
     const errorBody = await backendRes.text().catch(() => '');
+    console.warn('[api/auth/reissue] REFRESH_INVALID', {
+      status: backendRes.status,
+      referer: request.headers.get('referer'),
+    });
     const response = NextResponse.json(
       {
         success: false,

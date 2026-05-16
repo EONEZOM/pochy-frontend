@@ -80,7 +80,7 @@ export default function AuthSuccessPage() {
     phase === 'loading'
       ? '처리 중...'
       : phase === 'error'
-        ? '안내'
+        ? '로그인 실패'
         : hasServerNickname
           ? '로그인 완료'
           : '회원가입 완료';

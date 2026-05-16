@@ -96,6 +96,41 @@ export const extractRefreshTokenFromPayload = (value: unknown): string | null =>
   return extractNamedToken(value, ['refreshToken', 'refresh_token']);
 };
 
+const REFRESH_COOKIE_NAME_PATTERN =
+  /(?:^|[;,]\s*)(?:REFRESH_TOKEN|refreshToken|refresh_token)=([^;]+)/i;
+
+/** 백엔드 verify·reissue 응답의 Set-Cookie에서 refresh 토큰을 읽습니다. */
+export const extractRefreshTokenFromSetCookieHeader = (
+  headers: Headers,
+): string | null => {
+  const headerWithGetSetCookie = headers as Headers & {
+    getSetCookie?: () => string[];
+  };
+  const setCookieList =
+    typeof headerWithGetSetCookie.getSetCookie === 'function'
+      ? headerWithGetSetCookie.getSetCookie()
+      : [];
+
+  const fallback = headers.get('set-cookie');
+  const rawCookies =
+    setCookieList.length > 0 ? setCookieList : fallback ? [fallback] : [];
+
+  for (const raw of rawCookies) {
+    const match = raw.match(REFRESH_COOKIE_NAME_PATTERN);
+    const value = match?.[1]?.trim();
+    if (!value) {
+      continue;
+    }
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  }
+
+  return null;
+};
+
 export const extractAccessTokenFromPayload = (value: unknown): string | null => {
   return extractNamedToken(value, ['accessToken', 'access_token', 'token']);
 };

@@ -53,6 +53,18 @@ function LoginContent() {
 
     const checkSession = async () => {
       try {
+        const sessionRes = await fetch('/api/auth/session-check', {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+        });
+
+        if (sessionRes.status !== 204) {
+          if (!isMounted) return;
+          setIsCheckingSession(false);
+          return;
+        }
+
         await reissueWithTimeout();
         if (!isMounted) return;
         const nextPath = await resolvePostAuthPath();

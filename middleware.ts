@@ -5,6 +5,7 @@ import {
   applyRefreshTokenCookie,
   extractAccessTokenFromPayload,
   extractRefreshTokenFromPayload,
+  extractRefreshTokenFromSetCookieHeader,
   REFRESH_TOKEN_COOKIE_KEY,
 } from '@/lib/auth-cookie';
 import { getServerApiBase } from '@/lib/server-api-base';
@@ -112,7 +113,9 @@ export async function middleware(request: NextRequest) {
     payload = null;
   }
 
-  const refreshToken = extractRefreshTokenFromPayload(payload);
+  const refreshToken =
+    extractRefreshTokenFromPayload(payload) ??
+    extractRefreshTokenFromSetCookieHeader(backendRes.headers);
   if (!refreshToken) {
     console.warn('[middleware][verify] missing refresh token in response', {
       status: backendRes.status,
