@@ -89,7 +89,9 @@ export const reissueSession = async (signal?: AbortSignal): Promise<void> => {
   const response = await axiosInstance.post('/api/auth/reissue', undefined, {
     signal,
   });
-  const tokenFromBody = extractAccessToken(response?.data?.result);
+  const tokenFromBody =
+    extractAccessToken(response?.data?.result) ??
+    extractAccessToken(response?.data);
   const tokenFromHeader = extractAccessToken(
     response?.headers?.authorization?.replace?.(/^Bearer\s+/i, ''),
   );

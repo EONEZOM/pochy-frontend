@@ -10,6 +10,7 @@ import {
   resolveAccessToken,
   resolveRefreshToken,
 } from '@/utils/oauth-session';
+import { isWithdrawnMemberNickname } from '@/lib/is-withdrawn-member';
 
 function KakaoCallbackContent() {
   const router = useRouter();
@@ -27,8 +28,20 @@ function KakaoCallbackContent() {
     const exchangeToken = async () => {
       try {
         const response = await kakaoLogin({ code });
-        const accessToken = resolveAccessToken(response?.result);
-        const refreshToken = resolveRefreshToken(response?.result);
+        const authResult = response?.result;
+
+        if (isWithdrawnMemberNickname(authResult?.nickname)) {
+          if (!isMounted) {
+            return;
+          }
+          alert('탈퇴한 계정입니다. 새로 가입해 주세요.');
+          window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+          router.replace('/login');
+          return;
+        }
+
+        const accessToken = resolveAccessToken(authResult);
+        const refreshToken = resolveRefreshToken(authResult);
 
         if (refreshToken) {
           const cookieOk = await persistRefreshTokenCookie(refreshToken);

@@ -53,12 +53,16 @@ export function OpeningScreen() {
     try {
       await reissueWithTimeout();
       markOpeningSeen();
-      const nextPath = await resolvePostAuthPath();
-      if (!nextPath) {
+      const resolved = await resolvePostAuthPath();
+      if (resolved.status === 'withdrawn') {
         setIsSessionExpiredModalOpen(true);
         return;
       }
-      router.replace(nextPath);
+      if (resolved.status !== 'ok') {
+        setIsSessionExpiredModalOpen(true);
+        return;
+      }
+      router.replace(resolved.path);
     } catch (error) {
       const failureKind = classifyReissueError(error);
       if (failureKind === 'noAccount') {

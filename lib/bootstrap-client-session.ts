@@ -41,6 +41,10 @@ export type BootstrapClientSessionOptions = {
 export const bootstrapClientSession = async (
   options?: BootstrapClientSessionOptions,
 ): Promise<void> => {
+  if (options?.forceReissue && typeof window !== 'undefined') {
+    window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+  }
+
   if (!options?.forceReissue) {
     syncAccessTokenFromCookie();
 

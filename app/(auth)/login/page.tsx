@@ -21,7 +21,10 @@ import {
 import type { RequestMagicLinkParams } from '@/api/model';
 import { useRequestMagicLink } from '@/api/generated/login-controller/login-controller';
 import { bootstrapClientSession } from '@/lib/bootstrap-client-session';
-import { clearClientSession } from '@/lib/clear-client-session';
+import {
+  clearClientSession,
+  clearFullAuthSession,
+} from '@/lib/clear-client-session';
 import { resolvePostAuthPath } from '@/lib/resolve-post-auth-path';
 import { getState } from '@/api/generated/oauth/oauth';
 import { isAxiosError } from 'axios';
@@ -66,18 +69,27 @@ function LoginContent() {
           return;
         }
 
-        const nextPath = await resolvePostAuthPath();
+        const resolved = await resolvePostAuthPath();
         if (!isMounted) {
           return;
         }
 
-        if (!nextPath || nextPath === pathname) {
+        if (resolved.status === 'withdrawn') {
+          await clearFullAuthSession();
+          setIsCheckingSession(false);
+          return;
+        }
+
+        if (
+          resolved.status !== 'ok' ||
+          resolved.path === pathname
+        ) {
           clearClientSession();
           setIsCheckingSession(false);
           return;
         }
 
-        router.replace(nextPath);
+        router.replace(resolved.path);
       } catch {
         if (!isMounted) {
           return;
@@ -122,9 +134,13 @@ function LoginContent() {
     setIsCheckingAutoLogin(true);
     try {
       await bootstrapClientSession();
-      const nextPath = await resolvePostAuthPath();
-      if (nextPath && nextPath !== pathname) {
-        router.replace(nextPath);
+      const resolved = await resolvePostAuthPath();
+      if (resolved.status === 'withdrawn') {
+        await clearFullAuthSession();
+        return;
+      }
+      if (resolved.status === 'ok' && resolved.path !== pathname) {
+        router.replace(resolved.path);
         return;
       }
     } catch {

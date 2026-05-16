@@ -2,14 +2,11 @@
 
 import { Suspense, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { naverLogin } from '@/api/generated/oauth/oauth';
 import {
   ACCESS_TOKEN_STORAGE_KEY,
   formatOAuthCallbackError,
-  persistRefreshTokenCookie,
-  resolveAccessToken,
-  resolveRefreshToken,
 } from '@/utils/oauth-session';
+import { isWithdrawnMemberNickname } from '@/lib/is-withdrawn-member';
 
 function NaverCallbackContent() {
   const router = useRouter();
@@ -30,22 +27,36 @@ function NaverCallbackContent() {
 
     const exchangeToken = async () => {
       try {
-        const response = await naverLogin({ code, state });
-        const accessToken = resolveAccessToken(response?.result);
-        const refreshToken = resolveRefreshToken(response?.result);
+        const exchangeUrl = new URL('/api/oauth/naver/exchange', window.location.origin);
+        exchangeUrl.searchParams.set('code', code);
+        exchangeUrl.searchParams.set('state', state);
 
-        if (refreshToken) {
-          const cookieOk = await persistRefreshTokenCookie(refreshToken);
-          if (!cookieOk) {
-            if (!isMounted) {
-              return;
-            }
-            alert('로그인 세션을 저장하지 못했어요. 다시 시도해 주세요.');
-            router.replace('/login');
-            return;
-          }
+        const exchangeRes = await fetch(exchangeUrl.toString(), {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (!exchangeRes.ok) {
+          throw new Error(`naver_exchange_${exchangeRes.status}`);
         }
 
+        const exchangeBody = (await exchangeRes.json()) as {
+          ok?: boolean;
+          accessToken?: string | null;
+          nickname?: string | null;
+        };
+
+        if (isWithdrawnMemberNickname(exchangeBody.nickname)) {
+          if (!isMounted) {
+            return;
+          }
+          alert('탈퇴한 계정입니다. 새로 가입해 주세요.');
+          window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+          router.replace('/login');
+          return;
+        }
+
+        const accessToken = exchangeBody.accessToken?.trim();
         if (accessToken) {
           window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, accessToken);
         }

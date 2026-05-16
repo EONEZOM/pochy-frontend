@@ -135,6 +135,10 @@ export const extractAccessTokenFromPayload = (value: unknown): string | null => 
   return extractNamedToken(value, ['accessToken', 'access_token', 'token']);
 };
 
+export const extractNicknameFromPayload = (value: unknown): string | null => {
+  return extractNamedToken(value, ['nickname']);
+};
+
 /** reissue 응답 등 토큰 종류가 하나뿐일 때 사용 */
 export const extractTokenFromPayload = (value: unknown): string | null => {
   return (
