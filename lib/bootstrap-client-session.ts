@@ -29,9 +29,24 @@ export const syncAccessTokenFromCookie = (): boolean => {
   return true;
 };
 
+const hasAccessInStorage = (): boolean => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return Boolean(
+    window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)?.trim(),
+  );
+};
+
 export type BootstrapClientSessionOptions = {
   /** 인증 직후(/success 등): access가 있어도 refresh로 재발급 */
   forceReissue?: boolean;
+  /**
+   * reissue 실패해도 exchange 직후 localStorage access가 있으면 예외를 던지지 않습니다.
+   * 네이버 등 refresh 쿠키가 불안정한 소셜 로그인에 사용합니다.
+   */
+  allowExistingAccessOnReissueFailure?: boolean;
 };
 
 /**
@@ -41,22 +56,20 @@ export type BootstrapClientSessionOptions = {
 export const bootstrapClientSession = async (
   options?: BootstrapClientSessionOptions,
 ): Promise<void> => {
-  if (options?.forceReissue && typeof window !== 'undefined') {
-    window.localStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
-  }
-
   if (!options?.forceReissue) {
     syncAccessTokenFromCookie();
 
-    const hasAccessInStorage = Boolean(
-      typeof window !== 'undefined' &&
-        window.localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)?.trim(),
-    );
-
-    if (hasAccessInStorage) {
+    if (hasAccessInStorage()) {
       return;
     }
   }
 
-  await reissueWithTimeout();
+  try {
+    await reissueWithTimeout();
+  } catch (error) {
+    if (options?.allowExistingAccessOnReissueFailure && hasAccessInStorage()) {
+      return;
+    }
+    throw error;
+  }
 };

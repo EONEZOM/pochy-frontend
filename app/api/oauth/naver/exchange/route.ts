@@ -3,16 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   applyRefreshTokenCookie,
   extractAccessTokenFromPayload,
+  extractBearerTokenFromAuthorizationHeader,
   extractEmailFromPayload,
   extractNicknameFromPayload,
   extractRefreshTokenFromPayload,
   extractRefreshTokenFromSetCookieHeader,
 } from '@/lib/auth-cookie';
-import { getServerApiBase } from '@/lib/server-api-base';
 
 /**
  * 네이버 OAuth는 TokenDto(access만)로 내려와 refresh가 브라우저 쿠키에 안 붙습니다.
- * 서버에서 백엔드와 교환한 뒤 REFRESH_TOKEN 쿠키를 프론트 도메인에 설정합니다.
+ * getState()와 동일하게 동일 오리진 /api 프록시 + 브라우저 Cookie를 전달해 교환합니다.
  */
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')?.trim() ?? '';
@@ -25,17 +25,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const apiBase = getServerApiBase();
-  if (!apiBase) {
-    return NextResponse.json(
-      { ok: false, error: 'config' },
-      { status: 500 },
-    );
-  }
-
-  const exchangeUrl = new URL(`${apiBase}/api/login/oauth2/naver`);
+  const exchangeUrl = new URL('/api/login/oauth2/naver', request.nextUrl.origin);
   exchangeUrl.searchParams.set('code', code);
   exchangeUrl.searchParams.set('state', state);
+
+  const cookieHeader = request.headers.get('cookie');
 
   let backendRes: Response;
   try {
@@ -46,6 +40,7 @@ export async function GET(request: NextRequest) {
         Accept: 'application/json, text/plain, */*',
         Origin: request.nextUrl.origin,
         Referer: request.url,
+        ...(cookieHeader ? { cookie: cookieHeader } : {}),
       },
     });
   } catch (error) {
@@ -74,8 +69,19 @@ export async function GET(request: NextRequest) {
   const refreshFromBody = extractRefreshTokenFromPayload(payload);
   const refreshFromSetCookie =
     extractRefreshTokenFromSetCookieHeader(backendRes.headers);
-  const refreshToken = refreshFromBody ?? refreshFromSetCookie;
-  const accessToken = extractAccessTokenFromPayload(payload);
+  const bearerFromHeader = extractBearerTokenFromAuthorizationHeader(
+    backendRes.headers,
+  );
+  const refreshToken =
+    refreshFromBody ??
+    refreshFromSetCookie ??
+    extractRefreshTokenFromPayload(bearerFromHeader);
+
+  const accessToken =
+    extractAccessTokenFromPayload(payload) ??
+    extractAccessTokenFromPayload(bearerFromHeader) ??
+    bearerFromHeader;
+
   const nickname = extractNicknameFromPayload(payload);
   const email = extractEmailFromPayload(payload);
 

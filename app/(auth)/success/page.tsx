@@ -24,7 +24,7 @@ import { useQueryClient } from '@tanstack/react-query';
 const SUCCESS_DISPLAY_MS = 1400;
 
 type SuccessPhase = 'loading' | 'ready' | 'error';
-type SuccessErrorKind = 'failed' | 'withdrawn';
+type SuccessErrorKind = 'failed' | 'withdrawn' | 'session' | 'profile';
 
 /**
  * 매직링크·소셜 로그인 직후 완료 화면 (`/success`)
@@ -43,7 +43,10 @@ export default function AuthSuccessPage() {
 
     const prepareSession = async () => {
       try {
-        await bootstrapClientSession({ forceReissue: true });
+        await bootstrapClientSession({
+          forceReissue: true,
+          allowExistingAccessOnReissueFailure: true,
+        });
         if (!isMounted) {
           return;
         }
@@ -64,7 +67,7 @@ export default function AuthSuccessPage() {
 
         if (resolved.status !== 'ok') {
           clearClientSession();
-          setErrorKind('failed');
+          setErrorKind('profile');
           setNextPath(null);
           setPhase('error');
           return;
@@ -89,12 +92,13 @@ export default function AuthSuccessPage() {
         setHasServerNickname(resolved.path === '/');
         setNextPath(resolved.path);
         setPhase('ready');
-      } catch {
+      } catch (error) {
         if (!isMounted) {
           return;
         }
+        console.error('[success] session bootstrap failed', error);
         await clearFullAuthSession();
-        setErrorKind('failed');
+        setErrorKind('session');
         setNextPath(null);
         setPhase('error');
       }
@@ -144,7 +148,11 @@ export default function AuthSuccessPage() {
       : phase === 'error'
         ? errorKind === 'withdrawn'
           ? '탈퇴한 계정이에요'
-          : '로그인 실패'
+          : errorKind === 'session'
+            ? '세션 연결 실패'
+            : errorKind === 'profile'
+              ? '계정 정보 확인 실패'
+              : '로그인 실패'
         : hasServerNickname
           ? '로그인 완료'
           : '회원가입 완료';
@@ -155,7 +163,11 @@ export default function AuthSuccessPage() {
       : phase === 'error'
         ? errorKind === 'withdrawn'
           ? '새로 가입하려면 로그인 화면으로 이동합니다.'
-          : '로그인 화면으로 이동합니다.'
+          : errorKind === 'session'
+            ? '다시 로그인해 주세요.'
+            : errorKind === 'profile'
+              ? '로그인 화면으로 이동합니다.'
+              : '로그인 화면으로 이동합니다.'
         : hasServerNickname
           ? '잠시 후 홈으로 이동합니다.'
           : '잠시 후 닉네임을 설정할게요.';

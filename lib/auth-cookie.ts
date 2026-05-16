@@ -135,6 +135,20 @@ export const extractAccessTokenFromPayload = (value: unknown): string | null => 
   return extractNamedToken(value, ['accessToken', 'access_token', 'token']);
 };
 
+/** 백엔드 응답 Authorization 헤더에서 Bearer 토큰을 읽습니다. */
+export const extractBearerTokenFromAuthorizationHeader = (
+  headers: Headers,
+): string | null => {
+  const authorization = headers.get('authorization');
+  if (!authorization?.trim()) {
+    return null;
+  }
+
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  const token = match?.[1]?.trim();
+  return token || null;
+};
+
 export const extractNicknameFromPayload = (value: unknown): string | null => {
   return extractNamedToken(value, ['nickname']);
 };
