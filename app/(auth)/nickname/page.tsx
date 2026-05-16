@@ -21,6 +21,7 @@ import {
   getNicknameErrorMessage,
   isNicknameLengthValid,
   resolveNicknameFromResponse,
+  resolveUsableHomeNickname,
 } from '@/lib/nickname';
 import { hasUsableServerNickname } from '@/lib/is-withdrawn-member';
 import { saveDefaultProfileAfterSignup } from '@/lib/member-profile';
@@ -124,23 +125,35 @@ function NicknameSetupContent() {
     updateNickname({ data: { nickname: trimmedNickname } });
   };
 
+  const fetchSavedHomeNickname = React.useCallback(async () => {
+    const homeAfterAuto = await queryClient.fetchQuery({
+      queryKey: getGetHomeDataQueryKey(),
+      queryFn: () => getHomeData(),
+    });
+    return resolveUsableHomeNickname(homeAfterAuto?.result?.nickname);
+  }, [queryClient]);
+
   const handleSkip = async () => {
     if (isPending) {
       return;
     }
     setIsSkipping(true);
     try {
-      const autoResponse = await autoNickname();
-      let randomNickname = resolveNicknameFromResponse(autoResponse);
+      let randomNickname: string | null = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const autoResponse = await autoNickname();
 
-      if (!randomNickname) {
-        const homeAfterAuto = await queryClient.fetchQuery({
-          queryKey: getGetHomeDataQueryKey(),
-          queryFn: () => getHomeData(),
-        });
-        randomNickname = resolveNicknameFromResponse({
-          result: homeAfterAuto?.result?.nickname,
-        });
+        const savedOnServer = await fetchSavedHomeNickname();
+        if (savedOnServer) {
+          await completeSignup(savedOnServer);
+          return;
+        }
+
+        const candidate = resolveNicknameFromResponse(autoResponse);
+        if (candidate && isNicknameLengthValid(candidate)) {
+          randomNickname = candidate;
+          break;
+        }
       }
 
       if (!randomNickname) {
@@ -148,7 +161,21 @@ function NicknameSetupContent() {
         return;
       }
 
-      await updateNicknameAsync({ data: { nickname: randomNickname } });
+      try {
+        await updateNicknameAsync({ data: { nickname: randomNickname } });
+      } catch (patchError) {
+        if (
+          patchError instanceof AxiosError &&
+          patchError.response?.status === 400
+        ) {
+          const savedAfterPatchError = await fetchSavedHomeNickname();
+          if (savedAfterPatchError) {
+            await completeSignup(savedAfterPatchError);
+            return;
+          }
+        }
+        throw patchError;
+      }
     } catch (error) {
       if (error instanceof AxiosError && error.response?.status === 403) {
         setAuthExpiredMessage(getNicknameErrorMessage(error));
@@ -271,7 +298,7 @@ function NicknameSetupContent() {
 
       {authExpiredMessage ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[rgba(22,22,24,0.45)] p-5">
-          <div className="w-full max-w-[320px] rounded-[24px] bg-white px-6 py-5 shadow-xl">
+          <div className="w-full rounded-[24px] bg-white px-6 py-5 shadow-xl">
             <h2 className="text-mono-jet text-base font-bold">오류</h2>
             <p className="text-mono-jet mt-3 text-sm leading-5">
               {authExpiredMessage}
