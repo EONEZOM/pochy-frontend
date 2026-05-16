@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import {
-  applyAccessTokenCookie,
   applyRefreshTokenCookie,
-  extractAccessTokenFromPayload,
   extractRefreshTokenFromPayload,
   extractRefreshTokenFromSetCookieHeader,
   REFRESH_TOKEN_COOKIE_KEY,
@@ -130,16 +128,11 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  const accessToken = extractAccessTokenFromPayload(payload);
   const redirect = NextResponse.redirect(new URL('/success', request.url));
   applyRefreshTokenCookie(redirect, refreshToken, request);
-  if (accessToken) {
-    applyAccessTokenCookie(redirect, accessToken, request);
-  }
 
   console.info('[middleware][verify] success', {
     status: backendRes.status,
-    hasAccessToken: Boolean(accessToken),
   });
 
   return redirect;

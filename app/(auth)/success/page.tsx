@@ -36,7 +36,7 @@ export default function AuthSuccessPage() {
 
     const prepareSession = async () => {
       try {
-        await bootstrapClientSession();
+        await bootstrapClientSession({ forceReissue: true });
         if (!isMounted) {
           return;
         }
