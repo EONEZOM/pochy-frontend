@@ -8,6 +8,7 @@ import {
   extractRefreshTokenFromSetCookieHeader,
   REFRESH_TOKEN_COOKIE_KEY,
 } from '@/lib/auth-cookie';
+import { agentDebugLog } from '@/lib/debug-agent-log';
 import { getServerApiBase } from '@/lib/server-api-base';
 
 const API_BASE = getServerApiBase();
@@ -113,9 +114,24 @@ export async function middleware(request: NextRequest) {
     payload = null;
   }
 
-  const refreshToken =
-    extractRefreshTokenFromPayload(payload) ??
+  const refreshFromBody = extractRefreshTokenFromPayload(payload);
+  const refreshFromSetCookie =
     extractRefreshTokenFromSetCookieHeader(backendRes.headers);
+  const refreshToken = refreshFromBody ?? refreshFromSetCookie;
+
+  // #region agent log
+  agentDebugLog({
+    hypothesisId: 'H2',
+    location: 'middleware.ts:verify:token-sources',
+    message: 'verify refresh token sources',
+    data: {
+      hasRefreshFromBody: Boolean(refreshFromBody),
+      hasRefreshFromSetCookie: Boolean(refreshFromSetCookie),
+      backendStatus: backendRes.status,
+    },
+  });
+  // #endregion
+
   if (!refreshToken) {
     console.warn('[middleware][verify] missing refresh token in response', {
       status: backendRes.status,

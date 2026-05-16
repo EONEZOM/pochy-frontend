@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { bootstrapClientSession } from '@/lib/bootstrap-client-session';
+import { agentDebugLog, getClientAuthSnapshot } from '@/lib/debug-agent-log';
 import { markOpeningSeen } from '@/lib/opening-seen';
 import {
   resolvePostAuthPath,
@@ -33,6 +34,14 @@ export default function AuthSuccessPage() {
     let isMounted = true;
 
     const prepareSession = async () => {
+      // #region agent log
+      agentDebugLog({
+        hypothesisId: 'H4',
+        location: 'success/page.tsx:prepareSession:start',
+        message: 'success page session prep',
+        data: getClientAuthSnapshot(),
+      });
+      // #endregion
       try {
         await bootstrapClientSession();
         if (!isMounted) {
@@ -48,7 +57,15 @@ export default function AuthSuccessPage() {
         setHasServerNickname(path === '/');
         setNextPath(path);
         setPhase('ready');
-      } catch {
+      } catch (error) {
+        // #region agent log
+        agentDebugLog({
+          hypothesisId: 'H4',
+          location: 'success/page.tsx:prepareSession:catch',
+          message: 'success page prep failed',
+          data: { snapshot: getClientAuthSnapshot() },
+        });
+        // #endregion
         if (!isMounted) {
           return;
         }

@@ -20,7 +20,8 @@ import {
 } from '@/components/login/LoginPrivacyConsentModal';
 import type { RequestMagicLinkParams } from '@/api/model';
 import { useRequestMagicLink } from '@/api/generated/login-controller/login-controller';
-import { reissueWithTimeout } from '@/lib/reissue-with-timeout';
+import { bootstrapClientSession } from '@/lib/bootstrap-client-session';
+import { agentDebugLog, getClientAuthSnapshot } from '@/lib/debug-agent-log';
 import { resolvePostAuthPath } from '@/lib/resolve-post-auth-path';
 import { getState } from '@/api/generated/oauth/oauth';
 import { isAxiosError } from 'axios';
@@ -53,20 +54,27 @@ function LoginContent() {
 
     const checkSession = async () => {
       try {
-        const sessionRes = await fetch('/api/auth/session-check', {
-          method: 'GET',
-          credentials: 'include',
-          cache: 'no-store',
+        // #region agent log
+        agentDebugLog({
+          hypothesisId: 'H4',
+          location: 'login/page.tsx:checkSession:start',
+          message: 'login auto session check',
+          data: getClientAuthSnapshot(),
         });
+        // #endregion
 
-        if (sessionRes.status !== 204) {
-          if (!isMounted) return;
-          setIsCheckingSession(false);
-          return;
-        }
-
-        await reissueWithTimeout();
+        await bootstrapClientSession();
         if (!isMounted) return;
+
+        // #region agent log
+        agentDebugLog({
+          hypothesisId: 'H3',
+          location: 'login/page.tsx:bootstrap:ok',
+          message: 'login bootstrap completed',
+          data: getClientAuthSnapshot(),
+        });
+        // #endregion
+
         const nextPath = await resolvePostAuthPath();
         if (!isMounted) return;
         router.replace(nextPath);
@@ -110,7 +118,7 @@ function LoginContent() {
 
     setIsCheckingAutoLogin(true);
     try {
-      await reissueWithTimeout();
+      await bootstrapClientSession();
       const nextPath = await resolvePostAuthPath();
       router.replace(nextPath);
       return;

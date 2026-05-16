@@ -6,12 +6,30 @@ import {
   extractRefreshTokenFromPayload,
   REFRESH_TOKEN_COOKIE_KEY,
 } from '@/lib/auth-cookie';
+import { agentDebugLogServer } from '@/lib/debug-agent-log-server';
+import { ACCESS_TOKEN_COOKIE_KEY } from '@/lib/auth-cookie';
 import { REISSUE_ERROR_CODE } from '@/lib/reissue-error';
 import { getServerApiBase } from '@/lib/server-api-base';
 
 export async function POST(request: NextRequest) {
   const apiBase = getServerApiBase();
   const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_KEY)?.value;
+  const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE_KEY)?.value;
+
+  // #region agent log
+  agentDebugLogServer({
+    hypothesisId: 'H1',
+    location: 'reissue/route.ts:POST:entry',
+    message: 'reissue request cookies',
+    data: {
+      hasRefresh: Boolean(refreshToken?.trim()),
+      hasAccess: Boolean(accessToken?.trim()),
+      refreshLen: refreshToken?.length ?? 0,
+      accessLen: accessToken?.length ?? 0,
+      referer: request.headers.get('referer'),
+    },
+  });
+  // #endregion
 
   if (!refreshToken) {
     console.info('[api/auth/reissue] REFRESH_MISSING', {
@@ -51,6 +69,17 @@ export async function POST(request: NextRequest) {
 
   if (!backendRes.ok) {
     const errorBody = await backendRes.text().catch(() => '');
+    // #region agent log
+    agentDebugLogServer({
+      hypothesisId: 'H3',
+      location: 'reissue/route.ts:POST:backend-fail',
+      message: 'backend reissue rejected',
+      data: {
+        backendStatus: backendRes.status,
+        errorBodyLen: errorBody.length,
+      },
+    });
+    // #endregion
     console.warn('[api/auth/reissue] REFRESH_INVALID', {
       status: backendRes.status,
       referer: request.headers.get('referer'),
@@ -96,6 +125,18 @@ export async function POST(request: NextRequest) {
   } else {
     applyRefreshTokenCookie(response, refreshToken, request);
   }
+
+  // #region agent log
+  agentDebugLogServer({
+    hypothesisId: 'H3',
+    location: 'reissue/route.ts:POST:success',
+    message: 'reissue success',
+    data: {
+      hasAuthHeader: Boolean(authorization),
+      rotatedRefresh: Boolean(nextRefreshToken),
+    },
+  });
+  // #endregion
 
   return response;
 }
