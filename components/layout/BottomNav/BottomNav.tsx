@@ -93,7 +93,7 @@ export function BottomNav({ className }: { className?: string }) {
       <nav
         className={cn(
           // 문서 끝에 두면 긴 페이지에서 탭이 화면 밖으로 밀림 → 뷰포트 하단 고정
-          'fixed bottom-0 left-1/2 z-40 w-full -translate-x-1/2 border-t border-mono-bright-gray bg-mono-white pb-(--safe-area-bottom)',
+          'border-mono-bright-gray bg-mono-white fixed bottom-0 left-1/2 z-40 w-full -translate-x-1/2 border-t pb-(--safe-area-bottom)',
           BOTTOM_NAV_MAX_WIDTH_CLASS,
           className,
         )}

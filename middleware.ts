@@ -119,8 +119,9 @@ export async function middleware(request: NextRequest) {
   }
 
   const refreshFromBody = extractRefreshTokenFromPayload(payload);
-  const refreshFromSetCookie =
-    extractRefreshTokenFromSetCookieHeader(backendRes.headers);
+  const refreshFromSetCookie = extractRefreshTokenFromSetCookieHeader(
+    backendRes.headers,
+  );
   const refreshToken = refreshFromBody ?? refreshFromSetCookie;
 
   if (!refreshToken) {
