@@ -6,6 +6,7 @@ import { kakaoLogin } from '@/api/generated/oauth/oauth';
 import {
   ACCESS_TOKEN_STORAGE_KEY,
   formatOAuthCallbackError,
+  persistOAuthSignupHints,
   persistRefreshTokenCookie,
   resolveAccessToken,
   resolveRefreshToken,
@@ -39,6 +40,8 @@ function KakaoCallbackContent() {
           router.replace('/login');
           return;
         }
+
+        persistOAuthSignupHints({ email: authResult?.email });
 
         const accessToken = resolveAccessToken(authResult);
         const refreshToken = resolveRefreshToken(authResult);

@@ -19,6 +19,7 @@ import {
   resolveNicknameFromResponse,
 } from '@/lib/nickname';
 import { saveDefaultProfileAfterSignup } from '@/lib/member-profile';
+import { clearOAuthSignupHints } from '@/utils/oauth-session';
 import { useQueryClient } from '@tanstack/react-query';
 
 const NICKNAME_CTA_CLASSNAME =
@@ -56,6 +57,7 @@ function NicknameSetupContent() {
         '기본 프로필 설정에 실패했어요. 마이페이지에서 다시 설정할 수 있어요.',
       );
     } finally {
+      clearOAuthSignupHints();
       await queryClient.invalidateQueries({
         queryKey: getGetHomeDataQueryKey(),
       });

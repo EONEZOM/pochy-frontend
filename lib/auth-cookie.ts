@@ -139,6 +139,10 @@ export const extractNicknameFromPayload = (value: unknown): string | null => {
   return extractNamedToken(value, ['nickname']);
 };
 
+export const extractEmailFromPayload = (value: unknown): string | null => {
+  return extractNamedToken(value, ['email']);
+};
+
 /** reissue 응답 등 토큰 종류가 하나뿐일 때 사용 */
 export const extractTokenFromPayload = (value: unknown): string | null => {
   return (

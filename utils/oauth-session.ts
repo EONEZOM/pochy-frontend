@@ -4,6 +4,39 @@
  */
 
 export const ACCESS_TOKEN_STORAGE_KEY = 'ACCESS_TOKEN';
+const OAUTH_SIGNUP_EMAIL_KEY = 'OAUTH_SIGNUP_EMAIL';
+
+export type OAuthSignupHints = {
+  email?: string | null;
+};
+
+export const persistOAuthSignupHints = (hints: OAuthSignupHints): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const email = hints.email?.trim();
+  if (email) {
+    window.sessionStorage.setItem(OAUTH_SIGNUP_EMAIL_KEY, email);
+  }
+};
+
+export const readOAuthSignupEmail = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const email = window.sessionStorage.getItem(OAUTH_SIGNUP_EMAIL_KEY)?.trim();
+  return email || null;
+};
+
+export const clearOAuthSignupHints = (): void => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.sessionStorage.removeItem(OAUTH_SIGNUP_EMAIL_KEY);
+};
 
 export const resolveAccessToken = (value: unknown): string | null => {
   if (typeof value === 'string' && value.trim().length > 0) {

@@ -10,10 +10,14 @@ import {
   clearFullAuthSession,
 } from '@/lib/clear-client-session';
 import { markOpeningSeen } from '@/lib/opening-seen';
+import { getGetHomeDataQueryKey } from '@/api/generated/home/home';
+import { ensureDefaultProfileImage } from '@/lib/member-profile';
 import {
   resolvePostAuthPath,
   type PostAuthPath,
 } from '@/lib/resolve-post-auth-path';
+import { clearOAuthSignupHints } from '@/utils/oauth-session';
+import { useQueryClient } from '@tanstack/react-query';
 
 /** 완료 문구를 보여 준 뒤 다음 화면으로 넘기기까지 (ms) */
 const SUCCESS_DISPLAY_MS = 1400;
@@ -26,6 +30,7 @@ type SuccessErrorKind = 'failed' | 'withdrawn';
  */
 export default function AuthSuccessPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [phase, setPhase] = useState<SuccessPhase>('loading');
   const [errorKind, setErrorKind] = useState<SuccessErrorKind>('failed');
   const [nextPath, setNextPath] = useState<PostAuthPath | null>(null);
@@ -64,6 +69,19 @@ export default function AuthSuccessPage() {
           return;
         }
 
+        if (resolved.path === '/') {
+          try {
+            await ensureDefaultProfileImage();
+            await queryClient.invalidateQueries({
+              queryKey: getGetHomeDataQueryKey(),
+            });
+          } catch (error) {
+            console.error('[success] default profile save failed', error);
+          } finally {
+            clearOAuthSignupHints();
+          }
+        }
+
         setHasServerNickname(resolved.path === '/');
         setNextPath(resolved.path);
         setPhase('ready');
@@ -83,7 +101,7 @@ export default function AuthSuccessPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     if (phase === 'loading') {

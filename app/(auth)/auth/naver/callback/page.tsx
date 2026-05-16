@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   ACCESS_TOKEN_STORAGE_KEY,
   formatOAuthCallbackError,
+  persistOAuthSignupHints,
 } from '@/utils/oauth-session';
 import { isWithdrawnMemberNickname } from '@/lib/is-withdrawn-member';
 
@@ -44,6 +45,7 @@ function NaverCallbackContent() {
           ok?: boolean;
           accessToken?: string | null;
           nickname?: string | null;
+          email?: string | null;
         };
 
         if (isWithdrawnMemberNickname(exchangeBody.nickname)) {
@@ -55,6 +57,8 @@ function NaverCallbackContent() {
           router.replace('/login');
           return;
         }
+
+        persistOAuthSignupHints({ email: exchangeBody.email });
 
         const accessToken = exchangeBody.accessToken?.trim();
         if (accessToken) {

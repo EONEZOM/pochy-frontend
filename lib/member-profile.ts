@@ -11,7 +11,8 @@
  */
 import { getMyProfile } from '@/api/generated/member-controller/member-controller';
 import { customInstance } from '@/api/axios-instance';
-import type { UpdateProfileDto } from '@/api/model';
+import type { ProfileDto, UpdateProfileDto } from '@/api/model';
+import { readOAuthSignupEmail } from '@/utils/oauth-session';
 
 export const patchMyProfileRequestOnly = async (request: UpdateProfileDto) => {
   const formData = new FormData();
@@ -27,16 +28,22 @@ export const patchMyProfileRequestOnly = async (request: UpdateProfileDto) => {
   });
 };
 
-/**
- * 회원가입(닉네임 설정) 직후, 프로필 이미지가 없으면 서버 기본 프사를 할당합니다.
- * profileImageUrl이 이미 있으면 API 호출을 생략합니다.
- */
-export const saveDefaultProfileAfterSignup = async (nickname: string) => {
-  const trimmedNickname = nickname.trim();
-  if (!trimmedNickname) {
-    throw new Error('닉네임이 비어 있습니다.');
+const resolveProfileEmail = (profile: ProfileDto | undefined): string | null => {
+  const fromProfile = profile?.email?.trim();
+  if (fromProfile) {
+    return fromProfile;
   }
 
+  return readOAuthSignupEmail();
+};
+
+/**
+ * 프로필 이미지가 없으면 서버 기본 프사를 할당합니다.
+ * 카카오 등 소셜 가입 시 닉네임이 이미 있어 /nickname 을 건너뛸 때도 호출합니다.
+ */
+export const ensureDefaultProfileImage = async (
+  nicknameOverride?: string,
+): Promise<void> => {
   const profileResponse = await getMyProfile();
   const profile = profileResponse.result;
 
@@ -44,13 +51,30 @@ export const saveDefaultProfileAfterSignup = async (nickname: string) => {
     return;
   }
 
-  const email = profile?.email?.trim();
+  const nickname = (nicknameOverride ?? profile?.nickname)?.trim();
+  if (!nickname) {
+    return;
+  }
+
+  const email = resolveProfileEmail(profile);
   if (!email) {
     throw new Error('프로필 이메일을 확인할 수 없습니다.');
   }
 
-  return patchMyProfileRequestOnly({
-    nickname: trimmedNickname,
+  await patchMyProfileRequestOnly({
+    nickname,
     email,
   });
+};
+
+/**
+ * 회원가입(닉네임 설정) 직후, 프로필 이미지가 없으면 서버 기본 프사를 할당합니다.
+ */
+export const saveDefaultProfileAfterSignup = async (nickname: string) => {
+  const trimmedNickname = nickname.trim();
+  if (!trimmedNickname) {
+    throw new Error('닉네임이 비어 있습니다.');
+  }
+
+  await ensureDefaultProfileImage(trimmedNickname);
 };

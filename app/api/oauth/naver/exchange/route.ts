@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   applyRefreshTokenCookie,
   extractAccessTokenFromPayload,
+  extractEmailFromPayload,
   extractNicknameFromPayload,
   extractRefreshTokenFromPayload,
   extractRefreshTokenFromSetCookieHeader,
@@ -76,6 +77,7 @@ export async function GET(request: NextRequest) {
   const refreshToken = refreshFromBody ?? refreshFromSetCookie;
   const accessToken = extractAccessTokenFromPayload(payload);
   const nickname = extractNicknameFromPayload(payload);
+  const email = extractEmailFromPayload(payload);
 
   if (!refreshToken) {
     console.warn('[api/oauth/naver/exchange] missing refresh token', {
@@ -91,6 +93,7 @@ export async function GET(request: NextRequest) {
     ok: true,
     accessToken: accessToken ?? null,
     nickname: nickname ?? null,
+    email: email ?? null,
   });
   applyRefreshTokenCookie(response, refreshToken, request);
 
