@@ -117,9 +117,9 @@ export function MainHomeEmptyView() {
         </div>
 
         <MainHomeBottomZipperWithLip
-          className="-mt-1 sm:-mt-5"
-          panelClassName="h-[min(calc(var(--app-height)*0.32),220px)]"
-          imageClassName="scale-110"
+          className="-mt-1 pt-[10px] sm:-mt-5"
+          panelClassName="h-[min(calc(var(--app-height)*0.32),180px)]"
+          imageClassName="scale-105"
         />
       </div>
     </div>
