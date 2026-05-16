@@ -9,6 +9,7 @@
  */
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { ImageIcon } from 'lucide-react';
 
 import type { Detail } from '@/api/model';
@@ -52,13 +53,37 @@ const isValidImageUrl = (value?: string): boolean => {
 const scrollTrackClass =
   'scrollbar-hide flex touch-pan-x gap-3 overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]';
 
+const tileClassName =
+  'relative size-[100px] shrink-0 overflow-hidden rounded-xl border-2 border-white bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]';
+
+const getItemDetailHref = (
+  sectionIndex: number,
+  id?: number,
+): string | null => {
+  if (id == null || !Number.isFinite(id)) {
+    return null;
+  }
+
+  switch (sectionIndex) {
+    case 0:
+      return `/wish/${id}`;
+    case 1:
+      return `/my-cosmetics/${id}`;
+    case 2:
+      return null;
+    default:
+      return null;
+  }
+};
+
 export function HomeSectionCarousel({
   sectionIndex = 0,
   sectionTitle,
   showSkeleton,
   items,
 }: HomeSectionCarouselProps) {
-  const { registerRef, onDragStart, isDrag } = useDragScroll();
+  const { registerRef, onDragStart, isDrag, checkIsClickForbidden } =
+    useDragScroll();
 
   const trackProps = {
     ref: registerRef,
@@ -87,7 +112,7 @@ export function HomeSectionCarousel({
 
   if (items.length === 0) {
     return (
-      <p className="flex h-[100px] items-center justify-center py-3 text-center text-lg leading-5 font-bold text-[#161618]">
+      <p className="flex h-[100px] w-full items-center justify-center py-3 text-center text-lg leading-5 font-bold text-[#161618]">
         아직 등록된 화장품이 없어요
       </p>
     );
@@ -97,18 +122,13 @@ export function HomeSectionCarousel({
     <div {...trackProps}>
       {items.map((item, index) => {
         const isFirstSection = sectionIndex === 0;
-        const eager =
-          (isFirstSection && index < 14) ||
-          (sectionIndex === 1 && index < 8) ||
-          index < 5;
         const priority = isFirstSection && index < 3;
         const fetchHigh = isFirstSection && index === 0;
+        const detailHref = getItemDetailHref(sectionIndex, item.id);
+        const itemKey = `${sectionTitle}-${item.id ?? item.imageUrl ?? index}`;
 
-        return (
-          <div
-            key={`${sectionTitle}-${item.id ?? item.imageUrl ?? index}`}
-            className="relative size-[100px] shrink-0 overflow-hidden rounded-xl border-2 border-white bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
-          >
+        const tileContent = (
+          <>
             {isValidImageUrl(item.imageUrl) ? (
               <Image
                 src={item.imageUrl as string}
@@ -129,7 +149,30 @@ export function HomeSectionCarousel({
                 <ImageIcon className="size-5" />
               </div>
             )}
-          </div>
+          </>
+        );
+
+        if (!detailHref) {
+          return (
+            <div key={itemKey} className={tileClassName}>
+              {tileContent}
+            </div>
+          );
+        }
+
+        return (
+          <Link
+            key={itemKey}
+            href={detailHref}
+            onClick={(event) => {
+              if (checkIsClickForbidden()) {
+                event.preventDefault();
+              }
+            }}
+            className={cn(tileClassName, 'block transition-shadow hover:shadow-md')}
+          >
+            {tileContent}
+          </Link>
         );
       })}
     </div>

@@ -75,7 +75,7 @@ function MainHomeListView({
       className={MAIN_HOME_LIST_LAYOUT}
       style={{ background: MAIN_HOME_GRADIENT_BG }}
     >
-      <MainHomeTopZipperWithLogo />
+      <MainHomeTopZipperWithLogo imageClassName="-translate-y-[70px]" />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-4 pb-1">
         <div className="mx-auto w-full max-w-[360px] shrink-0">
@@ -158,8 +158,7 @@ function MainPageContent() {
     };
   }, [isMainQueriesPending]);
 
-  const isSlowMainLoading =
-    isMainQueriesPending && hasSlowMainLoadingTimedOut;
+  const isSlowMainLoading = isMainQueriesPending && hasSlowMainLoadingTimedOut;
 
   const handleRetryMainQueries = React.useCallback(() => {
     void refetchHome();
@@ -296,8 +295,8 @@ function MainPageContent() {
       {showHomeSkeleton && isSlowMainLoading && (
         <p className="absolute right-0 bottom-8 left-0 z-30 px-4 text-center text-[11px] leading-snug text-zinc-500">
           응답이 지연되고 있습니다. 백엔드가 켜져 있고{' '}
-          <code className="rounded bg-zinc-100 px-1">NEXT_PUBLIC_API_URL</code>이
-          맞는지 확인해 주세요.
+          <code className="rounded bg-zinc-100 px-1">NEXT_PUBLIC_API_URL</code>
+          이 맞는지 확인해 주세요.
         </p>
       )}
     </div>
