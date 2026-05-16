@@ -227,12 +227,12 @@ small {
 }
 
 @keyframes openingSlideFall {
-  from {
-    transform: translateY(-50%);
+  0% {
+    transform: translate3d(0, -50%, 0);
   }
 
-  to {
-    transform: translateY(0);
+  100% {
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -245,7 +245,12 @@ small {
 }
 
 .opening-slide-fall {
-  animation: openingSlideFall 12s linear infinite;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 0;
+  line-height: 0;
+  animation: openingSlideFall 8s linear infinite;
   will-change: transform;
 }
 
