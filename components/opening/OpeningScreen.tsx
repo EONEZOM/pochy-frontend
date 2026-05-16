@@ -6,8 +6,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Modal } from '@/components/common/Modal';
-import { reissueWithTimeout } from '@/lib/reissue-with-timeout';
+import { classifyReissueError } from '@/lib/reissue-error';
+import { markOpeningSeen } from '@/lib/opening-seen';
 import { preloadOpeningAssets } from '@/lib/preload-opening-assets';
+import { reissueWithTimeout } from '@/lib/reissue-with-timeout';
+import { resolvePostAuthPath } from '@/lib/resolve-post-auth-path';
 import { cn } from '@/lib/utils';
 
 const OPENING_TOP_POUCH_SRC = '/figma/opening/위파우치.svg';
@@ -35,6 +38,8 @@ export function OpeningScreen() {
   const router = useRouter();
   const [isReissuePending, setIsReissuePending] = useState(false);
   const [isNoAccountModalOpen, setIsNoAccountModalOpen] = useState(false);
+  const [isSessionExpiredModalOpen, setIsSessionExpiredModalOpen] = useState(false);
+  const [isNetworkErrorModalOpen, setIsNetworkErrorModalOpen] = useState(false);
 
   useEffect(() => {
     preloadOpeningAssets();
@@ -47,9 +52,20 @@ export function OpeningScreen() {
     setIsReissuePending(true);
     try {
       await reissueWithTimeout();
-      router.replace('/nickname');
-    } catch {
-      setIsNoAccountModalOpen(true);
+      markOpeningSeen();
+      const nextPath = await resolvePostAuthPath();
+      router.replace(nextPath);
+    } catch (error) {
+      const failureKind = classifyReissueError(error);
+      if (failureKind === 'noAccount') {
+        setIsNoAccountModalOpen(true);
+        return;
+      }
+      if (failureKind === 'sessionExpired') {
+        setIsSessionExpiredModalOpen(true);
+        return;
+      }
+      setIsNetworkErrorModalOpen(true);
     } finally {
       setIsReissuePending(false);
     }
@@ -85,7 +101,7 @@ export function OpeningScreen() {
               bottom: SLIDE_WINDOW_BOTTOM,
             }}
           >
-            <div className="opening-slide-fall flex w-full flex-col leading-none">
+            <div className="opening-slide-fall">
               <Image
                 src={OPENING_SLIDE_SRC}
                 alt=""
@@ -137,6 +153,7 @@ export function OpeningScreen() {
         <div className="mt-auto flex w-full flex-col items-center gap-3 pb-2">
           <Link
             href="/login"
+            onClick={markOpeningSeen}
             className={cn(
               'flex h-14 w-[205px] max-w-full items-center justify-center rounded-full',
               'bg-[#FF93DB] text-base font-bold text-[#161618]',
@@ -175,6 +192,26 @@ export function OpeningScreen() {
         onOpenChange={setIsNoAccountModalOpen}
         title="안내"
         description="계정이 없습니다. 생성해주세요."
+        confirmText="확인"
+        variant="warning"
+        closeOnOverlayClick={false}
+      />
+
+      <Modal
+        open={isSessionExpiredModalOpen}
+        onOpenChange={setIsSessionExpiredModalOpen}
+        title="안내"
+        description="로그인이 만료되었어요. 다시 로그인해 주세요."
+        confirmText="확인"
+        variant="warning"
+        closeOnOverlayClick={false}
+      />
+
+      <Modal
+        open={isNetworkErrorModalOpen}
+        onOpenChange={setIsNetworkErrorModalOpen}
+        title="안내"
+        description="연결이 지연되고 있어요. 잠시 후 다시 시도해 주세요."
         confirmText="확인"
         variant="warning"
         closeOnOverlayClick={false}

@@ -21,6 +21,7 @@ import {
 import type { RequestMagicLinkParams } from '@/api/model';
 import { useRequestMagicLink } from '@/api/generated/login-controller/login-controller';
 import { reissueWithTimeout } from '@/lib/reissue-with-timeout';
+import { resolvePostAuthPath } from '@/lib/resolve-post-auth-path';
 import { getState } from '@/api/generated/oauth/oauth';
 import { isAxiosError } from 'axios';
 import Image from 'next/image';
@@ -54,7 +55,9 @@ function LoginContent() {
       try {
         await reissueWithTimeout();
         if (!isMounted) return;
-        router.replace('/nickname');
+        const nextPath = await resolvePostAuthPath();
+        if (!isMounted) return;
+        router.replace(nextPath);
       } catch {
         if (!isMounted) return;
         setIsCheckingSession(false);
@@ -96,7 +99,8 @@ function LoginContent() {
     setIsCheckingAutoLogin(true);
     try {
       await reissueWithTimeout();
-      router.replace('/nickname');
+      const nextPath = await resolvePostAuthPath();
+      router.replace(nextPath);
       return;
     } catch {
       // refresh token이 없거나 만료된 경우 기존 매직링크 로그인으로 fallback
