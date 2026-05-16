@@ -135,20 +135,30 @@ function MainPageContent() {
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
 
-  const [isSlowMainLoading, setIsSlowMainLoading] = React.useState(false);
+  const isMainQueriesPending = isHomeLoading || isWishListLoading;
+  const [hasSlowMainLoadingTimedOut, setHasSlowMainLoadingTimedOut] =
+    React.useState(false);
+
   React.useEffect(() => {
-    const pending = isHomeLoading || isWishListLoading;
-    if (!pending) {
-      setIsSlowMainLoading(false);
+    if (!isMainQueriesPending) {
       return;
     }
-    const timerId = window.setTimeout(() => {
-      setIsSlowMainLoading(true);
+
+    const resetTimerId = window.setTimeout(() => {
+      setHasSlowMainLoadingTimedOut(false);
+    }, 0);
+    const slowTimerId = window.setTimeout(() => {
+      setHasSlowMainLoadingTimedOut(true);
     }, 8000);
+
     return () => {
-      window.clearTimeout(timerId);
+      window.clearTimeout(resetTimerId);
+      window.clearTimeout(slowTimerId);
     };
-  }, [isHomeLoading, isWishListLoading]);
+  }, [isMainQueriesPending]);
+
+  const isSlowMainLoading =
+    isMainQueriesPending && hasSlowMainLoadingTimedOut;
 
   const handleRetryMainQueries = React.useCallback(() => {
     void refetchHome();
