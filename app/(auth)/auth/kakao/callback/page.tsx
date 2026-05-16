@@ -50,8 +50,14 @@ function KakaoCallbackContent() {
           email: resolveOAuthEmail(authResult) ?? authResult?.email,
         });
 
-        if (shouldMarkPendingNicknameSetup(authResult?.newMember)) {
-          markPendingNicknameSetup();
+        const hasExistingNickname = Boolean(authResult?.nickname?.trim());
+        if (
+          shouldMarkPendingNicknameSetup(
+            authResult?.newMember,
+            hasExistingNickname,
+          )
+        ) {
+          markPendingNicknameSetup(authResult?.newMember === true);
         }
 
         const accessToken = resolveAccessToken(authResult);

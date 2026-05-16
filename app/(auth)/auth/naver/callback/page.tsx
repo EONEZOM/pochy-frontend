@@ -70,8 +70,14 @@ function NaverCallbackContent() {
 
         persistOAuthSignupHints({ email: exchangeBody.email });
 
-        if (shouldMarkPendingNicknameSetup(exchangeBody.newMember)) {
-          markPendingNicknameSetup();
+        const hasExistingNickname = Boolean(exchangeBody.nickname?.trim());
+        if (
+          shouldMarkPendingNicknameSetup(
+            exchangeBody.newMember,
+            hasExistingNickname,
+          )
+        ) {
+          markPendingNicknameSetup(exchangeBody.newMember === true);
         }
 
         const accessToken = exchangeBody.accessToken?.trim();

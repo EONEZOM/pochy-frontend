@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   applyRefreshTokenCookie,
   extractNewMemberFromPayload,
+  extractNicknameFromPayload,
   extractRefreshTokenFromPayload,
   extractRefreshTokenFromSetCookieHeader,
   REFRESH_TOKEN_COOKIE_KEY,
@@ -136,7 +137,12 @@ export async function middleware(request: NextRequest) {
   const redirect = NextResponse.redirect(new URL('/success', request.url));
   applyRefreshTokenCookie(redirect, refreshToken, request);
 
-  if (shouldMarkPendingNicknameSetup(extractNewMemberFromPayload(payload))) {
+  if (
+    shouldMarkPendingNicknameSetup(
+      extractNewMemberFromPayload(payload),
+      Boolean(extractNicknameFromPayload(payload)?.trim()),
+    )
+  ) {
     applyPendingNicknameSetupCookie(redirect, request);
   }
 
