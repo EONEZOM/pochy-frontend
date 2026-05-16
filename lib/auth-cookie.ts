@@ -57,6 +57,16 @@ export const clearRefreshTokenCookie = (
   });
 };
 
+/** ApiResponseDTO 메타 필드 — 재귀 탐색 시 토큰으로 오인하지 않습니다. */
+const PAYLOAD_META_KEYS = new Set([
+  'code',
+  'message',
+  'success',
+  'status',
+  'detail',
+  'error',
+]);
+
 const extractNamedToken = (
   value: unknown,
   keys: string[],
@@ -66,8 +76,8 @@ const extractNamedToken = (
     return null;
   }
 
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value.trim();
+  if (typeof value === 'string') {
+    return depth === 0 && value.trim().length > 0 ? value.trim() : null;
   }
 
   if (typeof value !== 'object') {
@@ -82,7 +92,10 @@ const extractNamedToken = (
     }
   }
 
-  for (const nestedValue of Object.values(record)) {
+  for (const [key, nestedValue] of Object.entries(record)) {
+    if (PAYLOAD_META_KEYS.has(key)) {
+      continue;
+    }
     const nested = extractNamedToken(nestedValue, keys, depth + 1);
     if (nested) {
       return nested;

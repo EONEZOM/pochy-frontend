@@ -5,10 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { bootstrapClientSession } from '@/lib/bootstrap-client-session';
-import {
-  clearClientSession,
-  clearFullAuthSession,
-} from '@/lib/clear-client-session';
+import { clearFullAuthSession } from '@/lib/clear-client-session';
 import { markOpeningSeen } from '@/lib/opening-seen';
 import { getGetHomeDataQueryKey } from '@/api/generated/home/home';
 import { getGetMyProfileQueryKey } from '@/api/generated/member-controller/member-controller';
@@ -66,7 +63,6 @@ export default function AuthSuccessPage() {
         }
 
         if (resolved.status !== 'ok') {
-          clearClientSession();
           setErrorKind('profile');
           setNextPath(null);
           setPhase('error');

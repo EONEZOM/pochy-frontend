@@ -51,12 +51,26 @@ const getAccessToken = (): string | null => {
   return null;
 };
 
-const extractAccessToken = (value: unknown): string | null => {
-  if (typeof value === 'string' && value.trim().length > 0) {
-    return value.trim();
+const REISSUE_PAYLOAD_META_KEYS = new Set([
+  'code',
+  'message',
+  'success',
+  'status',
+  'detail',
+  'error',
+]);
+
+const extractAccessToken = (
+  value: unknown,
+  depth = 0,
+): string | null => {
+  if (typeof value === 'string') {
+    return depth === 0 && value.trim().length > 0 ? value.trim() : null;
   }
 
-  if (typeof value !== 'object' || value === null) return null;
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
 
   const candidate = value as Record<string, unknown>;
   const keys = ['accessToken', 'access_token', 'token'];
@@ -67,10 +81,14 @@ const extractAccessToken = (value: unknown): string | null => {
     }
   }
 
-  // 응답 구조가 중첩된 경우(result.tokenDto.accessToken 등)까지 탐색합니다.
-  for (const nestedValue of Object.values(candidate)) {
-    const nestedToken = extractAccessToken(nestedValue);
-    if (nestedToken) return nestedToken;
+  for (const [key, nestedValue] of Object.entries(candidate)) {
+    if (REISSUE_PAYLOAD_META_KEYS.has(key)) {
+      continue;
+    }
+    const nestedToken = extractAccessToken(nestedValue, depth + 1);
+    if (nestedToken) {
+      return nestedToken;
+    }
   }
   return null;
 };

@@ -1,4 +1,5 @@
 import { getHomeData } from '@/api/generated/home/home';
+import { getMyProfile } from '@/api/generated/member-controller/member-controller';
 import { isWithdrawnMemberNickname } from '@/lib/is-withdrawn-member';
 
 export type PostAuthPath = '/' | '/nickname';
@@ -8,23 +9,35 @@ export type PostAuthResolveResult =
   | { status: 'withdrawn' }
   | { status: 'failed' };
 
+const resolvePathFromNickname = (nickname?: string | null): PostAuthResolveResult => {
+  const trimmedNickname = nickname?.trim();
+
+  if (isWithdrawnMemberNickname(trimmedNickname)) {
+    return { status: 'withdrawn' };
+  }
+
+  return {
+    status: 'ok',
+    path: trimmedNickname ? '/' : '/nickname',
+  };
+};
+
 /**
  * reissue·소셜 로그인 직후 이동 경로 — 서버 닉네임 유무로 홈/닉네임 설정을 구분합니다.
  */
 export const resolvePostAuthPath = async (): Promise<PostAuthResolveResult> => {
   try {
     const response = await getHomeData();
-    const nickname = response?.result?.nickname?.trim();
+    return resolvePathFromNickname(response?.result?.nickname);
+  } catch (homeError) {
+    console.warn('[resolvePostAuthPath] getHomeData failed, trying getMyProfile', homeError);
+  }
 
-    if (isWithdrawnMemberNickname(nickname)) {
-      return { status: 'withdrawn' };
-    }
-
-    return {
-      status: 'ok',
-      path: nickname ? '/' : '/nickname',
-    };
-  } catch {
+  try {
+    const profileResponse = await getMyProfile();
+    return resolvePathFromNickname(profileResponse?.result?.nickname);
+  } catch (profileError) {
+    console.warn('[resolvePostAuthPath] getMyProfile failed', profileError);
     return { status: 'failed' };
   }
 };

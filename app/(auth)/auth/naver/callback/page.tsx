@@ -43,10 +43,15 @@ function NaverCallbackContent() {
 
         const exchangeBody = (await exchangeRes.json()) as {
           ok?: boolean;
+          error?: string;
           accessToken?: string | null;
           nickname?: string | null;
           email?: string | null;
         };
+
+        if (exchangeBody.ok === false || exchangeBody.error === 'missing_refresh') {
+          throw new Error('naver_exchange_missing_refresh');
+        }
 
         if (isWithdrawnMemberNickname(exchangeBody.nickname)) {
           if (!isMounted) {
@@ -61,9 +66,11 @@ function NaverCallbackContent() {
         persistOAuthSignupHints({ email: exchangeBody.email });
 
         const accessToken = exchangeBody.accessToken?.trim();
-        if (accessToken) {
-          window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, accessToken);
+        if (!accessToken) {
+          throw new Error('naver_exchange_missing_access');
         }
+
+        window.localStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, accessToken);
         if (!isMounted) {
           return;
         }
