@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Suspense } from 'react';
+import { AxiosError } from 'axios';
 import { useRouter } from 'next/navigation';
 import { HomeSectionCarousel } from '@/components/main/HomeSectionCarousel';
 import { MainHomeListHeader } from '@/components/main/MainHomeListHeader';
@@ -14,6 +15,22 @@ import type { Detail } from '@/api/model';
 import type { ReadListDto } from '@/api/model';
 import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
 import { useBottomNavVisibility } from '@/providers/bottom-nav-visibility';
+import { cn } from '@/lib/utils';
+
+const getMainQueryErrorMessage = (error: unknown): string => {
+  if (error instanceof AxiosError) {
+    if (error.code === 'ECONNABORTED') {
+      return '요청 시간이 초과되었습니다. 백엔드 연결과 .env의 API 주소를 확인해 주세요.';
+    }
+    if (!error.response) {
+      return '네트워크에 연결할 수 없습니다. 서버가 실행 중인지 확인해 주세요.';
+    }
+  }
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+  return '데이터를 불러오지 못했습니다.';
+};
 
 /** 메인(리스트·로딩)과 빈 홈 공통 배경 그라데이션 */
 const MAIN_HOME_GRADIENT_BG =
@@ -99,21 +116,62 @@ function MainPageContent() {
   const router = useRouter();
   const { setHomeEmptyViewActive } = useBottomNavVisibility();
 
-  const { data: homeResponse, isLoading: isHomeLoading } = useGetHomeData();
-  const { data: wishListResponse, isLoading: isWishListLoading } =
-    useReadWishCosmeticsList({
-      sort: 'desc',
-      size: 100,
-    });
+  const {
+    data: homeResponse,
+    isLoading: isHomeLoading,
+    isError: isHomeError,
+    error: homeError,
+    refetch: refetchHome,
+  } = useGetHomeData();
+  const {
+    data: wishListResponse,
+    isLoading: isWishListLoading,
+    isError: isWishListError,
+    refetch: refetchWish,
+  } = useReadWishCosmeticsList({
+    sort: 'desc',
+    size: 100,
+  });
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
 
+  const [isSlowMainLoading, setIsSlowMainLoading] = React.useState(false);
   React.useEffect(() => {
-    if (isHomeLoading || hasServerNickname) {
+    const pending = isHomeLoading || isWishListLoading;
+    if (!pending) {
+      setIsSlowMainLoading(false);
+      return;
+    }
+    const timerId = window.setTimeout(() => {
+      setIsSlowMainLoading(true);
+    }, 8000);
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [isHomeLoading, isWishListLoading]);
+
+  const handleRetryMainQueries = React.useCallback(() => {
+    void refetchHome();
+    void refetchWish();
+  }, [refetchHome, refetchWish]);
+
+  React.useEffect(() => {
+    if (
+      isHomeLoading ||
+      isWishListLoading ||
+      isHomeError ||
+      hasServerNickname
+    ) {
       return;
     }
     router.replace('/nickname');
-  }, [hasServerNickname, isHomeLoading, router]);
+  }, [
+    hasServerNickname,
+    isHomeError,
+    isHomeLoading,
+    isWishListLoading,
+    router,
+  ]);
 
   const wishItems: Detail[] = (wishListResponse?.result?.content ?? []).flatMap(
     (item) => {
@@ -151,7 +209,35 @@ function MainPageContent() {
     };
   }, [isAllSectionsEmpty, setHomeEmptyViewActive]);
 
-  if (!isHomeLoading && !hasServerNickname) {
+  if (isHomeError) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-hidden overscroll-none bg-white px-6">
+        <p className="text-mono-dark-gray text-center text-sm leading-relaxed">
+          홈 정보를 불러오지 못했습니다.
+          <span className="mt-2 block text-xs font-normal opacity-80">
+            {getMainQueryErrorMessage(homeError)}
+          </span>
+        </p>
+        <button
+          type="button"
+          onClick={handleRetryMainQueries}
+          className={cn(
+            'rounded-full bg-[#FF93DB] px-6 py-3 text-sm font-bold text-[#161618]',
+            'transition-transform active:scale-[0.98]',
+          )}
+        >
+          다시 시도
+        </button>
+      </div>
+    );
+  }
+
+  if (
+    !isHomeLoading &&
+    !isWishListLoading &&
+    !hasServerNickname &&
+    !isHomeError
+  ) {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden overscroll-none bg-white px-5">
         <p className="text-mono-dark-gray text-sm">확인 중...</p>
@@ -160,7 +246,7 @@ function MainPageContent() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden overscroll-none">
+    <div className="relative flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden overscroll-none">
       {showHomeSkeleton ? (
         <MainHomeListView
           showSkeleton
@@ -179,6 +265,25 @@ function MainPageContent() {
           nickname={homeData?.nickname}
           profileUrl={homeData?.profileUrl}
         />
+      )}
+      {isWishListError && (
+        <p className="text-mono-dark-gray absolute right-0 bottom-16 left-0 z-30 px-4 text-center text-xs">
+          위시 목록만 불러오지 못했습니다.{' '}
+          <button
+            type="button"
+            className="text-[#FF60CA] underline underline-offset-2"
+            onClick={() => void refetchWish()}
+          >
+            다시 시도
+          </button>
+        </p>
+      )}
+      {showHomeSkeleton && isSlowMainLoading && (
+        <p className="absolute right-0 bottom-8 left-0 z-30 px-4 text-center text-[11px] leading-snug text-zinc-500">
+          응답이 지연되고 있습니다. 백엔드가 켜져 있고{' '}
+          <code className="rounded bg-zinc-100 px-1">NEXT_PUBLIC_API_URL</code>이
+          맞는지 확인해 주세요.
+        </p>
       )}
     </div>
   );
