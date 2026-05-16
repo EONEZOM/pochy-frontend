@@ -19,10 +19,8 @@ import {
   LoginPrivacyConsentModal,
 } from '@/components/login/LoginPrivacyConsentModal';
 import type { RequestMagicLinkParams } from '@/api/model';
-import {
-  reissue,
-  useRequestMagicLink,
-} from '@/api/generated/login-controller/login-controller';
+import { useRequestMagicLink } from '@/api/generated/login-controller/login-controller';
+import { reissueWithTimeout } from '@/lib/reissue-with-timeout';
 import { getState } from '@/api/generated/oauth/oauth';
 import { isAxiosError } from 'axios';
 import Image from 'next/image';
@@ -54,7 +52,7 @@ function LoginContent() {
 
     const checkSession = async () => {
       try {
-        await reissue();
+        await reissueWithTimeout();
         if (!isMounted) return;
         router.replace('/nickname');
       } catch {
@@ -97,7 +95,7 @@ function LoginContent() {
 
     setIsCheckingAutoLogin(true);
     try {
-      await reissue();
+      await reissueWithTimeout();
       router.replace('/nickname');
       return;
     } catch {
@@ -186,7 +184,8 @@ function LoginContent() {
           height={69}
           className="absolute top-[-20px] left-0 h-auto w-full object-cover"
           unoptimized
-          priority
+          loading="lazy"
+          fetchPriority="low"
         />
       </div>
 
