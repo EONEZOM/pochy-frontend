@@ -120,7 +120,6 @@ export function HomeSectionCarousel({
                   String(item.imageUrl),
                 )}
                 priority={priority}
-                loading={eager ? 'eager' : 'lazy'}
                 {...(fetchHigh ? { fetchPriority: 'high' as const } : {})}
                 decoding="async"
                 draggable={false}

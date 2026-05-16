@@ -410,11 +410,6 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
                       fill
                       className="object-contain"
                       priority={index === safeInitialIndex}
-                      loading={
-                        Math.abs(index - safeInitialIndex) <= 1
-                          ? 'eager'
-                          : 'lazy'
-                      }
                     />
                   </div>
                 </CarouselItem>

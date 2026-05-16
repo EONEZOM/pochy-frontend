@@ -42,40 +42,44 @@ function MyCosmeticsListContent() {
         ) : items.length === 0 ? (
           <div className="flex min-h-[60vh] flex-col items-center justify-center gap-2">
             <p className="font-bold">아직 등록된 화장품이 없어요.</p>
-            <p className="text-mono-dark-gray text-sm">스캔해서 파우치를 채워보세요!</p>
+            <p className="text-mono-dark-gray text-sm">
+              스캔해서 파우치를 채워보세요!
+            </p>
           </div>
         ) : (
           <div className="flex w-full gap-3 pb-4">
             {[0, 1].map((colIndex) => (
-              <div key={colIndex} className="flex min-w-0 flex-1 flex-col gap-3">
+              <div
+                key={colIndex}
+                className="flex min-w-0 flex-1 flex-col gap-3"
+              >
                 {items
                   .filter((_, i) => i % 2 === colIndex)
                   .map((item, rowIndex) => {
                     const globalIndex = rowIndex * 2 + colIndex;
                     return (
-                    <Link
-                      key={item.id}
-                      href={`/my-cosmetics/${item.id}`}
-                      className="border-mono-bright-gray block w-full min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md"
-                    >
-                      <div className="bg-mono-bright-gray relative w-full">
-                        <WishCardImage
-                          officialImage={item.imgUrl ?? ''}
-                          captureImage={item.captureUrl ?? ''}
-                          productName={item.name ?? ''}
-                          priority={globalIndex === 0}
-                          loading={globalIndex < 10 ? 'eager' : 'lazy'}
-                        />
-                      </div>
-                      <div className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
-                        <span className="text-mono-dark-gray w-full truncate text-center text-sm">
-                          {item.brand}
-                        </span>
-                        <span className="text-mono-jet w-full truncate text-center text-sm font-semibold">
-                          {item.name}
-                        </span>
-                      </div>
-                    </Link>
+                      <Link
+                        key={item.id}
+                        href={`/my-cosmetics/${item.id}`}
+                        className="border-mono-bright-gray block w-full min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-shadow hover:shadow-md"
+                      >
+                        <div className="bg-mono-bright-gray relative w-full">
+                          <WishCardImage
+                            officialImage={item.imgUrl ?? ''}
+                            captureImage={item.captureUrl ?? ''}
+                            productName={item.name ?? ''}
+                            priority={globalIndex === 0}
+                          />
+                        </div>
+                        <div className="flex min-w-0 flex-col items-center gap-0.5 px-2 py-3">
+                          <span className="text-mono-dark-gray w-full truncate text-center text-sm">
+                            {item.brand}
+                          </span>
+                          <span className="text-mono-jet w-full truncate text-center text-sm font-semibold">
+                            {item.name}
+                          </span>
+                        </div>
+                      </Link>
                     );
                   })}
               </div>
@@ -87,10 +91,17 @@ function MyCosmeticsListContent() {
       {/* 등록 버튼 */}
       <div className="pointer-events-none fixed bottom-16 left-1/2 z-50 w-full max-w-120 -translate-x-1/2">
         <div className="relative h-24">
-          <div className="absolute bottom-5 right-5">
+          <div className="absolute right-5 bottom-5">
             <Link href="/my-cosmetics/register" className="pointer-events-auto">
               <button className="bg-mono-jet flex size-12 items-center justify-center rounded-full shadow-lg">
-                <Image src="/icons/imgplus.svg" alt="등록" width={24} height={24} unoptimized className="invert" />
+                <Image
+                  src="/icons/imgplus.svg"
+                  alt="등록"
+                  width={24}
+                  height={24}
+                  unoptimized
+                  className="invert"
+                />
               </button>
             </Link>
           </div>

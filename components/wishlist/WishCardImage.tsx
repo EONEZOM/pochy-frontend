@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { shouldBypassNextImageOptimizer } from '@/lib/next-image-src';
 import { WISH_PLACEHOLDER_IMAGE_SRC } from '@/constants/wish-placeholders';
@@ -16,6 +16,11 @@ interface WishCardImageProps {
   /** LCP·첫 카드 등에만 사용 (남용 시 역효과) */
   priority?: boolean;
   loading?: 'lazy' | 'eager';
+}
+
+interface WishCardImageViewProps extends WishCardImageProps {
+  resolvedOfficial: string;
+  resolvedCapture: string;
 }
 
 /**
@@ -41,15 +46,36 @@ export function WishCardImage({
     [captureImage],
   );
 
-  const computedInitial = resolvedOfficial || resolvedCapture || '';
-  const [src, setSrc] = useState(computedInitial);
-  const [failed, setFailed] = useState(!computedInitial);
+  const mediaKey = `${resolvedOfficial}|${resolvedCapture}`;
 
-  useEffect(() => {
-    const next = resolvedOfficial || resolvedCapture || '';
-    setSrc(next);
-    setFailed(!next);
-  }, [resolvedOfficial, resolvedCapture]);
+  return (
+    <WishCardImageView
+      key={mediaKey}
+      officialImage={officialImage}
+      captureImage={captureImage}
+      productName={productName}
+      fill={fill}
+      className={className}
+      priority={priority}
+      loading={loading}
+      resolvedOfficial={resolvedOfficial}
+      resolvedCapture={resolvedCapture}
+    />
+  );
+}
+
+const WishCardImageView = ({
+  resolvedOfficial,
+  resolvedCapture,
+  productName,
+  fill = false,
+  className,
+  priority = false,
+  loading,
+}: WishCardImageViewProps) => {
+  const initialSrc = resolvedOfficial || resolvedCapture || '';
+  const [src, setSrc] = useState(initialSrc);
+  const [failed, setFailed] = useState(!initialSrc);
 
   const handleError = useCallback(() => {
     if (src === resolvedOfficial && resolvedCapture) {
@@ -120,4 +146,4 @@ export function WishCardImage({
       loading={loading}
     />
   );
-}
+};

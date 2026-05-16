@@ -100,7 +100,6 @@ export function MainHomeEmptyView() {
                     sizes="(max-width: 640px) 38vw, 522px"
                     unoptimized
                     priority={tileIndex < 2}
-                    loading={tileIndex < 3 ? 'eager' : 'lazy'}
                     {...(tileIndex === 0
                       ? { fetchPriority: 'high' as const }
                       : {})}

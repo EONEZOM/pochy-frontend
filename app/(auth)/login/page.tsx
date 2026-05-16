@@ -8,7 +8,7 @@
  * - 배경 일러스트: `public/figma/login/*`
  */
 
-import React, { Suspense, useEffect, useRef, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button as SolidButton } from '@/components/common/Button';
 import { Button } from '@/components/ui/button';
@@ -52,15 +52,10 @@ function LoginContent() {
   const [isPrivacyConsentModalOpen, setIsPrivacyConsentModalOpen] =
     useState(false);
   const [hasPrivacyConsent, setHasPrivacyConsent] = useState(false);
-  const didRunAutoSessionCheck = useRef(false);
 
   useEffect(() => {
-    if (didRunAutoSessionCheck.current) {
-      return;
-    }
-    didRunAutoSessionCheck.current = true;
-
     let isMounted = true;
+    let willRedirect = false;
 
     const checkSession = async () => {
       try {
@@ -76,35 +71,34 @@ function LoginContent() {
 
         if (resolved.status === 'withdrawn') {
           await clearFullAuthSession();
-          setIsCheckingSession(false);
           return;
         }
 
-        if (
-          resolved.status !== 'ok' ||
-          resolved.path === pathname
-        ) {
-          clearClientSession();
-          setIsCheckingSession(false);
+        if (resolved.status === 'ok' && resolved.path !== pathname) {
+          willRedirect = true;
+          router.replace(resolved.path);
           return;
         }
 
-        router.replace(resolved.path);
+        clearClientSession();
       } catch {
         if (!isMounted) {
           return;
         }
         clearClientSession();
-        setIsCheckingSession(false);
+      } finally {
+        if (isMounted && !willRedirect) {
+          setIsCheckingSession(false);
+        }
       }
     };
 
-    checkSession();
+    void checkSession();
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [pathname, router]);
 
   const { mutate: requestMagicLink, isPending } = useRequestMagicLink({
     mutation: {
@@ -227,14 +221,12 @@ function LoginContent() {
           alt=""
           width={525}
           height={69}
-          className="absolute top-[-20px] left-0 h-auto w-full object-cover"
+          className="absolute top-[-60px] left-0 h-auto w-full object-cover"
           unoptimized
-          loading="lazy"
-          fetchPriority="low"
         />
       </div>
 
-      <main className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-[360px] flex-1 flex-col px-5 pt-[max(1rem,var(--safe-area-top))] pb-[max(1.25rem,var(--safe-area-bottom))]">
+      <main className="relative z-10 mx-auto flex h-full min-h-0 w-full flex-1 flex-col px-5 pt-[max(1rem,var(--safe-area-top))] pb-[max(1.25rem,var(--safe-area-bottom))]">
         <div className="mt-auto w-full shrink-0">
           <div className="mx-auto flex w-full max-w-[319px] flex-col gap-4">
             <BottomSheet

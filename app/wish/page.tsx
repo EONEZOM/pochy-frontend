@@ -229,39 +229,38 @@ function WishlistPageContent() {
                   .map((item, rowIndex) => {
                     const globalIndex = rowIndex * 2 + colIndex;
                     return (
-                    <Link
-                      key={item.id}
-                      href={`/wish/${item.id}`}
-                      className="group flex w-full min-w-0 flex-col"
-                    >
-                      <div
-                        className={cn(
-                          'relative aspect-square w-full shrink-0 overflow-hidden',
-                          rowIndex % 2 === colIndex
-                            ? 'bg-[#FFF7FC]'
-                            : 'bg-[#F3F3F3]',
-                        )}
+                      <Link
+                        key={item.id}
+                        href={`/wish/${item.id}`}
+                        className="group flex w-full min-w-0 flex-col"
                       >
-                        <WishCardImage
-                          fill
-                          officialImage={item.official_image}
-                          captureImage={item.capture_image}
-                          productName={item.product_name}
-                          className="object-contain"
-                          priority={globalIndex === 0}
-                          loading={globalIndex < 10 ? 'eager' : 'lazy'}
-                        />
-                      </div>
+                        <div
+                          className={cn(
+                            'relative aspect-square w-full shrink-0 overflow-hidden',
+                            rowIndex % 2 === colIndex
+                              ? 'bg-[#FFF7FC]'
+                              : 'bg-[#F3F3F3]',
+                          )}
+                        >
+                          <WishCardImage
+                            fill
+                            officialImage={item.official_image}
+                            captureImage={item.capture_image}
+                            productName={item.product_name}
+                            className="object-contain"
+                            priority={globalIndex === 0}
+                          />
+                        </div>
 
-                      <div className="flex h-14 min-h-14 min-w-0 shrink-0 flex-col gap-0.5 pt-2">
-                        <span className="text-mono-dark-gray w-full truncate text-xs">
-                          {item.brand_name}
-                        </span>
-                        <span className="text-mono-jet line-clamp-2 w-full text-sm leading-5 font-semibold">
-                          {item.product_name}
-                        </span>
-                      </div>
-                    </Link>
+                        <div className="flex h-14 min-h-14 min-w-0 shrink-0 flex-col gap-0.5 pt-2">
+                          <span className="text-mono-dark-gray w-full truncate text-xs">
+                            {item.brand_name}
+                          </span>
+                          <span className="text-mono-jet line-clamp-2 w-full text-sm leading-5 font-semibold">
+                            {item.product_name}
+                          </span>
+                        </div>
+                      </Link>
                     );
                   })}
               </div>
