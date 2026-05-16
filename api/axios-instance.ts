@@ -75,8 +75,20 @@ const extractAccessToken = (value: unknown): string | null => {
   return null;
 };
 
-const requestReissue = async () => {
-  const response = await axiosInstance.post('/api/auth/reissue');
+const AUTH_PATHS_WITHOUT_BEARER = [
+  '/api/auth/reissue',
+  '/api/auth/magic-link',
+] as const;
+
+const shouldAttachAccessToken = (requestUrl: string): boolean => {
+  return !AUTH_PATHS_WITHOUT_BEARER.some((path) => requestUrl.includes(path));
+};
+
+/** 리프레시 쿠키로 액세스 토큰을 재발급하고 localStorage에 저장합니다. */
+export const reissueSession = async (signal?: AbortSignal): Promise<void> => {
+  const response = await axiosInstance.post('/api/auth/reissue', undefined, {
+    signal,
+  });
   const tokenFromBody = extractAccessToken(response?.data?.result);
   const tokenFromHeader = extractAccessToken(
     response?.headers?.authorization?.replace?.(/^Bearer\s+/i, ''),
@@ -89,6 +101,7 @@ const requestReissue = async () => {
 };
 
 axiosInstance.interceptors.request.use((config) => {
+  const requestUrl = config.url ?? '';
   const token = getAccessToken();
   const isFormData =
     typeof FormData !== 'undefined' && config.data instanceof FormData;
@@ -106,7 +119,7 @@ axiosInstance.interceptors.request.use((config) => {
     }
   }
 
-  if (token) {
+  if (token && shouldAttachAccessToken(requestUrl)) {
     config.headers = config.headers ?? {};
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -148,7 +161,7 @@ axiosInstance.interceptors.response.use(
 
     try {
       if (!reissuePromise) {
-        reissuePromise = requestReissue().finally(() => {
+        reissuePromise = reissueSession().finally(() => {
           reissuePromise = null;
         });
       }
