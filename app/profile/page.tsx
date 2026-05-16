@@ -45,6 +45,10 @@ export default function MyPage() {
   const nickname = isNicknameTouched
     ? nicknameInput
     : (profile?.nickname ?? '');
+  const savedNickname = (profile?.nickname ?? '').trim();
+  const trimmedNickname = nickname.trim();
+  const hasNicknameChange =
+    !isLoading && trimmedNickname !== savedNickname;
 
   const { mutate: updateNickname, isPending: isSaving } = useUpdateNickname({
     mutation: {
@@ -226,8 +230,8 @@ export default function MyPage() {
             <Button
               type="button"
               onClick={handleComplete}
-              disabled={isSaving}
-              className="border-mono-bright-gray text-mono-jet hover:bg-brand-lavender/90 bg-brand-lavender mb-[10px] h-12 w-full rounded-full border text-sm leading-5 font-bold shadow-none sm:h-14 sm:text-base"
+              disabled={isSaving || !hasNicknameChange}
+              className="border-mono-bright-gray text-mono-jet hover:bg-brand-lavender/90 bg-brand-lavender mb-[10px] h-12 w-full rounded-full border text-sm leading-5 font-bold shadow-none disabled:opacity-50 sm:h-14 sm:text-base"
             >
               {isSaving ? '저장 중...' : '완료'}
             </Button>
