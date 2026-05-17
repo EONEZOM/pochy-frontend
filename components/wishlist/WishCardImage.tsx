@@ -3,7 +3,10 @@
 import Image from 'next/image';
 import { useState, useCallback, useMemo } from 'react';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
-import { shouldBypassNextImageOptimizer } from '@/lib/next-image-src';
+import {
+  resolveDisplayImageSrc,
+  shouldBypassNextImageOptimizer,
+} from '@/lib/next-image-src';
 import { WISH_PLACEHOLDER_IMAGE_SRC } from '@/constants/wish-placeholders';
 
 interface WishCardImageProps {
@@ -38,11 +41,11 @@ export function WishCardImage({
   loading,
 }: WishCardImageProps) {
   const resolvedOfficial = useMemo(
-    () => resolveMediaUrl(officialImage),
+    () => resolveDisplayImageSrc(resolveMediaUrl(officialImage)),
     [officialImage],
   );
   const resolvedCapture = useMemo(
-    () => resolveMediaUrl(captureImage),
+    () => resolveDisplayImageSrc(resolveMediaUrl(captureImage)),
     [captureImage],
   );
 
