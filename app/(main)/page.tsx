@@ -80,7 +80,7 @@ function MainHomeListView({
       <MainHomeTopZipperWithLogo imageClassName="-translate-y-[70px]" />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-4 pb-1">
-        <div className="mx-auto w-full max-w-[360px] shrink-0">
+        <div className="mx-auto w-full shrink-0">
           <MainHomeListHeader
             nickname={nickname}
             profileUrl={profileUrl}

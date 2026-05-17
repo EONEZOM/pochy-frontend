@@ -105,7 +105,7 @@ export function Modal({
         aria-modal="true"
         aria-label={resolvedTitle}
         className={cn(
-          'w-full max-w-[360px] rounded-[20px] bg-white px-6 py-5 text-center shadow-[0_8px_30px_rgba(22,22,24,0.22)]',
+          'w-full rounded-[20px] bg-white px-6 py-5 text-center shadow-[0_8px_30px_rgba(22,22,24,0.22)]',
           className,
         )}
         onClick={(event) => event.stopPropagation()}

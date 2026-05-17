@@ -113,7 +113,7 @@ export function OpeningScreen() {
         </div>
       </div>
 
-      <div className="relative z-20 mx-auto flex min-h-0 w-full max-w-[360px] flex-1 flex-col px-5 pt-[max(2.5rem,var(--safe-area-top))] pb-[max(1.25rem,var(--safe-area-bottom))]">
+      <div className="relative z-20 mx-auto flex min-h-0 w-full flex-1 flex-col px-5 pt-[max(2.5rem,var(--safe-area-top))] pb-[max(1.25rem,var(--safe-area-bottom))]">
         <div className="flex shrink-0 justify-center pt-[clamp(3rem,18vh,7rem)]">
           <Image
             src={OPENING_LOGO_SRC}
