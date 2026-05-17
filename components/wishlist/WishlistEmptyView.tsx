@@ -53,7 +53,6 @@ export function WishlistEmptyView() {
             alt=""
             width={400}
             height={294}
-            unoptimized
             className="pointer-events-none h-auto w-full object-contain drop-shadow-[0_6px_20px_rgba(255,96,202,0.25)]"
             priority
           />
@@ -67,7 +66,6 @@ export function WishlistEmptyView() {
               alt=""
               width={70}
               height={90}
-              unoptimized
               className="pointer-events-none h-auto w-40 max-w-[min(18vw,72px)] object-contain"
             />
           </div>

@@ -49,6 +49,7 @@ import {
   mapScanResultsToV2Request,
 } from '@/lib/wish-cosmetics';
 import { cn } from '@/lib/utils';
+import { scheduleScanEntryTipOpen } from '@/lib/scan-entry-tip';
 import { Modal } from '@/components/common/Modal';
 import { WishScanAnalyzeLoading } from '@/components/wishlist/WishScanAnalyzeLoading';
 
@@ -105,16 +106,9 @@ export default function WishlistRegisterPage() {
   const { mutate: analyze, isPending } = useAnalyzeCosmeticCapture();
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    try {
-      if (window.localStorage.getItem(WISH_SCAN_ENTRY_TIP_DISMISSED_KEY) !== '1') {
-        setIsEntryTipModalOpen(true);
-      }
-    } catch {
+    return scheduleScanEntryTipOpen(WISH_SCAN_ENTRY_TIP_DISMISSED_KEY, () => {
       setIsEntryTipModalOpen(true);
-    }
+    });
   }, []);
 
   useEffect(() => {
@@ -198,7 +192,9 @@ export default function WishlistRegisterPage() {
         captureImages: normalizedCaptureImages,
         directImages: directImageFiles,
       });
-      await queryClient.invalidateQueries({ queryKey: ['/api/wish-cosmetics'] });
+      await queryClient.invalidateQueries({
+        queryKey: ['/api/wish-cosmetics'],
+      });
       alert('위시리스트에 등록되었습니다.');
       router.push('/wish');
     } catch (error) {
@@ -263,7 +259,6 @@ export default function WishlistRegisterPage() {
                 alt=""
                 width={17}
                 height={17}
-                unoptimized
                 className="mt-px shrink-0"
               />
               <p className="text-[11px] leading-[150%] font-normal text-[#161618]">
@@ -302,7 +297,6 @@ export default function WishlistRegisterPage() {
                       alt=""
                       width={24}
                       height={24}
-                      unoptimized
                       className="opacity-60"
                     />
                     <input
@@ -365,7 +359,6 @@ export default function WishlistRegisterPage() {
               alt=""
               width={27}
               height={36}
-              unoptimized
               className="h-9 w-auto shrink-0"
               aria-hidden
             />
@@ -397,7 +390,6 @@ export default function WishlistRegisterPage() {
               alt=""
               width={36}
               height={36}
-              unoptimized
               className="size-9 shrink-0"
               aria-hidden
             />

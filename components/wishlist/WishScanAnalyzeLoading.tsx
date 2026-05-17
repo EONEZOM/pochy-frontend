@@ -16,7 +16,7 @@ type WishScanAnalyzeLoadingProps = {
 export function WishScanAnalyzeLoading({ phase }: WishScanAnalyzeLoadingProps) {
   return (
     <div
-      className="pointer-events-auto fixed top-0 bottom-0 left-1/2 z-[60] flex w-full min-w-90 max-w-120 -translate-x-1/2 flex-col items-center justify-center px-6"
+      className="pointer-events-auto fixed top-0 bottom-0 left-1/2 z-[60] flex w-full max-w-120 min-w-90 -translate-x-1/2 flex-col items-center justify-center px-6"
       style={{
         background:
           'linear-gradient(180deg, rgba(255, 255, 255, 1) 12%, rgba(255, 198, 236, 1) 100%)',
@@ -40,7 +40,6 @@ export function WishScanAnalyzeLoading({ phase }: WishScanAnalyzeLoadingProps) {
             alt="POCHY"
             fill
             className="object-contain"
-            unoptimized
             priority
           />
         </motion.div>

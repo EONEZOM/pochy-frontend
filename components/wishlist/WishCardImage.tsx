@@ -94,7 +94,6 @@ const WishCardImageView = ({
             alt=""
             width={48}
             height={48}
-            unoptimized
             className="object-contain"
           />
         </div>
@@ -107,7 +106,6 @@ const WishCardImageView = ({
           alt=""
           width={48}
           height={48}
-          unoptimized
           className="object-contain"
         />
       </div>
