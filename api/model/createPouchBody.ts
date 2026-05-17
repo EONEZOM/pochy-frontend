@@ -5,8 +5,9 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
-import type { AddCosmeticDetailDto } from './addCosmeticDetailDto';
+import type { CombinedAddDto } from './combinedAddDto';
 
-export interface AddCosmeticListDto {
-  items?: AddCosmeticDetailDto[];
-}
+export type CreatePouchBody = {
+  pouchImage: Blob;
+  request: CombinedAddDto;
+};

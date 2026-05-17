@@ -8,10 +8,7 @@
 
 export interface WappenItemDto {
   wappenId?: number;
+  xpoint?: number;
   ypoint?: number;
   zindex?: number;
-  xpoint?: number;
-  xPoint?: number;
-  yPoint?: number;
-  zIndex?: number;
 }

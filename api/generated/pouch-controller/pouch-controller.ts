@@ -29,7 +29,7 @@ import type {
   ApiResponseDTOPouchListDto,
   ApiResponseDTOString,
   ApiResponseDTOUpdateDto,
-  CombinedAddDto,
+  CreatePouchBody,
   GetPouchListParams,
   UpdatePouchBody,
   UploadPouchCompositeImageBody
@@ -42,27 +42,121 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 
-export const addCosmeticsToPouch = (
-    combinedAddDto: CombinedAddDto,
+/**
+ * 파우치 목록을 조회합니다. page, size 지정 안하면 page=0, size=20이 기본값입니다.
+ * @summary 파우치 목록 조회
+ */
+export const getPouchList = (
+    params: GetPouchListParams,
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
 
-      return customInstance<ApiResponseDTOString>(
-      {url: `/api/pouches/cosmetics`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: combinedAddDto, signal
+      return customInstance<ApiResponseDTOPouchListDto>(
+      {url: `/api/pouches`, method: 'GET',
+        params, signal
     },
       options);
     }
 
 
 
-export const getAddCosmeticsToPouchMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addCosmeticsToPouch>>, TError,{data: CombinedAddDto}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof addCosmeticsToPouch>>, TError,{data: CombinedAddDto}, TContext> => {
 
-const mutationKey = ['addCosmeticsToPouch'];
+export const getGetPouchListQueryKey = (params?: GetPouchListParams,) => {
+    return [
+    `/api/pouches`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetPouchListQueryOptions = <TData = Awaited<ReturnType<typeof getPouchList>>, TError = unknown>(params: GetPouchListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPouchListQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPouchList>>> = ({ signal }) => getPouchList(params, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPouchListQueryResult = NonNullable<Awaited<ReturnType<typeof getPouchList>>>
+export type GetPouchListQueryError = unknown
+
+
+export function useGetPouchList<TData = Awaited<ReturnType<typeof getPouchList>>, TError = unknown>(
+ params: GetPouchListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPouchList>>,
+          TError,
+          Awaited<ReturnType<typeof getPouchList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPouchList<TData = Awaited<ReturnType<typeof getPouchList>>, TError = unknown>(
+ params: GetPouchListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPouchList>>,
+          TError,
+          Awaited<ReturnType<typeof getPouchList>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPouchList<TData = Awaited<ReturnType<typeof getPouchList>>, TError = unknown>(
+ params: GetPouchListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary 파우치 목록 조회
+ */
+
+export function useGetPouchList<TData = Awaited<ReturnType<typeof getPouchList>>, TError = unknown>(
+ params: GetPouchListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetPouchListQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export const createPouch = (
+    createPouchBody?: CreatePouchBody,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ApiResponseDTOString>(
+      {url: `/api/pouches`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: createPouchBody, signal
+    },
+      options);
+    }
+
+
+
+export const getCreatePouchMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPouch>>, TError,{data?: CreatePouchBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPouch>>, TError,{data?: CreatePouchBody}, TContext> => {
+
+const mutationKey = ['createPouch'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -72,10 +166,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addCosmeticsToPouch>>, {data: CombinedAddDto}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPouch>>, {data?: CreatePouchBody}> = (props) => {
           const {data} = props ?? {};
 
-          return  addCosmeticsToPouch(data,requestOptions)
+          return  createPouch(data,requestOptions)
         }
 
 
@@ -85,19 +179,19 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type AddCosmeticsToPouchMutationResult = NonNullable<Awaited<ReturnType<typeof addCosmeticsToPouch>>>
-    export type AddCosmeticsToPouchMutationBody = CombinedAddDto
-    export type AddCosmeticsToPouchMutationError = unknown
+    export type CreatePouchMutationResult = NonNullable<Awaited<ReturnType<typeof createPouch>>>
+    export type CreatePouchMutationBody = CreatePouchBody | undefined
+    export type CreatePouchMutationError = unknown
 
-    export const useAddCosmeticsToPouch = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addCosmeticsToPouch>>, TError,{data: CombinedAddDto}, TContext>, request?: SecondParameter<typeof customInstance>}
+    export const useCreatePouch = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPouch>>, TError,{data?: CreatePouchBody}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof addCosmeticsToPouch>>,
+        Awaited<ReturnType<typeof createPouch>>,
         TError,
-        {data: CombinedAddDto},
+        {data?: CreatePouchBody},
         TContext
       > => {
-      return useMutation(getAddCosmeticsToPouchMutationOptions(options), queryClient);
+      return useMutation(getCreatePouchMutationOptions(options), queryClient);
     }
     export const getPouchDetail = (
     pouchId: number,
@@ -312,97 +406,3 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getUploadPouchCompositeImageMutationOptions(options), queryClient);
     }
-    /**
- * 파우치 목록을 조회합니다. page, size 지정 안하면 page=0, size=20이 기본값입니다.
- * @summary 파우치 목록 조회
- */
-export const getPouchList = (
-    params: GetPouchListParams,
- options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
-) => {
-
-
-      return customInstance<ApiResponseDTOPouchListDto>(
-      {url: `/api/pouches`, method: 'GET',
-        params, signal
-    },
-      options);
-    }
-
-
-
-
-export const getGetPouchListQueryKey = (params?: GetPouchListParams,) => {
-    return [
-    `/api/pouches`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getGetPouchListQueryOptions = <TData = Awaited<ReturnType<typeof getPouchList>>, TError = unknown>(params: GetPouchListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetPouchListQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPouchList>>> = ({ signal }) => getPouchList(params, requestOptions, signal);
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetPouchListQueryResult = NonNullable<Awaited<ReturnType<typeof getPouchList>>>
-export type GetPouchListQueryError = unknown
-
-
-export function useGetPouchList<TData = Awaited<ReturnType<typeof getPouchList>>, TError = unknown>(
- params: GetPouchListParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getPouchList>>,
-          TError,
-          Awaited<ReturnType<typeof getPouchList>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPouchList<TData = Awaited<ReturnType<typeof getPouchList>>, TError = unknown>(
- params: GetPouchListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getPouchList>>,
-          TError,
-          Awaited<ReturnType<typeof getPouchList>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetPouchList<TData = Awaited<ReturnType<typeof getPouchList>>, TError = unknown>(
- params: GetPouchListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary 파우치 목록 조회
- */
-
-export function useGetPouchList<TData = Awaited<ReturnType<typeof getPouchList>>, TError = unknown>(
- params: GetPouchListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getPouchList>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGetPouchListQueryOptions(params,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-

@@ -15,8 +15,8 @@ export interface SliceMyCosmeticsResponseDTO {
   content?: MyCosmeticsResponseDTO[];
   number?: number;
   sort?: SortObject;
-  numberOfElements?: number;
   first?: boolean;
   last?: boolean;
+  numberOfElements?: number;
   empty?: boolean;
 }
