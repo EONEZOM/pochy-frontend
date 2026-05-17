@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import type { ChatCompletionContentPart } from 'openai/resources/chat/completions';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -13,13 +14,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '이미지가 없습니다.' }, { status: 400 });
     }
 
-    const imageMessages = images.map((base64: string) => ({
-      type: 'image_url',
-      image_url: {
-        url: base64.startsWith('data:') ? base64 : `data:image/jpeg;base64,${base64}`,
-        detail: 'high',
-      },
-    }));
+    const imageMessages: ChatCompletionContentPart[] = images.map(
+      (base64: string) => ({
+        type: 'image_url',
+        image_url: {
+          url: base64.startsWith('data:')
+            ? base64
+            : `data:image/jpeg;base64,${base64}`,
+          detail: 'high',
+        },
+      }),
+    );
 
     const response = await openai.chat.completions.create({
       model: 'gpt-5.4-mini',
@@ -54,7 +59,7 @@ export async function POST(req: Request) {
           content: [
             { type: 'text', text: '이 제품이 무엇인지 분석해서 정보를 추출해줘.' },
             ...imageMessages,
-          ] as any,
+          ],
         },
       ],
       response_format: { type: 'json_object' },
