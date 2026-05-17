@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { getGetHomeDataQueryKey } from '@/api/generated/home/home';
 import {
   autoNickname,
+  getGetMyProfileQueryKey,
   useWithdraw,
   useUpdateNickname,
   useGetMyProfile,
@@ -52,8 +53,7 @@ export default function MyPage() {
     : (profile?.nickname ?? '');
   const savedNickname = (profile?.nickname ?? '').trim();
   const trimmedNickname = nickname.trim();
-  const hasNicknameChange =
-    !isLoading && trimmedNickname !== savedNickname;
+  const hasNicknameChange = !isLoading && trimmedNickname !== savedNickname;
 
   const { mutate: updateNickname, isPending: isSaving } = useUpdateNickname({
     mutation: {
@@ -130,33 +130,56 @@ export default function MyPage() {
     : '';
 
   const didEnsureProfileImage = React.useRef(false);
-  const [isEnsuringProfileImage, setIsEnsuringProfileImage] = React.useState(false);
+  const imageErrorRetryCountRef = React.useRef(0);
+  const [isEnsuringProfileImage, setIsEnsuringProfileImage] =
+    React.useState(false);
 
-  React.useEffect(() => {
-    if (isLoading || profileImageUrl || didEnsureProfileImage.current) {
-      return;
-    }
+  const invalidateProfileQueries = React.useCallback(async () => {
+    await Promise.all([
+      refetch(),
+      queryClient.invalidateQueries({ queryKey: getGetHomeDataQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() }),
+    ]);
+  }, [queryClient, refetch]);
 
-    didEnsureProfileImage.current = true;
-    setIsEnsuringProfileImage(true);
+  const runEnsureDefaultProfile = React.useCallback(
+    async (options?: { isImageErrorRetry?: boolean }) => {
+      if (options?.isImageErrorRetry) {
+        if (imageErrorRetryCountRef.current >= 1) {
+          return;
+        }
+        imageErrorRetryCountRef.current += 1;
+        didEnsureProfileImage.current = false;
+      } else if (didEnsureProfileImage.current) {
+        return;
+      }
 
-    const ensureProfile = async () => {
+      didEnsureProfileImage.current = true;
+      setIsEnsuringProfileImage(true);
+
       try {
         await ensureDefaultProfileImage();
-        await Promise.all([
-          refetch(),
-          queryClient.invalidateQueries({ queryKey: getGetHomeDataQueryKey() }),
-        ]);
+        await invalidateProfileQueries();
       } catch (error) {
         console.error('[profile] default profile save failed', error);
         didEnsureProfileImage.current = false;
       } finally {
         setIsEnsuringProfileImage(false);
       }
-    };
+    },
+    [invalidateProfileQueries],
+  );
 
-    void ensureProfile();
-  }, [isLoading, profileImageUrl, queryClient, refetch]);
+  React.useEffect(() => {
+    if (isLoading || profileImageUrl) {
+      return;
+    }
+    void runEnsureDefaultProfile();
+  }, [isLoading, profileImageUrl, runEnsureDefaultProfile]);
+
+  const handleProfileImageError = () => {
+    void runEnsureDefaultProfile({ isImageErrorRetry: true });
+  };
 
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = React.useState(false);
 
@@ -174,14 +197,14 @@ export default function MyPage() {
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex shrink-0 flex-col items-center">
             <div className="border-mono-white relative size-20 shrink-0 rounded-full border-[3px] shadow-[0_3px_3px_rgba(0,0,0,0.2)]">
-              {resolvedProfileImageUrl ? (
+              {resolvedProfileImageUrl && !isEnsuringProfileImage ? (
                 <Image
                   src={resolvedProfileImageUrl}
                   alt=""
                   width={80}
                   height={80}
-                  unoptimized
                   className="bg-mono-gray size-[74px] rounded-full object-cover"
+                  onError={handleProfileImageError}
                 />
               ) : (
                 <div className="bg-mono-gray size-[74px] rounded-full" />

@@ -15,6 +15,7 @@ import {
 } from '@/api/generated/home/home';
 import {
   autoNickname,
+  getGetMyProfileQueryKey,
   useUpdateNickname,
 } from '@/api/generated/member-controller/member-controller';
 import {
@@ -70,9 +71,14 @@ function NicknameSetupContent() {
     } finally {
       clearOAuthSignupHints();
       clearPendingNicknameSetup();
-      await queryClient.invalidateQueries({
-        queryKey: getGetHomeDataQueryKey(),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: getGetHomeDataQueryKey(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: getGetMyProfileQueryKey(),
+        }),
+      ]);
       router.replace('/');
     }
   };

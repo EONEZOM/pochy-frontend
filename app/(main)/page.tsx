@@ -10,6 +10,8 @@ import { MainHomeEmptyView } from '@/components/main/MainHomeEmptyView';
 import { MainHomeBottomZipperWithLip } from '@/components/main/MainHomeBottomZipperWithLip';
 import { MainHomeTopZipperWithLogo } from '@/components/main/MainHomeTopZipperWithLogo';
 import { useGetHomeData } from '@/api/generated/home/home';
+import { useGetMyProfile } from '@/api/generated/member-controller/member-controller';
+import { extractProfileImageUrl } from '@/lib/member-profile';
 import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import type { Detail } from '@/api/model';
 import type { ReadListDto } from '@/api/model';
@@ -133,8 +135,18 @@ function MainPageContent() {
     sort: 'desc',
     size: 100,
   });
+  const { data: profileResponse } = useGetMyProfile();
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
+
+  const headerProfileUrl = React.useMemo(() => {
+    const fromMember = extractProfileImageUrl(profileResponse?.result);
+    if (fromMember) {
+      return fromMember;
+    }
+    const fromHome = homeData?.profileUrl?.trim();
+    return fromHome || null;
+  }, [homeData?.profileUrl, profileResponse?.result]);
 
   const isMainQueriesPending = isHomeLoading || isWishListLoading;
   const [hasSlowMainLoadingTimedOut, setHasSlowMainLoadingTimedOut] =
@@ -266,7 +278,7 @@ function MainPageContent() {
           showSkeleton
           sections={sections}
           nickname={homeData?.nickname}
-          profileUrl={homeData?.profileUrl}
+          profileUrl={headerProfileUrl}
         />
       ) : isAllSectionsEmpty ? (
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-none bg-white p-0">
@@ -277,7 +289,7 @@ function MainPageContent() {
           showSkeleton={false}
           sections={sections}
           nickname={homeData?.nickname}
-          profileUrl={homeData?.profileUrl}
+          profileUrl={headerProfileUrl}
         />
       )}
       {isWishListError && (
