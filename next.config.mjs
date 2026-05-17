@@ -76,6 +76,10 @@ const nextConfig = {
         source: '/my-cosmetics/register',
         headers: crossOriginIsolationHeaders,
       },
+      {
+        source: '/my-cosmetics/register/direct',
+        headers: crossOriginIsolationHeaders,
+      },
     ];
   },
 

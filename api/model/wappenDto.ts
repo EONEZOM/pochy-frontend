@@ -7,6 +7,7 @@
  */
 
 export interface WappenDto {
+  imageUrl?: string;
   wappenId?: number;
   ypoint?: number;
   zindex?: number;
