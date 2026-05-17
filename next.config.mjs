@@ -94,14 +94,15 @@ const nextConfig = {
   },
 
   async rewrites() {
-    return [
-      {
-        // 프론트엔드에서 /api로 시작하는 모든 요청을
-        source: '/api/:path*',
-        // 실제 백엔드 서버 주소로 매핑
-        destination: `${apiBase}/api/:path*`,
-      },
-    ];
+    return {
+      afterFiles: [
+        {
+          // media-proxy만 BFF(Route Handler). /api/wappens 목록은 백엔드, /api/wappens/:id/image는 app/api Route Handler가 우선
+          source: '/api/:path((?!media-proxy).*)',
+          destination: `${apiBase}/api/:path`,
+        },
+      ],
+    };
   },
 
   // 3) Remote image allowlist for Naver hosts.

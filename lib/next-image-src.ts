@@ -120,8 +120,26 @@ export const resolveDisplayImageSrc = (src: string, width = 256): string => {
   return trimmed;
 };
 
-const isMediaProxyPath = (src: string): boolean =>
+export const isMediaProxyPath = (src: string): boolean =>
   src.trim().startsWith('/api/media-proxy?');
+
+/** 캔버스 레이어 src — 이미 프록시된 URL은 중복 래핑하지 않음 */
+export const resolveLayerImageSrc = (src: string): string => {
+  const trimmed = src.trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (isMediaProxyPath(trimmed) || trimmed.startsWith('/api/wappens/')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('/')) {
+    return trimmed;
+  }
+  if (isAllowedMediaProxySource(trimmed)) {
+    return toSameOriginImageProxyUrl(trimmed);
+  }
+  return trimmed;
+};
 
 export const shouldBypassNextImageOptimizer = (src: string): boolean => {
   const trimmed = src.trim();
