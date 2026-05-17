@@ -1,13 +1,19 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 
 import { useGetPouchDetail } from '@/api/generated/pouch-controller/pouch-controller';
-import { useSearchMyCosmetics } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
-import type { MyCosmeticsResponseDTO, PouchItemDetailDto } from '@/api/model';
+import type { PouchItemDetailDto } from '@/api/model';
 import { PouchSheetChrome } from '@/components/my-cosmetics/PouchSheetChrome';
+import {
+  dedupePouchDetailRowsByProduct,
+  type PouchDetailEnrichedRow,
+  resolvePouchRowCosmeticMatch,
+  usePouchCosmeticsById,
+} from '@/lib/pouch-cosmetic-lookup';
+import { getCosmeticImageSrc } from '@/lib/pouch-canvas';
 import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea';
-import { WishCardImage } from '@/components/wishlist/WishCardImage';
 import {
   FILTER_CATEGORIES,
   type FilterMainCategory,
@@ -20,9 +26,8 @@ type PouchDetailBottomSheetProps = {
   onExpandedChange: (isExpanded: boolean) => void;
 };
 
-type PouchDetailRow = PouchItemDetailDto & {
-  imgUrl?: string;
-  captureUrl?: string;
+type PouchDetailRow = PouchDetailEnrichedRow & {
+  imageSrc: string;
 };
 
 export function PouchDetailBottomSheet({
@@ -36,36 +41,42 @@ export function PouchDetailBottomSheet({
 
   const { data: pouchDetailData, isLoading: isPouchDetailLoading } =
     useGetPouchDetail(pouchId);
-  const { data: myCosmeticsData, isLoading: isMyCosmeticsLoading } =
-    useSearchMyCosmetics({ size: 100 });
-
-  const cosmeticsByMyCosmeticId = useMemo(() => {
-    const map = new Map<number, MyCosmeticsResponseDTO>();
-    const items = myCosmeticsData?.result?.content ?? [];
-    for (const item of items) {
-      const id = item.id;
-      if (id != null) {
-        map.set(id, item);
-      }
-    }
-    return map;
-  }, [myCosmeticsData?.result?.content]);
+  const pouchCosmetics = pouchDetailData?.result?.cosmetics;
+  const { cosmeticsById, cosmeticsByNameBrand, isLoading: isCosmeticsLookupLoading } =
+    usePouchCosmeticsById(pouchCosmetics);
 
   const pouchItems = useMemo((): PouchDetailRow[] => {
-    const cosmetics = pouchDetailData?.result?.cosmetics ?? [];
-    return cosmetics.map((item) => {
-      const myCosmeticId = item.myCosmeticId;
-      const matched =
-        myCosmeticId != null
-          ? cosmeticsByMyCosmeticId.get(myCosmeticId)
-          : undefined;
+    const cosmetics = pouchCosmetics ?? [];
+    const enriched: PouchDetailEnrichedRow[] = cosmetics.map((item) => {
+      const matched = resolvePouchRowCosmeticMatch(
+        item,
+        cosmeticsById,
+        cosmeticsByNameBrand,
+      );
+      const linkCosmeticId = matched?.id ?? undefined;
       return {
         ...item,
+        category: item.category?.trim() || matched?.category,
+        subCategory: item.subCategory?.trim() || matched?.subCategory,
         imgUrl: matched?.imgUrl,
         captureUrl: matched?.captureUrl,
+        linkCosmeticId,
       };
     });
-  }, [cosmeticsByMyCosmeticId, pouchDetailData?.result?.cosmetics]);
+    return dedupePouchDetailRowsByProduct(enriched).map((item) => {
+      const matched = resolvePouchRowCosmeticMatch(
+        item,
+        cosmeticsById,
+        cosmeticsByNameBrand,
+      );
+      const imageSrc = matched ? getCosmeticImageSrc(matched) : '';
+      return {
+        ...item,
+        linkCosmeticId: matched?.id ?? item.linkCosmeticId,
+        imageSrc,
+      };
+    });
+  }, [cosmeticsById, cosmeticsByNameBrand, pouchCosmetics]);
 
   const activeSubCategories = useMemo(
     () =>
@@ -91,7 +102,7 @@ export function PouchDetailBottomSheet({
     setCurrentSub('All');
   };
 
-  const isLoading = isPouchDetailLoading || isMyCosmeticsLoading;
+  const isLoading = isPouchDetailLoading || isCosmeticsLookupLoading;
 
   return (
     <PouchSheetChrome
@@ -124,33 +135,56 @@ export function PouchDetailBottomSheet({
         ) : (
           <ul className="mx-auto flex w-full flex-col gap-4">
             {filteredItems.map((item) => {
-              const rowKey = item.id ?? item.myCosmeticId;
+              const linkCosmeticId = item.linkCosmeticId;
+              const rowKey =
+                linkCosmeticId != null && linkCosmeticId > 0
+                  ? `cosmetic-${linkCosmeticId}`
+                  : item.id != null
+                    ? `pouch-item-${item.id}`
+                    : null;
               if (rowKey == null) {
                 return null;
               }
               const memo = (item.memo ?? '').trim();
-
-              return (
-                <li key={rowKey}>
-                  <div className="flex w-full items-start gap-4">
+              const rowContent = (
+                <div className="flex w-full items-start gap-4">
                     <div className="relative size-24 shrink-0 bg-[#F3F3F3] p-2">
                       <div className="absolute inset-0 flex items-center justify-center p-2">
                         <div className="relative h-[54px] w-[48px]">
-                          <WishCardImage
-                            officialImage={item.imgUrl ?? ''}
-                            captureImage={item.captureUrl ?? ''}
-                            productName={item.name ?? ''}
-                            fill
-                            className="object-contain drop-shadow-[5px_5px_2px_rgba(0,0,0,0.2)]"
-                          />
+                          {item.imageSrc ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.imageSrc}
+                              alt={item.name ?? ''}
+                              className="h-full w-full object-contain drop-shadow-[5px_5px_2px_rgba(0,0,0,0.2)]"
+                            />
+                          ) : (
+                            <span className="text-mono-dark-gray text-[10px]">
+                              이미지 없음
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    <PouchDetailItemText item={item} memo={memo} />
-                  </div>
-                </li>
+                  <PouchDetailItemText item={item} memo={memo} />
+                </div>
               );
+
+              if (linkCosmeticId != null && linkCosmeticId > 0) {
+                return (
+                  <li key={rowKey}>
+                    <Link
+                      href={`/my-cosmetics/${linkCosmeticId}`}
+                      className="block w-full"
+                    >
+                      {rowContent}
+                    </Link>
+                  </li>
+                );
+              }
+
+              return <li key={rowKey}>{rowContent}</li>;
             })}
           </ul>
         )}
