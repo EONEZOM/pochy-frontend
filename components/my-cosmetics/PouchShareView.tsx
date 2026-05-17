@@ -34,7 +34,7 @@ export function PouchShareView({
   const getCaptureBlob = async () => {
     const el = captureRef.current;
     if (!el) {
-      throw new Error('\uACF5\uC720 \uC601\uC5ED\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.');
+      throw new Error('공유 영역을 찾지 못했습니다.');
     }
     return captureShareElement(el);
   };
@@ -55,7 +55,7 @@ export function PouchShareView({
 
       await shareViaKakao({
         title: pouchName,
-        description: '\uB0B4 \uD30C\uC6B0\uCE58\uB97C \uACF5\uC720\uD574\uC694',
+        description: '내 파우치를 공유해요',
         imageUrl: shareImage.startsWith('blob:') ? '' : shareImage,
         linkUrl,
       });
@@ -65,7 +65,7 @@ export function PouchShareView({
         await shareImageFile(blob, pouchName);
       } catch (inner) {
         const message =
-          inner instanceof Error ? inner.message : '\uACF5\uC720\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.';
+          inner instanceof Error ? inner.message : '공유에 실패했습니다.';
         alert(message);
       }
     } finally {
@@ -82,7 +82,7 @@ export function PouchShareView({
       alert(
         err instanceof Error
           ? err.message
-          : '\uB2E4\uC6B4\uB85C\uB4DC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.',
+          : '다운로드에 실패했습니다.',
       );
     } finally {
       setIsProcessing(false);
@@ -98,9 +98,9 @@ export function PouchShareView({
         pouchName,
       );
       await copyTextToClipboard(url);
-      alert('\uB9C1\uD06C\uAC00 \uBCF5\uC0AC\uB418\uC5C8\uC5B4\uC694.');
+      alert('링크가 복사되었어요.');
     } catch {
-      alert('\uB9C1\uD06C \uBCF5\uC0AC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
+      alert('링크 복사에 실패했습니다.');
     } finally {
       setIsProcessing(false);
     }
@@ -109,7 +109,7 @@ export function PouchShareView({
   return (
     <div className="flex h-(--app-height) flex-col overflow-hidden bg-white">
       <Header
-        title={'\uD30C\uC6B0\uCE58 \uACF5\uC720\uD558\uAE30'}
+        title={'파우치 공유하기'}
         onBack={() => {
           router.back();
         }}
@@ -148,21 +148,21 @@ export function PouchShareView({
 
         <div className="mt-8 flex w-full max-w-[280px] items-center justify-center gap-4">
           <ShareActionButton
-            label={'\uCE74\uCE74\uC624\uD1A1'}
+            label={'카카오톡'}
             iconSrc="/figma/login/kakao-icon.png"
             bgClass="bg-[#FEE500]"
             disabled={isProcessing}
             onClick={handleKakao}
           />
           <ShareActionButton
-            label={'\uB2E4\uC6B4\uB85C\uB4DC'}
+            label={'다운로드'}
             iconKind="download"
             bgClass="bg-[#DCDCDC]"
             disabled={isProcessing}
             onClick={handleDownload}
           />
           <ShareActionButton
-            label={'\uB9C1\uD06C'}
+            label={'링크'}
             iconKind="link"
             bgClass="bg-[#DCDCDC]"
             disabled={isProcessing}

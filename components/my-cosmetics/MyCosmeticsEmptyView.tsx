@@ -20,13 +20,13 @@ export function MyCosmeticsEmptyView() {
           'linear-gradient(180deg, rgba(255, 255, 255, 1) 12%, rgba(255, 198, 236, 1) 100%)',
       }}
       role="region"
-      aria-label={'\uB0B4 \uD654\uC7A5\uD488 \uBE44\uC5B4 \uC788\uC74C'}
+      aria-label={'내 화장품 비어 있음'}
     >
       <div className="flex w-full flex-col items-center gap-6 text-center">
         <h2 className="text-sm leading-relaxed font-semibold text-[#FF60CA]">
-          {'\uD30C\uC6B0\uCE58\uAC00 \uBE44\uC5B4\uC788\uC5B4\uC694'}
+          {'파우치가 비어있어요'}
           <br />
-          {'\uB2F9\uC2E0\uC758 \uCDE8\uD5A5\uC5D0 \uB9DE\uAC8C \uD30C\uC6B0\uCE58\uB97C \uCC44\uC6CC\uBCF4\uC138\uC694'}
+          {'당신의 취향에 맞게 파우치를 채워보세요'}
         </h2>
 
         <Link
@@ -36,7 +36,7 @@ export function MyCosmeticsEmptyView() {
             'transition-transform duration-200 active:scale-[0.98]',
             'focus-visible:ring-2 focus-visible:ring-[#FF60CA]/50 focus-visible:ring-offset-2 focus-visible:outline-none',
           )}
-          aria-label={'\uC0C8 \uD30C\uC6B0\uCE58 \uB9CC\uB4E4\uAE30'}
+          aria-label={'새 파우치 만들기'}
         >
           <Image
             src={POUCHY_SRC}

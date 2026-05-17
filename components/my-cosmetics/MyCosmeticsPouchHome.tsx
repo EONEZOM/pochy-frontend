@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Pencil, Plus, Share2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Share2 } from 'lucide-react';
 
 import {
   Carousel,
@@ -18,7 +18,18 @@ import {
   buildPouchEditItemsPath,
   buildPouchSharePath,
 } from '@/lib/pouch-setup';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
+import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import { cn } from '@/lib/utils';
+
+const POUCH_HOME_GRADIENT =
+  'linear-gradient(180deg, rgba(255, 255, 255, 1) 31%, rgba(255, 198, 236, 1) 100%)';
+
+const arrowButtonClass =
+  'flex size-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm transition-opacity disabled:pointer-events-none disabled:opacity-35';
+
+const actionButtonBaseClass =
+  'flex size-14 items-center justify-center rounded-full shadow-md';
 
 type MyCosmeticsPouchHomeProps = {
   pouches: PouchDto[];
@@ -30,27 +41,26 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const total = pouches.length;
+  const canScrollPrev = currentIndex > 0;
+  const canScrollNext = currentIndex < total - 1;
   const currentPouch = pouches[currentIndex];
   const pouchId = currentPouch?.pouchId;
-  const pouchName = currentPouch?.name?.trim() ?? '\uC0C8 \uD30C\uC6B0\uCE58';
-  const onSelect = useCallback(() => {
-    if (!api) {
-      return;
-    }
-    setCurrentIndex(api.selectedScrollSnap());
-  }, [api]);
+  const pouchName = currentPouch?.name?.trim() ?? '새 파우치';
 
   useEffect(() => {
     if (!api) {
       return;
     }
+    const onSelect = () => {
+      setCurrentIndex(api.selectedScrollSnap());
+    };
     api.on('select', onSelect);
     api.on('reInit', onSelect);
     return () => {
       api.off('select', onSelect);
       api.off('reInit', onSelect);
     };
-  }, [api, onSelect]);
+  }, [api]);
 
   if (pouchId == null) {
     return null;
@@ -58,28 +68,26 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
 
   return (
     <div
-      className="relative flex min-h-[calc(100vh-8rem)] flex-col"
-      style={{
-        background:
-          'linear-gradient(180deg, rgba(255,255,255,1) 31%, rgba(255,198,236,1) 100%)',
-      }}
+      className="relative flex min-h-[calc(var(--app-height)-5.5rem)] flex-col"
+      style={{ background: POUCH_HOME_GRADIENT }}
     >
-      <div className="flex flex-1 flex-col items-center px-5 pt-4 pb-32">
-        <div className="mb-4 rounded-lg bg-white px-2 py-1.5 shadow-sm">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-5">
+        <div className="rounded-lg bg-white px-2 py-1.5">
           <span className="text-mono-jet text-base font-bold">{pouchName}</span>
         </div>
 
-        <div className="relative flex w-full max-w-[360px] items-center justify-center gap-2">
+        <div className="relative flex w-full items-center justify-center gap-2">
           <button
             type="button"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/80 shadow-sm"
-            aria-label="\uC774\uC804 \uD30C\uC6B0\uCE58"
+            className={arrowButtonClass}
+            aria-label={'이전 파우치'}
+            disabled={!canScrollPrev}
             onClick={() => api?.scrollPrev()}
           >
-            <ChevronLeft className="size-5" />
+            <ChevronLeft className="size-5 text-[#161618]" />
           </button>
 
-          <Carousel setApi={setApi} className="w-full max-w-[280px]">
+          <Carousel setApi={setApi} className="w-full">
             <CarouselContent>
               {pouches.map((pouch) => {
                 const id = pouch.pouchId;
@@ -92,14 +100,16 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
                   <CarouselItem key={id}>
                     <Link
                       href={href}
-                      className="flex min-h-[320px] items-center justify-center"
+                      className="flex items-center justify-center"
                     >
                       {pouch.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={pouch.imageUrl}
+                          src={resolveDisplayImageSrc(
+                            resolveMediaUrl(pouch.imageUrl),
+                          )}
                           alt={name}
-                          className="max-h-[min(48vh,380px)] w-auto max-w-full object-contain"
+                          className="max-h-[min(42vh,360px)] w-auto max-w-full object-contain"
                         />
                       ) : (
                         <Image
@@ -108,7 +118,7 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
                           width={220}
                           height={320}
                           unoptimized
-                          className="h-auto max-h-[380px] w-auto object-contain opacity-70"
+                          className="h-auto max-h-[360px] w-auto object-contain opacity-70"
                         />
                       )}
                     </Link>
@@ -120,52 +130,61 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
 
           <button
             type="button"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/80 shadow-sm"
-            aria-label="\uB2E4\uC74C \uD30C\uC6B0\uCE58"
+            className={arrowButtonClass}
+            aria-label={'다음 파우치'}
+            disabled={!canScrollNext}
             onClick={() => api?.scrollNext()}
           >
-            <ChevronRight className="size-5" />
+            <ChevronRight className="size-5 text-[#161618]" />
           </button>
         </div>
 
-        <p className="text-mono-jet mt-3 text-[9px] font-bold">
-          {currentIndex + 1}|{total}
-        </p>
-      </div>
+        <div
+          className="mt-3 flex h-4 min-w-[68px] items-center justify-center rounded-full bg-[#161618] px-6 py-1"
+          aria-live="polite"
+        >
+          <span className="text-[10px] font-bold text-white">
+            {currentIndex + 1} | {total}
+          </span>
+        </div>
 
-      <div className="fixed bottom-20 left-1/2 z-30 flex w-full max-w-[280px] -translate-x-1/2 items-center justify-center gap-2 px-4">
-        <button
-          type="button"
-          className="flex size-14 items-center justify-center rounded-full bg-[#DCDCDC] shadow-md"
-          aria-label="\uC218\uC815"
-          onClick={() => {
-            router.push(buildPouchEditItemsPath(pouchId, pouchName));
-          }}
-        >
-          <Pencil className="size-4 text-[#161618]" />
-        </button>
-        <button
-          type="button"
-          className="flex size-14 items-center justify-center rounded-full bg-[#FF93DB] shadow-md"
-          aria-label="\uD30C\uC6B0\uCE58 \uC0DD\uC131"
-          onClick={() => {
-            router.push('/my-cosmetics/create');
-          }}
-        >
-          <Plus className="size-5 text-[#161618]" />
-        </button>
-        <button
-          type="button"
-          className={cn(
-            'flex size-14 items-center justify-center rounded-full bg-[#DCDCDC] shadow-md',
-          )}
-          aria-label="\uACF5\uC720"
-          onClick={() => {
-            router.push(buildPouchSharePath(pouchId, pouchName));
-          }}
-        >
-          <Share2 className="size-4 text-[#161618]" />
-        </button>
+        <div className="mt-10 flex items-center justify-center gap-2">
+          <button
+            type="button"
+            className={cn(actionButtonBaseClass, 'bg-white')}
+            aria-label={'파우치 수정'}
+            onClick={() => {
+              router.push(buildPouchEditItemsPath(pouchId, pouchName));
+            }}
+          >
+            <Image
+              src="/icons/PenNewSquare.svg"
+              alt=""
+              width={16}
+              height={16}
+            />
+          </button>
+          <button
+            type="button"
+            className={cn(actionButtonBaseClass, 'bg-[#FF60CA]')}
+            aria-label={'파우치 추가'}
+            onClick={() => {
+              router.push('/my-cosmetics/create');
+            }}
+          >
+            <Plus className="size-6 text-white" strokeWidth={2.5} />
+          </button>
+          <button
+            type="button"
+            className={cn(actionButtonBaseClass, 'bg-white')}
+            aria-label={'파우치 공유'}
+            onClick={() => {
+              router.push(buildPouchSharePath(pouchId, pouchName));
+            }}
+          >
+            <Share2 className="size-4 text-[#161618]" />
+          </button>
+        </div>
       </div>
     </div>
   );

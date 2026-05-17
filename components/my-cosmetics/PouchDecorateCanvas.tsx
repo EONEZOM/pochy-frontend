@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Rnd } from 'react-rnd';
-import { X } from 'lucide-react';
+import { RotateCw, X } from 'lucide-react';
 
 import {
   POUCH_CANVAS_EXPORT_ID,
   type CanvasLayer,
   type CanvasRect,
 } from '@/lib/pouch-canvas';
+import { toSameOriginImageProxyUrl } from '@/lib/next-image-src';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
 
 const POUCHY_SRC = '/figma/my/pouchy.svg';
@@ -21,6 +23,136 @@ type PouchDecorateCanvasProps = {
   onSelectLayer: (id: string | null) => void;
   backgroundImageUrl?: string | null;
   readOnly?: boolean;
+};
+
+const getPointerAngleDeg = (
+  clientX: number,
+  clientY: number,
+  centerX: number,
+  centerY: number,
+) => {
+  return (Math.atan2(clientY - centerY, clientX - centerX) * 180) / Math.PI;
+};
+
+const getLayerScreenCenter = (
+  layer: CanvasLayer,
+  containerEl: HTMLElement,
+) => {
+  const containerRect = containerEl.getBoundingClientRect();
+  return {
+    x: containerRect.left + layer.x + layer.width / 2,
+    y: containerRect.top + layer.y + layer.height / 2,
+  };
+};
+
+type LayerRotationHandleProps = {
+  layer: CanvasLayer;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  onRotate: (rotation: number) => void;
+};
+
+const LayerRotationHandle = ({
+  layer,
+  containerRef,
+  onRotate,
+}: LayerRotationHandleProps) => {
+  const dragStateRef = useRef<{
+    startAngle: number;
+    startRotation: number;
+  } | null>(null);
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    event.preventDefault();
+
+    const containerEl = containerRef.current;
+    if (!containerEl) {
+      return;
+    }
+
+    const center = getLayerScreenCenter(layer, containerEl);
+    dragStateRef.current = {
+      startAngle: getPointerAngleDeg(event.clientX, event.clientY, center.x, center.y),
+      startRotation: layer.rotation ?? 0,
+    };
+
+    const handleEl = event.currentTarget;
+    handleEl.setPointerCapture(event.pointerId);
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const dragState = dragStateRef.current;
+      const container = containerRef.current;
+      if (!dragState || !container) {
+        return;
+      }
+
+      const moveCenter = getLayerScreenCenter(layer, container);
+      const currentAngle = getPointerAngleDeg(
+        moveEvent.clientX,
+        moveEvent.clientY,
+        moveCenter.x,
+        moveCenter.y,
+      );
+      const delta = currentAngle - dragState.startAngle;
+      onRotate(dragState.startRotation + delta);
+    };
+
+    const handlePointerUp = (upEvent: PointerEvent) => {
+      dragStateRef.current = null;
+      if (handleEl.hasPointerCapture(upEvent.pointerId)) {
+        handleEl.releasePointerCapture(upEvent.pointerId);
+      }
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+  };
+
+  return (
+    <button
+      type="button"
+      className="absolute -top-8 left-1/2 z-10 flex size-6 -translate-x-1/2 touch-none items-center justify-center rounded-full bg-black/60 text-white"
+      style={{ touchAction: 'none' }}
+      onPointerDown={handlePointerDown}
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
+      aria-label={'회전'}
+    >
+      <RotateCw size={12} />
+    </button>
+  );
+};
+
+type LayerImageProps = {
+  layer: CanvasLayer;
+};
+
+const LayerImage = ({ layer }: LayerImageProps) => {
+  const rotation = layer.rotation ?? 0;
+  const imageSrc = toSameOriginImageProxyUrl(resolveMediaUrl(layer.src));
+
+  return (
+    <div
+      className="h-full w-full"
+      style={{
+        transform: `rotate(${rotation}deg)`,
+        transformOrigin: 'center center',
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={imageSrc}
+        alt=""
+        className="h-full w-full object-contain drop-shadow-md"
+        draggable={false}
+      />
+    </div>
+  );
 };
 
 export function PouchDecorateCanvas({
@@ -77,6 +209,9 @@ export function PouchDecorateCanvas({
   };
 
   const sortedLayers = [...layers].sort((a, b) => a.zIndex - b.zIndex);
+  const resolvedBackgroundUrl = backgroundImageUrl
+    ? toSameOriginImageProxyUrl(resolveMediaUrl(backgroundImageUrl))
+    : null;
 
   return (
     <div
@@ -89,10 +224,10 @@ export function PouchDecorateCanvas({
         }
       }}
     >
-      {backgroundImageUrl ? (
+      {resolvedBackgroundUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={backgroundImageUrl}
+          src={resolvedBackgroundUrl}
           alt=""
           className="pointer-events-none absolute inset-0 h-full w-full object-contain"
         />
@@ -123,12 +258,7 @@ export function PouchDecorateCanvas({
                 zIndex: layer.zIndex,
               }}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={layer.src}
-                alt=""
-                className="h-full w-full object-contain drop-shadow-md"
-              />
+              <LayerImage layer={layer} />
             </div>
           );
         }
@@ -160,25 +290,28 @@ export function PouchDecorateCanvas({
               isSelected && 'ring-2 ring-[#FF60CA] ring-offset-1',
             )}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={layer.src}
-              alt=""
-              className="h-full w-full object-contain drop-shadow-md"
-              draggable={false}
-            />
+            <LayerImage layer={layer} />
             {isSelected ? (
-              <button
-                type="button"
-                className="absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full bg-black/60 text-white"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRemoveLayer(layer.id);
-                }}
-                aria-label={'\uC2A4\uD2F0\uCEE4 \uC81C\uAC70'}
-              >
-                <X size={12} />
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="absolute -top-2 -right-2 z-10 flex size-5 items-center justify-center rounded-full bg-black/60 text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveLayer(layer.id);
+                  }}
+                  aria-label={'스티커 제거'}
+                >
+                  <X size={12} />
+                </button>
+                <LayerRotationHandle
+                  layer={layer}
+                  containerRef={containerRef}
+                  onRotate={(rotation) => {
+                    handleUpdateLayer(layer.id, { rotation });
+                  }}
+                />
+              </>
             ) : null}
           </Rnd>
         );

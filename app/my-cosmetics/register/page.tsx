@@ -39,6 +39,8 @@ import { extractImageFileData } from '@/utils/image-utils';
 import type { ImageFileData } from '@/types/image';
 import { cn } from '@/lib/utils';
 import { scheduleScanEntryTipOpen } from '@/lib/scan-entry-tip';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
+import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 
 const MAX_CAPTURE_IMAGES = 9;
 
@@ -123,10 +125,13 @@ const srcToCaptureFile = async (
 const loadImageElement = (src: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const img = document.createElement('img');
-    img.crossOrigin = 'anonymous';
+    const displaySrc = resolveDisplayImageSrc(resolveMediaUrl(src));
+    if (/^https?:\/\//i.test(displaySrc)) {
+      img.crossOrigin = 'anonymous';
+    }
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error('이미지 로드 실패'));
-    img.src = src;
+    img.src = displaySrc;
   });
 
 export default function MyCosmeticsRegisterPage() {

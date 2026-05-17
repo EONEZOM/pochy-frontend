@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useSearchMyCosmetics } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import { getSearchMyCosmeticsQueryKey } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import { useGetPouchDetail } from '@/api/generated/pouch-controller/pouch-controller';
+import { useGetWappenList } from '@/api/generated/wappen-controller/wappen-controller';
 import { ExtraNav } from '@/components/common/ExtraNav';
 import { Header } from '@/components/layout/Header';
 import {
@@ -19,7 +20,15 @@ import {
 } from '@/components/my-cosmetics/PouchItemsBottomSheet';
 import { PouchDecorateBottomSheet } from '@/components/my-cosmetics/PouchDecorateBottomSheet';
 import { PouchDecorateCanvas } from '@/components/my-cosmetics/PouchDecorateCanvas';
+import { PouchDraftResumeModal } from '@/components/my-cosmetics/PouchDraftResumeModal';
 import { PouchNextButton } from '@/components/my-cosmetics/PouchNextButton';
+import {
+  clearPouchDraft,
+  hasPouchDraftForItemsResume,
+  readPouchDraft,
+  savePouchDraft,
+  type PouchDraftState,
+} from '@/lib/pouch-draft';
 import {
   buildPouchCompletePath,
   buildPouchItemsPath,
@@ -34,18 +43,22 @@ import {
 import {
   POUCH_CANVAS_EXPORT_ID,
   apiPointToLayerPosition,
+  createCanvasLayerId,
   createCenteredLayer,
+  ensureUniqueCanvasLayerIds,
   exportPouchCanvas,
   getCanvasRectFromElement,
   getCosmeticImageSrc,
   getWappenImageSrc,
   type CanvasLayer,
 } from '@/lib/pouch-canvas';
+import { resolveDisplayImageSrc } from '@/lib/next-image-src';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
 import type { MyCosmeticsResponseDTO } from '@/api/model';
 
 const POUCHY_SRC = '/figma/my/pouchy.svg';
-const SPEECH_BUBBLE_SRC = '/figma/my/\uB9D0\uD48D\uC120.svg';
+const SPEECH_BUBBLE_SRC = '/figma/my/말풍선.svg';
 
 type PickerStep = 'select' | 'decorate';
 
@@ -62,14 +75,14 @@ export function PouchItemsPicker({
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const isEditMode = searchParams.get('mode') === 'edit';
+  const isResume = searchParams.get('resume') === '1';
+  const isFresh = searchParams.get('fresh') === '1';
 
   const numericPouchId = Number.parseInt(pouchId, 10);
   const hasNumericPouchId =
     Number.isFinite(numericPouchId) && numericPouchId > 0;
 
-  const [step, setStep] = useState<PickerStep>(
-    isEditMode ? 'decorate' : 'select',
-  );
+  const [step, setStep] = useState<PickerStep>('select');
   const [selectedOrder, setSelectedOrder] = useState<number[]>([]);
   const [itemMemos, setItemMemos] = useState<Record<number, string>>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -78,10 +91,11 @@ export function PouchItemsPicker({
   const [layers, setLayers] = useState<CanvasLayer[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [nextZIndex, setNextZIndex] = useState(1);
-  const [editBackgroundUrl, setEditBackgroundUrl] = useState<string | null>(
-    null,
-  );
   const [hasInitializedEdit, setHasInitializedEdit] = useState(false);
+  const [isDraftReady, setIsDraftReady] = useState(false);
+  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
+
+  const isDraftFlow = !isEditMode && !hasNumericPouchId;
 
   const { data, isLoading } = useSearchMyCosmetics({
     size: 100,
@@ -91,6 +105,53 @@ export function PouchItemsPicker({
   const { data: pouchDetailData } = useGetPouchDetail(numericPouchId, {
     query: { enabled: isEditMode && hasNumericPouchId },
   });
+
+  const { data: pouchListData } = useQuery({
+    queryKey: getPouchListQueryKey(),
+    queryFn: fetchPouchList,
+    enabled: isEditMode && hasNumericPouchId,
+  });
+
+  const editPouchImageUrl = useMemo(() => {
+    if (!isEditMode || !hasNumericPouchId) {
+      return null;
+    }
+    const pouch = pouchListData?.result?.pouchList?.find(
+      (entry) => entry.pouchId === numericPouchId,
+    );
+    const url = pouch?.imageUrl?.trim();
+    return url || null;
+  }, [
+    hasNumericPouchId,
+    isEditMode,
+    numericPouchId,
+    pouchListData?.result?.pouchList,
+  ]);
+
+  const editPouchPreviewSrc = useMemo(() => {
+    if (!editPouchImageUrl) {
+      return null;
+    }
+    return resolveDisplayImageSrc(resolveMediaUrl(editPouchImageUrl));
+  }, [editPouchImageUrl]);
+
+  const { data: wappenListData, isSuccess: isWappenListReady } =
+    useGetWappenList(
+      { pageable: { page: 0, size: 100 } },
+      { query: { enabled: isEditMode } },
+    );
+
+  const wappenImageUrlById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const wappen of wappenListData?.result?.wappens ?? []) {
+      const wappenId = wappen.wappenId;
+      const imageUrl = wappen.imageUrl?.trim();
+      if (wappenId != null && imageUrl) {
+        map.set(wappenId, imageUrl);
+      }
+    }
+    return map;
+  }, [wappenListData?.result?.wappens]);
 
   const items = useMemo(
     () => data?.result?.content ?? [],
@@ -107,17 +168,101 @@ export function PouchItemsPicker({
     return map;
   }, [items]);
 
-  const displayName =
-    pouchName.trim() || readPendingPouchName() || '\uC0C8 \uD30C\uC6B0\uCE58';
+  const displayName = pouchName.trim() || readPendingPouchName() || '새 파우치';
   const pouchItemsPath = buildPouchItemsPath(pouchId, displayName);
 
-  const selectedItems = useMemo(() => {
-    return selectedOrder
-      .map((id) => itemsById.get(id))
-      .filter((item): item is MyCosmeticsResponseDTO => item != null);
-  }, [selectedOrder, itemsById]);
-
   const isCosmeticsEmpty = !isLoading && items.length === 0;
+
+  const applyDraft = useCallback((draft: PouchDraftState) => {
+    setStep(draft.step);
+    setSelectedOrder(draft.selectedOrder);
+    setItemMemos(draft.itemMemos);
+    setLayers(ensureUniqueCanvasLayerIds(draft.layers));
+    setNextZIndex(draft.nextZIndex);
+    setSelectedLayerId(null);
+  }, []);
+
+  const resetDraftState = useCallback(() => {
+    setStep('select');
+    setSelectedOrder([]);
+    setItemMemos({});
+    setLayers([]);
+    setNextZIndex(1);
+    setSelectedLayerId(null);
+    setIsSheetExpanded(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isDraftFlow) {
+      setIsDraftReady(true);
+      return;
+    }
+
+    const draft = readPouchDraft();
+    if (!draft) {
+      setIsDraftReady(true);
+      return;
+    }
+
+    if (isResume) {
+      applyDraft(draft);
+      setIsDraftReady(true);
+      return;
+    }
+
+    if (isFresh) {
+      setIsDraftReady(true);
+      return;
+    }
+
+    if (hasPouchDraftForItemsResume()) {
+      setIsDraftModalOpen(true);
+      return;
+    }
+
+    setIsDraftReady(true);
+  }, [applyDraft, isDraftFlow, isFresh, isResume]);
+
+  useEffect(() => {
+    if (!isDraftFlow || !isDraftReady || isDraftModalOpen) {
+      return;
+    }
+
+    savePouchDraft({
+      pouchName: displayName,
+      step,
+      selectedOrder,
+      itemMemos,
+      layers,
+      nextZIndex,
+    });
+  }, [
+    displayName,
+    isDraftFlow,
+    isDraftModalOpen,
+    isDraftReady,
+    itemMemos,
+    layers,
+    nextZIndex,
+    selectedOrder,
+    step,
+  ]);
+
+  const handleStartFreshDraft = () => {
+    clearPouchDraft();
+    resetDraftState();
+    setIsDraftModalOpen(false);
+    setIsDraftReady(true);
+  };
+
+  const handleResumeDraft = () => {
+    const draft = readPouchDraft();
+    if (draft) {
+      applyDraft(draft);
+    }
+    setIsDraftModalOpen(false);
+    setIsDraftReady(true);
+  };
 
   useEffect(() => {
     if (!isEditMode || !hasNumericPouchId || hasInitializedEdit) {
@@ -125,6 +270,15 @@ export function PouchItemsPicker({
     }
     const detail = pouchDetailData?.result;
     if (!detail) {
+      return;
+    }
+
+    if (isLoading) {
+      return;
+    }
+
+    const hasWappensToRestore = (detail.wappens?.length ?? 0) > 0;
+    if (hasWappensToRestore && !isWappenListReady) {
       return;
     }
 
@@ -146,7 +300,7 @@ export function PouchItemsPicker({
     };
 
     const restoredLayers: CanvasLayer[] = [];
-    let z = 1;
+    let nextLayerZIndex = 1;
 
     for (const c of detail.cosmetics ?? []) {
       const myCosmeticId = c.myCosmeticId;
@@ -158,20 +312,21 @@ export function PouchItemsPicker({
       if (!src) {
         continue;
       }
+      const layerZIndex = c.zindex ?? nextLayerZIndex;
       const pos = apiPointToLayerPosition(
         c.xpoint ?? 160,
         c.ypoint ?? 230,
         canvasRect,
       );
       restoredLayers.push({
-        id: `cosmetic-${myCosmeticId}-${z}`,
+        id: createCanvasLayerId(),
         kind: 'cosmetic',
         src,
         myCosmeticId,
-        zIndex: c.zindex ?? z,
+        zIndex: layerZIndex,
         ...pos,
       });
-      z = Math.max(z, (c.zindex ?? z) + 1);
+      nextLayerZIndex = Math.max(nextLayerZIndex, layerZIndex) + 1;
     }
 
     for (const w of detail.wappens ?? []) {
@@ -179,57 +334,56 @@ export function PouchItemsPicker({
       if (wappenId == null) {
         continue;
       }
-      const src = getWappenImageSrc({ wappenId });
+      const src = getWappenImageSrc({
+        wappenId,
+        imageUrl: wappenImageUrlById.get(wappenId),
+      });
+      const layerZIndex = w.zindex ?? nextLayerZIndex;
       const pos = apiPointToLayerPosition(
         w.xpoint ?? 160,
         w.ypoint ?? 230,
         canvasRect,
       );
       restoredLayers.push({
-        id: `wappen-${wappenId}-${z}`,
+        id: createCanvasLayerId(),
         kind: 'wappen',
         src,
         wappenId,
-        zIndex: w.zindex ?? z,
+        zIndex: layerZIndex,
         ...pos,
       });
-      z = Math.max(z, (w.zindex ?? z) + 1);
+      nextLayerZIndex = Math.max(nextLayerZIndex, layerZIndex) + 1;
     }
 
-    const nextZ = z;
-    queueMicrotask(() => {
-      setSelectedOrder(cosmeticIds);
-      setItemMemos(memos);
-      setLayers(restoredLayers);
-      setNextZIndex(nextZ);
-      setHasInitializedEdit(true);
-    });
+    setHasInitializedEdit(true);
+    setSelectedOrder(cosmeticIds);
+    setItemMemos(memos);
+    setLayers(ensureUniqueCanvasLayerIds(restoredLayers));
+    setNextZIndex(nextLayerZIndex);
   }, [
     isEditMode,
     hasNumericPouchId,
     hasInitializedEdit,
     pouchDetailData?.result,
     itemsById,
+    isLoading,
+    isWappenListReady,
+    wappenImageUrlById,
   ]);
 
-  useEffect(() => {
-    if (!isEditMode || !hasNumericPouchId) {
-      return;
-    }
-    const loadImageUrl = async () => {
-      const list = await queryClient.fetchQuery({
-        queryKey: getPouchListQueryKey(),
-        queryFn: fetchPouchList,
-      });
-      const pouch = list?.result?.pouchList?.find(
-        (p) => p.pouchId === numericPouchId,
+  const handleLayersChange = useCallback((nextLayers: CanvasLayer[]) => {
+    setLayers(nextLayers);
+    setSelectedOrder((prev) => {
+      const cosmeticIdsOnCanvas = new Set(
+        nextLayers
+          .filter(
+            (layer) => layer.kind === 'cosmetic' && layer.myCosmeticId != null,
+          )
+          .map((layer) => layer.myCosmeticId as number),
       );
-      if (pouch?.imageUrl) {
-        setEditBackgroundUrl(pouch.imageUrl);
-      }
-    };
-    void loadImageUrl();
-  }, [isEditMode, hasNumericPouchId, numericPouchId, queryClient]);
+      return prev.filter((id) => cosmeticIdsOnCanvas.has(id));
+    });
+  }, []);
 
   const handleNavigateToScanRegister = () => {
     savePouchRegisterReturnPath(pouchItemsPath);
@@ -270,21 +424,18 @@ export function PouchItemsPicker({
 
   const handleNextSelect = () => {
     if (selectedOrder.length === 0) {
-      alert('\uD30C\uC6B0\uCE58\uC5D0 \uB123\uC744 \uD654\uC7A5\uD488\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.');
+      alert('파우치에 넣을 화장품을 선택해 주세요.');
       return;
     }
     setStep('decorate');
     setIsSheetExpanded(false);
   };
 
-  const addLayer = useCallback(
-    (layer: CanvasLayer) => {
-      setLayers((prev) => [...prev, layer]);
-      setNextZIndex((z) => z + 1);
-      setSelectedLayerId(layer.id);
-    },
-    [],
-  );
+  const addLayer = useCallback((layer: CanvasLayer) => {
+    setLayers((prev) => [...prev, layer]);
+    setNextZIndex((z) => z + 1);
+    setSelectedLayerId(layer.id);
+  }, []);
 
   const handleAddCosmetic = (item: MyCosmeticsResponseDTO) => {
     const id = item.id;
@@ -295,6 +446,12 @@ export function PouchItemsPicker({
     if (!src) {
       return;
     }
+    setSelectedOrder((prev) => {
+      if (prev.includes(id)) {
+        return prev;
+      }
+      return [...prev, id];
+    });
     const canvasEl = document.getElementById(POUCH_CANVAS_EXPORT_ID);
     const canvasRect = getCanvasRectFromElement(canvasEl);
     addLayer(
@@ -322,13 +479,13 @@ export function PouchItemsPicker({
 
   const handleComplete = async () => {
     if (selectedOrder.length === 0) {
-      alert('\uD30C\uC6B0\uCE58\uC5D0 \uB123\uC744 \uD654\uC7A5\uD488\uC744 \uC120\uD0DD\uD574 \uC8FC\uC138\uC694.');
+      alert('파우치에 넣을 화장품을 선택해 주세요.');
       return;
     }
 
     const canvasEl = document.getElementById(POUCH_CANVAS_EXPORT_ID);
     if (!canvasEl) {
-      alert('\uD30C\uC6B0\uCE58 \uBBF8\uB9AC\uBCF4\uAE30\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.');
+      alert('파우치 미리보기를 찾지 못했습니다.');
       return;
     }
 
@@ -382,6 +539,23 @@ export function PouchItemsPicker({
     : POUCH_ITEMS_SHEET_SNAP_COLLAPSED;
   const sheetReservedBottom = `calc(var(--app-height) * ${sheetSnapRatio} + ${POUCH_ITEMS_SHEET_TOGGLE_RESERVE} + ${POUCH_ITEMS_SHEET_BOTTOM_OFFSET})`;
 
+  if (isDraftFlow && !isDraftReady) {
+    return (
+      <>
+        <PouchDraftResumeModal
+          open={isDraftModalOpen}
+          onStartFresh={handleStartFreshDraft}
+          onResume={handleResumeDraft}
+        />
+        {!isDraftModalOpen ? (
+          <div className="flex h-(--app-height) items-center justify-center bg-white text-sm text-zinc-500">
+            불러오는 중...
+          </div>
+        ) : null}
+      </>
+    );
+  }
+
   const headerAction =
     step === 'select' ? (
       <PouchNextButton
@@ -391,7 +565,7 @@ export function PouchItemsPicker({
       />
     ) : (
       <PouchNextButton
-        label={'\uC644\uB8CC'}
+        label="완료"
         isDisabled={isSaving}
         isLoading={isSaving}
         onClick={handleComplete}
@@ -400,10 +574,15 @@ export function PouchItemsPicker({
 
   return (
     <div className="relative flex h-(--app-height) w-full flex-col overflow-hidden bg-white">
+      <PouchDraftResumeModal
+        open={isDraftModalOpen}
+        onStartFresh={handleStartFreshDraft}
+        onResume={handleResumeDraft}
+      />
       <Header
         title={displayName}
         onBack={() => {
-          if (step === 'decorate' && !isEditMode) {
+          if (step === 'decorate') {
             setStep('select');
             return;
           }
@@ -425,22 +604,30 @@ export function PouchItemsPicker({
           {step === 'decorate' ? (
             <PouchDecorateCanvas
               layers={layers}
-              onLayersChange={setLayers}
+              onLayersChange={handleLayersChange}
               selectedLayerId={selectedLayerId}
               onSelectLayer={setSelectedLayerId}
-              backgroundImageUrl={isEditMode ? editBackgroundUrl : null}
             />
           ) : (
             <div className="flex h-full w-full max-w-[320px] items-center justify-center">
-              <Image
-                src={POUCHY_SRC}
-                alt=""
-                width={320}
-                height={460}
-                unoptimized
-                className="h-auto max-h-full w-auto max-w-full object-contain"
-                priority
-              />
+              {editPouchPreviewSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={editPouchPreviewSrc}
+                  alt={displayName}
+                  className="h-auto max-h-full w-auto max-w-full object-contain"
+                />
+              ) : (
+                <Image
+                  src={POUCHY_SRC}
+                  alt=""
+                  width={320}
+                  height={460}
+                  unoptimized
+                  className="h-auto max-h-full w-auto max-w-full object-contain"
+                  priority
+                />
+              )}
             </div>
           )}
         </div>
@@ -458,7 +645,8 @@ export function PouchItemsPicker({
           />
         ) : (
           <PouchDecorateBottomSheet
-            selectedItems={selectedItems}
+            cosmeticItems={items}
+            isCosmeticsLoading={isLoading}
             isExpanded={isSheetExpanded}
             onExpandedChange={setIsSheetExpanded}
             onAddCosmetic={handleAddCosmetic}
@@ -500,12 +688,12 @@ export function PouchItemsPicker({
                 onOpenChange={setIsRegisterMenuOpen}
                 items={[
                   {
-                    label: '\uC2A4\uCE94\uD558\uC5EC \uB4F1\uB85D\uD558\uAE30',
+                    label: '스캔하여 등록하기',
                     onClick: handleNavigateToScanRegister,
                     icon: '/icons/imgplus.svg',
                   },
                   {
-                    label: '\uC9C1\uC811 \uB4F1\uB85D\uD558\uAE30',
+                    label: '직접 등록하기',
                     onClick: handleNavigateToDirectRegister,
                     icon: '/icons/write.svg',
                   },

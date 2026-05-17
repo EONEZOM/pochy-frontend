@@ -29,22 +29,28 @@ function MyCosmeticsListContent() {
     !isPouchLoading && !isPouchError && !hasPouches && isDefaultFilters;
   const showPouchHome = hasPouches && isDefaultFilters;
 
+  if (showPouchHome && !isPouchLoading && !isPouchError) {
+    return (
+      <div className="relative">
+        <MyCosmeticsPouchHome pouches={pouches} />
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       {!showRegisteredEmpty ? <MyCosmeticsHeader /> : null}
       <main className="px-5 pb-4">
         {isPouchLoading ? (
           <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-500">
-            {'\uB0B4 \uD654\uC7A5\uD488\uC744 \uBD88\uB7EC\uC624\uB294 \uC911...'}
+            내 화장품을 불러오는 중...
           </div>
         ) : isPouchError ? (
           <div className="flex min-h-[60vh] items-center justify-center text-sm text-red-500">
-            {'\uBAA9\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.'}
+            목록을 불러오지 못했습니다.
           </div>
         ) : showRegisteredEmpty ? (
           <MyCosmeticsEmptyView />
-        ) : showPouchHome ? (
-          <MyCosmeticsPouchHome pouches={pouches} />
         ) : null}
       </main>
     </div>
@@ -56,7 +62,7 @@ export default function MyCosmeticsPage() {
     <Suspense
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-500">
-          {'\uB0B4 \uD654\uC7A5\uD488\uC744 \uBD88\uB7EC\uC624\uB294 \uC911...'}
+          내 화장품을 불러오는 중...
         </div>
       }
     >

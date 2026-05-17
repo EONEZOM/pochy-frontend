@@ -10,7 +10,7 @@ type PouchNextButtonProps = {
 };
 
 export function PouchNextButton({
-  label = '\uB2E4\uC74C',
+  label = '다음',
   isDisabled = false,
   isLoading = false,
   onClick,

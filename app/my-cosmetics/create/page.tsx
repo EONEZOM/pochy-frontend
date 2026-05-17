@@ -1,13 +1,21 @@
 ﻿'use client';
 
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import { useGetRandomNames } from '@/api/generated/pouch-name-controller/pouch-name-controller';
 import Input from '@/components/common/Input/Input';
 import { Header } from '@/components/layout/Header';
+import { PouchDraftResumeModal } from '@/components/my-cosmetics/PouchDraftResumeModal';
 import { PouchNextButton } from '@/components/my-cosmetics/PouchNextButton';
+import {
+  buildPouchItemsResumePath,
+  clearPouchDraft,
+  hasPouchDraft,
+  readPouchDraft,
+  savePouchDraft,
+} from '@/lib/pouch-draft';
 import {
   clearPendingPouchId,
   DRAFT_POUCH_ID,
@@ -21,6 +29,8 @@ function PouchCreateContent() {
   const router = useRouter();
   const [theme, setTheme] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
+  const [isDraftModalResolved, setIsDraftModalResolved] = useState(false);
 
   const { data: randomNamesData } = useGetRandomNames();
   const suggestedThemes = useMemo(() => {
@@ -34,6 +44,56 @@ function PouchCreateContent() {
   const trimmedTheme = theme.trim();
   const canProceed = trimmedTheme.length > 0;
 
+  useEffect(() => {
+    if (hasPouchDraft()) {
+      setIsDraftModalOpen(true);
+      return;
+    }
+    setIsDraftModalResolved(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isDraftModalResolved || !trimmedTheme) {
+      return;
+    }
+
+    const existing = readPouchDraft();
+    if (existing) {
+      savePouchDraft({
+        ...existing,
+        pouchName: trimmedTheme,
+      });
+      return;
+    }
+
+    savePouchDraft({
+      pouchName: trimmedTheme,
+      step: 'select',
+      selectedOrder: [],
+      itemMemos: {},
+      layers: [],
+      nextZIndex: 1,
+    });
+  }, [isDraftModalResolved, trimmedTheme]);
+
+  const handleStartFresh = () => {
+    clearPouchDraft();
+    setTheme('');
+    setIsDraftModalOpen(false);
+    setIsDraftModalResolved(true);
+  };
+
+  const handleResumeDraft = () => {
+    const draft = readPouchDraft();
+    setIsDraftModalOpen(false);
+    setIsDraftModalResolved(true);
+    if (!draft) {
+      return;
+    }
+    savePendingPouchName(draft.pouchName.trim());
+    router.push(buildPouchItemsResumePath(draft.pouchName));
+  };
+
   const handleNext = () => {
     if (!canProceed) {
       return;
@@ -42,14 +102,27 @@ function PouchCreateContent() {
     setIsSubmitting(true);
     clearPendingPouchId();
     savePendingPouchName(trimmedTheme);
+    savePouchDraft({
+      pouchName: trimmedTheme,
+      step: 'select',
+      selectedOrder: [],
+      itemMemos: {},
+      layers: [],
+      nextZIndex: 1,
+    });
     router.push(
-      `/my-cosmetics/pouch/${DRAFT_POUCH_ID}/items?name=${encodeURIComponent(trimmedTheme)}`,
+      `/my-cosmetics/pouch/${DRAFT_POUCH_ID}/items?name=${encodeURIComponent(trimmedTheme)}&fresh=1`,
     );
     setIsSubmitting(false);
   };
 
   return (
     <div className="flex h-(--app-height) flex-col overflow-hidden bg-white">
+      <PouchDraftResumeModal
+        open={isDraftModalOpen}
+        onStartFresh={handleStartFresh}
+        onResume={handleResumeDraft}
+      />
       <Header
         title="새 파우치 만들기"
         onBack={() => {
