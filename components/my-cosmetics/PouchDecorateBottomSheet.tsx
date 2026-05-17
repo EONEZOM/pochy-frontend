@@ -4,6 +4,14 @@ import { useState } from 'react';
 import { useGetWappenList } from '@/api/generated/wappen-controller/wappen-controller';
 
 import { PouchSheetChrome } from '@/components/my-cosmetics/PouchSheetChrome';
+import {
+  DECORATE_GRID_CELL_PX,
+  DECORATE_WAPPEN_GRID_CELL_PX,
+  DECORATE_WAPPEN_IMAGE_SCALE,
+  getDecorateGridClassName,
+  getDecorateScrollMaxHeightCollapsed,
+  getDecorateWappenGridClassName,
+} from '@/components/my-cosmetics/pouch-sheet-constants';
 import type { MyCosmeticsResponseDTO } from '@/api/model';
 import { getCosmeticImageSrc, getWappenImageSrc } from '@/lib/pouch-canvas';
 import { cn } from '@/lib/utils';
@@ -49,6 +57,7 @@ export function PouchDecorateBottomSheet({
 
       <DecorateScrollArea
         activeTab={activeTab}
+        isExpanded={isExpanded}
         cosmeticItems={cosmeticItems}
         isCosmeticsLoading={isCosmeticsLoading}
         isWappenLoading={isWappenLoading}
@@ -103,6 +112,7 @@ function DecorateTabRow({
 
 function DecorateScrollArea({
   activeTab,
+  isExpanded,
   cosmeticItems,
   isCosmeticsLoading,
   isWappenLoading,
@@ -111,6 +121,7 @@ function DecorateScrollArea({
   onAddWappen,
 }: {
   activeTab: DecorateTab;
+  isExpanded: boolean;
   cosmeticItems: MyCosmeticsResponseDTO[];
   isCosmeticsLoading: boolean;
   isWappenLoading: boolean;
@@ -118,8 +129,24 @@ function DecorateScrollArea({
   onAddCosmetic: (item: MyCosmeticsResponseDTO) => void;
   onAddWappen: (wappen: { wappenId: number; imageUrl: string }) => void;
 }) {
+  const collapsedScrollCellPx =
+    activeTab === 'wappen'
+      ? DECORATE_WAPPEN_GRID_CELL_PX
+      : DECORATE_GRID_CELL_PX;
+
   return (
-    <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-28">
+    <div
+      className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-5 pt-4 pb-28"
+      style={
+        isExpanded
+          ? undefined
+          : {
+              maxHeight: getDecorateScrollMaxHeightCollapsed(
+                collapsedScrollCellPx,
+              ),
+            }
+      }
+    >
       {activeTab === 'sticker' ? (
         isCosmeticsLoading ? (
           <p className="text-mono-dark-gray py-8 text-center text-sm">
@@ -150,6 +177,63 @@ function DecorateScrollArea({
   );
 }
 
+function DecorateGridItem({
+  imageSrc,
+  alt,
+  emptyLabel,
+  variant = 'cosmetic',
+  cellSizePx = DECORATE_GRID_CELL_PX,
+  onClick,
+}: {
+  imageSrc: string;
+  alt: string;
+  emptyLabel: string;
+  variant?: 'cosmetic' | 'wappen';
+  cellSizePx?: number;
+  onClick: () => void;
+}) {
+  const isWappen = variant === 'wappen';
+
+  return (
+    <button
+      type="button"
+      className={cn(
+        'relative flex items-center justify-center bg-transparent',
+        isWappen
+          ? 'relative aspect-square w-full max-w-full overflow-visible p-0'
+          : 'shrink-0 p-2',
+      )}
+      style={
+        isWappen
+          ? { maxWidth: DECORATE_WAPPEN_GRID_CELL_PX }
+          : { width: cellSizePx, height: cellSizePx }
+      }
+      onClick={onClick}
+    >
+      {imageSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageSrc}
+          alt={alt}
+          className={cn(
+            'object-contain drop-shadow-md',
+            isWappen
+              ? 'absolute inset-0 m-auto h-full w-full origin-center'
+              : 'max-h-full max-w-full',
+          )}
+          style={
+            isWappen
+              ? { transform: `scale(${DECORATE_WAPPEN_IMAGE_SCALE})` }
+              : undefined
+          }
+        />
+      ) : (
+        <span className="text-mono-dark-gray text-[10px]">{emptyLabel}</span>
+      )}
+    </button>
+  );
+}
+
 function CosmeticStickerGrid({
   items,
   onAddCosmetic,
@@ -158,7 +242,7 @@ function CosmeticStickerGrid({
   onAddCosmetic: (item: MyCosmeticsResponseDTO) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-x-4 gap-y-4">
+    <div className={getDecorateGridClassName()}>
       {items.map((item) => {
         const id = item.id;
         if (id == null) {
@@ -166,27 +250,15 @@ function CosmeticStickerGrid({
         }
         const src = getCosmeticImageSrc(item);
         return (
-          <button
+          <DecorateGridItem
             key={id}
-            type="button"
-            className="relative flex size-24 items-center justify-center bg-[#F3F3F3] p-2"
+            imageSrc={src}
+            alt={item.name ?? ''}
+            emptyLabel="이미지 없음"
             onClick={() => {
               onAddCosmetic(item);
             }}
-          >
-            {src ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={src}
-                alt={item.name ?? ''}
-                className="max-h-full max-w-full object-contain drop-shadow-md"
-              />
-            ) : (
-              <span className="text-mono-dark-gray text-[10px]">
-                이미지 없음
-              </span>
-            )}
-          </button>
+          />
         );
       })}
     </div>
@@ -201,7 +273,7 @@ function WappenGrid({
   onAddWappen: (wappen: { wappenId: number; imageUrl: string }) => void;
 }) {
   return (
-    <div className="grid grid-cols-4 gap-x-3 gap-y-3">
+    <div className={getDecorateWappenGridClassName()}>
       {wappens.map((wappen) => {
         const wappenId = wappen.wappenId;
         if (wappenId == null) {
@@ -209,21 +281,16 @@ function WappenGrid({
         }
         const src = getWappenImageSrc(wappen);
         return (
-          <button
+          <DecorateGridItem
             key={wappenId}
-            type="button"
-            className="relative size-16 overflow-hidden bg-[#F3F3F3]"
+            variant="wappen"
+            imageSrc={src}
+            alt=""
+            emptyLabel="와펜"
             onClick={() => {
               onAddWappen({ wappenId, imageUrl: src });
             }}
-          >
-            {src ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={src} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-mono-dark-gray text-[9px]">와펜</span>
-            )}
-          </button>
+          />
         );
       })}
     </div>
