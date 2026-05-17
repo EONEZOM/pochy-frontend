@@ -26,7 +26,7 @@ export default function MyCosmeticsDetailPage() {
   const cosmeticId = Number(params.id);
   const isValidId = Number.isFinite(cosmeticId) && cosmeticId > 0;
   const [selectedId, setSelectedId] = useState(cosmeticId);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState<number | null>(null);
 
   const { data: listData, isLoading: isListLoading } = useSearchMyCosmetics({
     size: 100,
@@ -39,10 +39,7 @@ export default function MyCosmeticsDetailPage() {
 
   const initialIndex = listItems.findIndex((v) => String(v.id) === String(cosmeticId));
   const safeInitialIndex = initialIndex >= 0 ? initialIndex : 0;
-
-  useEffect(() => {
-    if (initialIndex !== -1) setCurrentIndex(initialIndex);
-  }, [initialIndex]);
+  const activeIndex = currentIndex ?? safeInitialIndex;
 
   const { data: detailData, isFetching: isDetailFetching } = useGetCosmeticDetail(selectedId, {
     query: {
@@ -114,7 +111,7 @@ export default function MyCosmeticsDetailPage() {
                   <div
                     className={cn(
                       'relative aspect-2/3 w-full rounded-3xl bg-white shadow transition-all duration-500',
-                      currentIndex === index ? 'scale-100 opacity-100' : 'scale-90 opacity-40',
+                      activeIndex === index ? 'scale-100 opacity-100' : 'scale-90 opacity-40',
                     )}
                   >
                     <div className="absolute inset-0 overflow-hidden rounded-3xl">

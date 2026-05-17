@@ -21,7 +21,9 @@ export function PipelineLog({ logs, currentStep }: PipelineLogProps) {
           </p>
         ))}
         {logs.length === 0 && (
-          <p className="font-mono text-[10px] text-zinc-600">파이프라인 대기 중...</p>
+          <p className="font-mono text-[10px] text-zinc-600">
+            {'\uD30C\uC774\uD504\uB77C\uC778 \uB300\uAE30\uC911...'}
+          </p>
         )}
       </div>
     </div>
