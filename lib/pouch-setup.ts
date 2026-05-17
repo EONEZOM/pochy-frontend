@@ -3,17 +3,16 @@ import type {
   ApiResponseDTOString,
   ApiResponseDTOPouchListDto,
 } from '@/api/model';
-import {
-  getPouchList,
-  uploadPouchCompositeImage,
-} from '@/api/generated/pouch-controller/pouch-controller';
+import { getPouchList } from '@/api/generated/pouch-controller/pouch-controller';
 import {
   createPouchMultipart,
   updatePouchMultipart,
+  uploadPouchCompositeImageMultipart,
 } from '@/lib/pouch-api';
 import {
   buildCombinedAddDto,
   layersToSavePayload,
+  mergeSelectionsIntoCosmeticItems,
   type CanvasLayer,
   type CanvasRect,
 } from '@/lib/pouch-canvas';
@@ -290,10 +289,14 @@ export const savePouchDecoration = async (
   validatePouchSelections(selections);
 
   const trimmedName = name.trim();
-  const { cosmeticItems, wappenItems } = layersToSavePayload(
+  const { cosmeticItems: layerCosmeticItems, wappenItems } = layersToSavePayload(
     layers,
     selections,
     canvasRect,
+  );
+  const cosmeticItems = mergeSelectionsIntoCosmeticItems(
+    layerCosmeticItems,
+    selections,
   );
 
   if (cosmeticItems.length === 0) {
@@ -316,7 +319,7 @@ export const savePouchDecoration = async (
     pouchId = await resolvePouchIdAfterAdd(createRes);
   } else {
     await updatePouchMultipart(pouchId, { request });
-    await uploadPouchCompositeImage(pouchId, { pouchImage: compositeBlob });
+    await uploadPouchCompositeImageMultipart(pouchId, compositeBlob);
   }
 
   savePendingPouchId(pouchId);

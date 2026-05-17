@@ -10,7 +10,7 @@ import {
   type CanvasLayer,
   type CanvasRect,
 } from '@/lib/pouch-canvas';
-import { toSameOriginImageProxyUrl } from '@/lib/next-image-src';
+import { resolveLayerImageSrc, toSameOriginImageProxyUrl } from '@/lib/next-image-src';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
 
@@ -134,7 +134,7 @@ type LayerImageProps = {
 
 const LayerImage = ({ layer }: LayerImageProps) => {
   const rotation = layer.rotation ?? 0;
-  const imageSrc = toSameOriginImageProxyUrl(resolveMediaUrl(layer.src));
+  const imageSrc = resolveLayerImageSrc(resolveMediaUrl(layer.src));
 
   return (
     <div
@@ -145,12 +145,13 @@ const LayerImage = ({ layer }: LayerImageProps) => {
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={imageSrc}
-        alt=""
-        className="h-full w-full object-contain drop-shadow-md"
-        draggable={false}
-      />
+        <img
+          src={imageSrc}
+          alt=""
+          crossOrigin="anonymous"
+          className="h-full w-full object-contain drop-shadow-md"
+          draggable={false}
+        />
     </div>
   );
 };
@@ -229,6 +230,7 @@ export function PouchDecorateCanvas({
         <img
           src={resolvedBackgroundUrl}
           alt=""
+          crossOrigin="anonymous"
           className="pointer-events-none absolute inset-0 h-full w-full object-contain"
         />
       ) : (

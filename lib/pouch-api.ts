@@ -79,3 +79,19 @@ export const updatePouchMultipart = async (
     data: formData,
   });
 };
+
+/** PATCH /api/pouches/{pouchId}/image — 합성 이미지 업로드 */
+export const uploadPouchCompositeImageMultipart = async (
+  pouchId: number,
+  pouchImage: File | Blob,
+): Promise<ApiResponseDTOString> => {
+  const formData = new FormData();
+  const file = toPouchImageFile(pouchImage);
+  formData.append('pouchImage', file, file.name);
+
+  return customInstance({
+    url: `/api/pouches/${pouchId}/image`,
+    method: 'PATCH',
+    data: formData,
+  });
+};

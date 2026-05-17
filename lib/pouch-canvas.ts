@@ -88,15 +88,87 @@ export const createCenteredLayer = (
   };
 };
 
+const clampApiCoordinate = (value: number, max: number): number => {
+  if (!Number.isFinite(value)) {
+    return Math.round(max / 2);
+  }
+  return Math.min(max, Math.max(0, Math.round(value)));
+};
+
 export const layerCenterToApiPoint = (
   layer: CanvasLayer,
   canvasRect: CanvasRect,
 ) => {
   const centerX = layer.x + layer.width / 2;
   const centerY = layer.y + layer.height / 2;
-  const xpoint = Math.round((centerX / canvasRect.width) * POUCH_CANVAS_WIDTH);
-  const ypoint = Math.round((centerY / canvasRect.height) * POUCH_CANVAS_HEIGHT);
+  const xpoint = clampApiCoordinate(
+    (centerX / canvasRect.width) * POUCH_CANVAS_WIDTH,
+    POUCH_CANVAS_WIDTH,
+  );
+  const ypoint = clampApiCoordinate(
+    (centerY / canvasRect.height) * POUCH_CANVAS_HEIGHT,
+    POUCH_CANVAS_HEIGHT,
+  );
   return { xpoint, ypoint, zindex: layer.zIndex };
+};
+
+const dedupeCosmeticItemsByMyCosmeticId = (
+  items: AddCosmeticDetailDto[],
+): AddCosmeticDetailDto[] => {
+  const byMyCosmeticId = new Map<number, AddCosmeticDetailDto>();
+  for (const item of items) {
+    const myCosmeticId = item.myCosmeticId;
+    if (myCosmeticId == null || !Number.isFinite(myCosmeticId) || myCosmeticId <= 0) {
+      continue;
+    }
+    const existing = byMyCosmeticId.get(myCosmeticId);
+    if (!existing || (item.zindex ?? 0) >= (existing.zindex ?? 0)) {
+      byMyCosmeticId.set(myCosmeticId, item);
+    }
+  }
+  return [...byMyCosmeticId.values()].sort(
+    (a, b) => (a.zindex ?? 0) - (b.zindex ?? 0),
+  );
+};
+
+/** 캔버스 스티커 없이 선택만 된 화장품은 기본 좌표로 보강 */
+export const mergeSelectionsIntoCosmeticItems = (
+  cosmeticItems: AddCosmeticDetailDto[],
+  selections: PouchCosmeticSelection[],
+): AddCosmeticDetailDto[] => {
+  const merged = dedupeCosmeticItemsByMyCosmeticId(cosmeticItems);
+  const byMyCosmeticId = new Map(
+    merged.map((item) => [item.myCosmeticId as number, item]),
+  );
+  const centerX = Math.round(POUCH_CANVAS_WIDTH / 2);
+  const centerY = Math.round(POUCH_CANVAS_HEIGHT / 2);
+  let nextZIndex =
+    merged.reduce((max, item) => Math.max(max, item.zindex ?? 0), 0) + 1;
+
+  for (const selection of selections) {
+    const myCosmeticId = selection.myCosmeticId;
+    if (!Number.isFinite(myCosmeticId) || myCosmeticId <= 0) {
+      continue;
+    }
+    const memo = selection.memo?.trim();
+    const existing = byMyCosmeticId.get(myCosmeticId);
+    if (existing) {
+      if (memo && !(existing.memo ?? '').trim()) {
+        byMyCosmeticId.set(myCosmeticId, { ...existing, memo });
+      }
+      continue;
+    }
+    byMyCosmeticId.set(myCosmeticId, {
+      myCosmeticId,
+      xpoint: centerX,
+      ypoint: centerY,
+      zindex: nextZIndex,
+      ...(memo ? { memo } : {}),
+    });
+    nextZIndex += 1;
+  }
+
+  return dedupeCosmeticItemsByMyCosmeticId([...byMyCosmeticId.values()]);
 };
 
 export const apiPointToLayerPosition = (
@@ -156,7 +228,10 @@ export const layersToSavePayload = (
     }
   }
 
-  return { cosmeticItems, wappenItems };
+  return {
+    cosmeticItems: dedupeCosmeticItemsByMyCosmeticId(cosmeticItems),
+    wappenItems,
+  };
 };
 
 export type BuildCombinedAddDtoParams = {
@@ -187,13 +262,51 @@ export const buildCombinedAddDto = ({
   return payload;
 };
 
+const waitForImageElement = (img: HTMLImageElement): Promise<void> => {
+  if (img.complete && img.naturalWidth > 0) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const handleLoad = () => {
+      cleanup();
+      resolve();
+    };
+    const handleError = () => {
+      cleanup();
+      reject(new Error('파우치 스티커 이미지를 불러오지 못했습니다.'));
+    };
+    const cleanup = () => {
+      img.removeEventListener('load', handleLoad);
+      img.removeEventListener('error', handleError);
+    };
+    img.addEventListener('load', handleLoad);
+    img.addEventListener('error', handleError);
+  });
+};
+
+/** html-to-image 캡처 전 캔버스 내 img 로드 완료 대기 */
+export const waitForCanvasImages = async (
+  element: HTMLElement,
+): Promise<void> => {
+  const images = Array.from(element.querySelectorAll('img'));
+  if (images.length === 0) {
+    return;
+  }
+  await Promise.all(images.map((img) => waitForImageElement(img)));
+};
+
 export const exportPouchCanvas = async (
   element: HTMLElement,
 ): Promise<Blob> => {
+  await waitForCanvasImages(element);
+
   const blob = await toBlob(element, {
-    cacheBust: true,
+    cacheBust: false,
     pixelRatio: 2,
     skipFonts: true,
+    fetchRequestInit: {
+      credentials: 'same-origin',
+    },
   });
 
   if (!blob) {
