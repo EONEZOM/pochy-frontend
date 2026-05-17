@@ -5,9 +5,9 @@
  * POCHY Swagger UI
  * OpenAPI spec version: 1.0.0
  */
-import type { WappenDto } from './wappenDto';
+import type { WappenUrlDto } from './wappenUrlDto';
 
 export interface WappenListDto {
   hasNext?: boolean;
-  wappens?: WappenDto[];
+  wappens?: WappenUrlDto[];
 }

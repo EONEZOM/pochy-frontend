@@ -9,7 +9,7 @@
 export interface FindMyCosmeticsDto {
   productImageUrl?: string;
   content?: string;
+  xpoint?: number;
   ypoint?: number;
   zindex?: number;
-  xpoint?: number;
 }

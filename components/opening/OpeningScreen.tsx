@@ -82,7 +82,6 @@ export function OpeningScreen() {
             alt=""
             width={366}
             height={180}
-            unoptimized
             sizes="100vw"
             className={cn(POUCH_IMAGE_CLASS, 'opening-pouch-rise -mb-px')}
             priority
@@ -103,7 +102,6 @@ export function OpeningScreen() {
               alt=""
               width={366}
               height={186}
-              unoptimized
               sizes="100vw"
               className={cn(
                 POUCH_IMAGE_CLASS,

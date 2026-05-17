@@ -8,6 +8,5 @@
 import type { AddCosmeticDetailDto } from './addCosmeticDetailDto';
 
 export interface AddCosmeticListDto {
-  pouchId?: number;
   items?: AddCosmeticDetailDto[];
 }

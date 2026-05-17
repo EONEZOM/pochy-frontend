@@ -9,10 +9,7 @@
 export interface AddCosmeticDetailDto {
   myCosmeticId?: number;
   memo?: string;
+  xpoint?: number;
   ypoint?: number;
   zindex?: number;
-  xpoint?: number;
-  xPoint?: number;
-  yPoint?: number;
-  zIndex?: number;
 }

@@ -36,7 +36,6 @@ export function MainHomeBottomZipperWithLip({
           src="/figma/main/아래지퍼.svg"
           alt=""
           fill
-          unoptimized
           className={cn('object-cover object-top', imageClassName)}
           sizes="(max-width: 480px) 100vw, 480px"
           priority
@@ -48,7 +47,6 @@ export function MainHomeBottomZipperWithLip({
             alt=""
             width={112}
             height={112}
-            unoptimized
             className="h-auto w-full object-contain object-bottom"
           />
         </div>

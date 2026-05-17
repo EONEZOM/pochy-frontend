@@ -68,39 +68,17 @@ function WishCapturePreviewImage({
           alt=""
           width={iconSize}
           height={iconSize}
-          unoptimized
           className="object-contain"
         />
       </span>
     );
   }
 
-  const unoptimized =
-    previewSrc.startsWith('data:') ||
-    previewSrc.startsWith('blob:') ||
-    previewSrc.endsWith('.svg');
-
   if (variant === 'modal') {
-    return (
-      <Image
-        src={previewSrc}
-        alt={alt}
-        fill
-        className="object-contain"
-        unoptimized={unoptimized}
-      />
-    );
+    return <Image src={previewSrc} alt={alt} fill className="object-contain" />;
   }
 
-  return (
-    <Image
-      src={previewSrc}
-      alt={alt}
-      fill
-      className="object-cover"
-      unoptimized={unoptimized}
-    />
-  );
+  return <Image src={previewSrc} alt={alt} fill className="object-cover" />;
 }
 
 function WishFieldLabel({ children }: { children: ReactNode }) {
@@ -129,7 +107,6 @@ function WishFieldRow({
         alt=""
         width={24}
         height={24}
-        unoptimized
         className="mt-9 shrink-0"
         aria-hidden
       />
@@ -149,11 +126,18 @@ type ProductDetailFormData = {
   image_url?: string | null;
   mall_url?: string | null;
   imageFile?: File | null;
+  /** 직접 등록 누끼 Blob — 제출 시 directImage로 사용 */
+  nukkiBlob?: Blob | null;
+};
+
+export type ProductDetailFormImageSelectResult = {
+  official_image?: string;
+  nukkiBlob?: Blob;
 };
 
 type ProductDetailFormInitialData = Partial<ProductDetailFormData>;
 
-type ProductDetailFormSubmitData = ProductDetailFormData &
+export type ProductDetailFormSubmitData = ProductDetailFormData &
   Record<string, unknown>;
 
 type ProductDetailFormStringField =
@@ -183,6 +167,18 @@ interface ProductDetailFormProps {
   onScanNext?: () => void;
   canScanPrev?: boolean;
   canScanNext?: boolean;
+  /** directRegister 레이아웃에서 가격 필드 숨김 */
+  hidePrice?: boolean;
+  /** 연관 리뷰 영상 섹션·API 호출 숨김 (내 화장품 스캔 등) */
+  hideYoutubeReview?: boolean;
+  /** 사진 선택 직후 호출 (누끼 등 후처리) */
+  onImageFileSelected?: (
+    file: File,
+  ) => Promise<ProductDetailFormImageSelectResult>;
+  /** AI 자동완성 등으로 공식 이미지 URL이 채워진 뒤 호출 (누끼 등 후처리) */
+  onOfficialImageUrlSelected?: (
+    imageUrl: string,
+  ) => Promise<ProductDetailFormImageSelectResult>;
 }
 
 const FORM_DEFAULTS = {
@@ -212,8 +208,13 @@ export default function ProductDetailForm({
   onScanNext,
   canScanPrev = false,
   canScanNext = false,
+  hidePrice = false,
+  hideYoutubeReview = false,
+  onImageFileSelected,
+  onOfficialImageUrlSelected,
 }: ProductDetailFormProps) {
   const isDirectRegisterLayout = layoutVariant === 'directRegister';
+  const [isImageProcessing, setIsImageProcessing] = useState(false);
   const [formData, setFormData] = useState<ProductDetailFormData>(() => ({
     ...FORM_DEFAULTS,
     ...initialData,
@@ -238,6 +239,34 @@ export default function ProductDetailForm({
       sub_category: isEtc ? 'Other' : '',
     });
   };
+
+  const applyOfficialImageNukki = useCallback(
+    async (imageUrl: string, baseData: ProductDetailFormData) => {
+      if (!onOfficialImageUrlSelected) {
+        return baseData;
+      }
+
+      if (baseData.official_image?.startsWith('blob:')) {
+        URL.revokeObjectURL(baseData.official_image);
+      }
+
+      setIsImageProcessing(true);
+      try {
+        const result = await onOfficialImageUrlSelected(imageUrl);
+        const merged: ProductDetailFormData = {
+          ...baseData,
+          image_url: imageUrl,
+          official_image: result.official_image ?? imageUrl,
+          nukkiBlob: result.nukkiBlob ?? null,
+        };
+        setFormData(merged);
+        return merged;
+      } finally {
+        setIsImageProcessing(false);
+      }
+    },
+    [onOfficialImageUrlSelected],
+  );
 
   const fetchNaverShoppingInfo = useCallback(
     async (
@@ -279,6 +308,7 @@ export default function ProductDetailForm({
         };
 
         if (data.official_image) {
+          const naverImageUrl = String(data.official_image).trim();
           const nextData = (() => {
             const isFeaturesEmpty =
               !sourceData.features || String(sourceData.features).trim() === '';
@@ -287,19 +317,25 @@ export default function ProductDetailForm({
               : '';
             return {
               ...sourceData,
-              official_image: data.official_image,
+              official_image: naverImageUrl,
               price: data.lowest_price ?? '',
               mall_url: data.mall_url,
               features: isFeaturesEmpty
                 ? categoryString
                 : String(sourceData.features ?? ''),
             };
-          })();
-          setFormData(nextData as ProductDetailFormData);
+          })() as ProductDetailFormData;
+
+          setFormData(nextData);
+
+          const mergedData = onOfficialImageUrlSelected
+            ? await applyOfficialImageNukki(naverImageUrl, nextData)
+            : nextData;
+
           if (showSuccessAlert) {
             alert('상품 정보를 새로 가져왔습니다.');
           }
-          return nextData as ProductDetailFormData;
+          return mergedData;
         }
 
         const priceRaw = data.lowest_price;
@@ -338,7 +374,7 @@ export default function ProductDetailForm({
         }
       }
     },
-    [],
+    [applyOfficialImageNukki, onOfficialImageUrlSelected],
   );
 
   // 스캔 결과 보정용.
@@ -382,28 +418,60 @@ export default function ProductDetailForm({
     if (!file) {
       return;
     }
-    if (formData.image_url?.startsWith('blob:')) {
-      URL.revokeObjectURL(formData.image_url);
-    }
-    const previewUrl = URL.createObjectURL(file);
-    const hasNaverOfficial =
-      String(formData.official_image ?? '').trim().length > 0;
 
-    if (isDirectRegisterLayout && hasNaverOfficial) {
-      setFormData((prev) => ({
-        ...prev,
+    const applyFileSelection = async () => {
+      if (formData.image_url?.startsWith('blob:')) {
+        URL.revokeObjectURL(formData.image_url);
+      }
+      if (formData.official_image?.startsWith('blob:')) {
+        URL.revokeObjectURL(formData.official_image);
+      }
+
+      const previewUrl = URL.createObjectURL(file);
+      const hasNaverOfficial =
+        String(formData.official_image ?? '').trim().length > 0 &&
+        !formData.official_image?.startsWith('blob:');
+
+      const basePatch: Partial<ProductDetailFormData> = {
         image_url: previewUrl,
         imageFile: file,
-      }));
-      return;
-    }
+        nukkiBlob: null,
+      };
 
-    setFormData((prev) => ({
-      ...prev,
-      official_image: null,
-      image_url: previewUrl,
-      imageFile: file,
-    }));
+      if (isDirectRegisterLayout && hasNaverOfficial) {
+        setFormData((prev) => ({
+          ...prev,
+          ...basePatch,
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          ...basePatch,
+          official_image: null,
+        }));
+      }
+
+      if (!onImageFileSelected) {
+        return;
+      }
+
+      setIsImageProcessing(true);
+      try {
+        const result = await onImageFileSelected(file);
+        setFormData((prev) => ({
+          ...prev,
+          image_url: previewUrl,
+          imageFile: file,
+          official_image: result.official_image ?? prev.official_image,
+          nukkiBlob: result.nukkiBlob ?? null,
+        }));
+      } finally {
+        setIsImageProcessing(false);
+      }
+    };
+
+    void applyFileSelection();
+    e.target.value = '';
   };
 
   const handleSubmit = async () => {
@@ -443,8 +511,10 @@ export default function ProductDetailForm({
     return `${b} ${p}`.trim();
   }, [formData.brand_name, formData.product_name]);
 
-  const { data: youtubeData, isLoading: isYoutubeLoading } =
-    useYoutubeReview(youtubeQuery);
+  const { data: youtubeData, isLoading: isYoutubeLoading } = useYoutubeReview(
+    youtubeQuery,
+    { enabled: !hideYoutubeReview },
+  );
 
   const isScanEditLayout = showScanWarning;
   const scanIndexText = useMemo(() => {
@@ -503,7 +573,10 @@ export default function ProductDetailForm({
     : (headerTitle ?? '제품 상세보기');
 
   const handleCaptureShare = async () => {
-    if (!capturePreviewSrc || capturePreviewSrc === WISH_PLACEHOLDER_IMAGE_SRC) {
+    if (
+      !capturePreviewSrc ||
+      capturePreviewSrc === WISH_PLACEHOLDER_IMAGE_SRC
+    ) {
       return;
     }
     try {
@@ -524,7 +597,10 @@ export default function ProductDetailForm({
   };
 
   const handleCaptureDownload = async () => {
-    if (!capturePreviewSrc || capturePreviewSrc === WISH_PLACEHOLDER_IMAGE_SRC) {
+    if (
+      !capturePreviewSrc ||
+      capturePreviewSrc === WISH_PLACEHOLDER_IMAGE_SRC
+    ) {
       return;
     }
     try {
@@ -571,7 +647,6 @@ export default function ProductDetailForm({
                   alt=""
                   width={15}
                   height={15}
-                  unoptimized
                   className="mt-px shrink-0"
                   aria-hidden
                 />
@@ -618,7 +693,6 @@ export default function ProductDetailForm({
                       alt=""
                       width={56}
                       height={56}
-                      unoptimized
                       className="object-contain"
                       aria-hidden
                     />
@@ -650,6 +724,18 @@ export default function ProductDetailForm({
                       className="object-contain"
                       priority
                     />
+                    {isImageProcessing ? (
+                      <div
+                        className="absolute inset-0 z-20 flex items-center justify-center bg-white/70"
+                        aria-live="polite"
+                        aria-busy="true"
+                      >
+                        <Loader2
+                          className="size-8 animate-spin text-[#FF60CA]"
+                          aria-hidden
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </>
@@ -676,7 +762,6 @@ export default function ProductDetailForm({
                         alt=""
                         width={48}
                         height={48}
-                        unoptimized
                         aria-hidden
                       />
                     </button>
@@ -692,7 +777,6 @@ export default function ProductDetailForm({
                         alt=""
                         width={48}
                         height={48}
-                        unoptimized
                         aria-hidden
                       />
                     </button>
@@ -783,60 +867,60 @@ export default function ProductDetailForm({
                 />
               </div>
 
-              <div>
-                <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
-                  가격
-                </div>
-                <div className="flex min-h-[37px] items-center gap-2 rounded-[4px] border-[0.5px] border-[#DCDCDC] px-2.5 py-2">
-                  <span className="shrink-0 text-[11px] font-normal text-[#FF60CA]">
-                    최저가
-                  </span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    placeholder="0"
-                    value={formData.price || ''}
-                    onChange={(e) => handleChange('price', e.target.value)}
-                    className="min-w-0 flex-1 border-0 bg-transparent p-0 text-xs font-bold text-[#161618] outline-none placeholder:font-normal placeholder:text-[#B7B7B7]"
-                    aria-label="가격"
-                  />
-                  <span className="shrink-0 text-xs font-bold text-[#161618]">
-                    원
-                  </span>
-                  <div className="relative shrink-0">
-                    {showNaverLowestPriceTip ? (
-                      <div className="absolute right-[-10px] bottom-full z-10 mb-1 flex justify-end">
+              {!hidePrice ? (
+                <div>
+                  <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
+                    가격
+                  </div>
+                  <div className="flex min-h-[37px] items-center gap-2 rounded-[4px] border-[0.5px] border-[#DCDCDC] px-2.5 py-2">
+                    <span className="shrink-0 text-[11px] font-normal text-[#FF60CA]">
+                      최저가
+                    </span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={formData.price || ''}
+                      onChange={(e) => handleChange('price', e.target.value)}
+                      className="min-w-0 flex-1 border-0 bg-transparent p-0 text-xs font-bold text-[#161618] outline-none placeholder:font-normal placeholder:text-[#B7B7B7]"
+                      aria-label="가격"
+                    />
+                    <span className="shrink-0 text-xs font-bold text-[#161618]">
+                      원
+                    </span>
+                    <div className="relative shrink-0">
+                      {showNaverLowestPriceTip ? (
+                        <div className="absolute right-[-10px] bottom-full z-10 mb-1 flex justify-end">
+                          <Image
+                            src="/icons/네이버최저가.svg"
+                            alt="네이버 최저가 안내"
+                            width={103}
+                            height={47}
+                            className="h-auto w-[103px] max-w-[min(103px,calc(100vw-40px))]"
+                          />
+                        </div>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowNaverLowestPriceTip((open) => !open);
+                        }}
+                        className="shrink-0"
+                        aria-expanded={showNaverLowestPriceTip}
+                        aria-label="네이버 최저가 안내 보기"
+                      >
                         <Image
-                          src="/icons/네이버최저가.svg"
-                          alt="네이버 최저가 안내"
-                          width={103}
-                          height={47}
-                          unoptimized
-                          className="h-auto w-[103px] max-w-[min(103px,calc(100vw-40px))]"
+                          src="/icons/warning.svg"
+                          alt=""
+                          width={15}
+                          height={15}
+                          aria-hidden
                         />
-                      </div>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowNaverLowestPriceTip((open) => !open);
-                      }}
-                      className="shrink-0"
-                      aria-expanded={showNaverLowestPriceTip}
-                      aria-label="네이버 최저가 안내 보기"
-                    >
-                      <Image
-                        src="/icons/warning.svg"
-                        alt=""
-                        width={15}
-                        height={15}
-                        unoptimized
-                        aria-hidden
-                      />
-                    </button>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : null}
 
               <div>
                 <div className="mb-1 text-[11px] leading-[150%] font-normal text-[#6C6C6C]">
@@ -1006,17 +1090,19 @@ export default function ProductDetailForm({
                 />
               </WishFieldRow>
 
-              <WishFieldRow label="가격">
-                <Input
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="예: 28000"
-                  value={formData.price || ''}
-                  onChange={(e) => handleChange('price', e.target.value)}
-                  className="text-[var(--brand-pink)] placeholder:text-zinc-300"
-                  aria-label="가격"
-                />
-              </WishFieldRow>
+              {!hidePrice ? (
+                <WishFieldRow label="가격">
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="예: 28000"
+                    value={formData.price || ''}
+                    onChange={(e) => handleChange('price', e.target.value)}
+                    className="text-[var(--brand-pink)] placeholder:text-zinc-300"
+                    aria-label="가격"
+                  />
+                </WishFieldRow>
+              ) : null}
 
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
@@ -1082,7 +1168,6 @@ export default function ProductDetailForm({
                   alt=""
                   width={24}
                   height={24}
-                  unoptimized
                   className="mt-9 shrink-0"
                   aria-hidden
                 />
@@ -1118,7 +1203,6 @@ export default function ProductDetailForm({
                   alt=""
                   width={24}
                   height={24}
-                  unoptimized
                   className="mt-9 shrink-0"
                   aria-hidden
                 />
@@ -1155,7 +1239,7 @@ export default function ProductDetailForm({
             </div>
           )}
 
-          {!isDirectRegisterLayout ? (
+          {!isDirectRegisterLayout && !hideYoutubeReview ? (
             <section className="mt-10 border-t border-zinc-100 pt-6">
               <WishFieldLabel>연관 리뷰 영상</WishFieldLabel>
 
@@ -1235,7 +1319,7 @@ export default function ProductDetailForm({
           <button
             type="button"
             onClick={() => void handleSaveClick()}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isImageProcessing}
             className={cn(
               'h-12 w-full transition-opacity disabled:opacity-60',
               isScanEditLayout || isDirectRegisterLayout

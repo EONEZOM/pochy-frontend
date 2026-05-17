@@ -8,6 +8,5 @@
 import type { WappenItemDto } from './wappenItemDto';
 
 export interface AddWappenListDto {
-  pouchId?: number;
   items?: WappenItemDto[];
 }

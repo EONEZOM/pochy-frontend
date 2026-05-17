@@ -62,7 +62,6 @@ export function MainHomeListHeader({
               width={48}
               height={48}
               className="size-full object-cover"
-              unoptimized
               priority
             />
           ) : (

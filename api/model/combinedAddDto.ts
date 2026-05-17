@@ -9,6 +9,7 @@ import type { AddCosmeticListDto } from './addCosmeticListDto';
 import type { AddWappenListDto } from './addWappenListDto';
 
 export interface CombinedAddDto {
+  pouchName?: string;
   cosmeticList?: AddCosmeticListDto;
   wappenList?: AddWappenListDto;
 }

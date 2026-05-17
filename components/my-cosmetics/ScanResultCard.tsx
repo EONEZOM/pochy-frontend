@@ -74,7 +74,7 @@ export function ScanResultEmpty() {
     <div className="border-mono-gray flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed">
       <Image src="/icons/imgplus.svg" alt="" width={32} height={32} unoptimized className="opacity-20" />
       <p className="text-mono-dark-gray text-xs font-bold uppercase tracking-widest">
-        분석 결과 대기 중
+        {'분석 결과 대기중'}
       </p>
     </div>
   );

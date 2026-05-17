@@ -62,6 +62,8 @@ export const BOTTOM_NAV_HIDDEN_PATHS = [
   '/success',
   '/nickname',
   '/auth',
+  '/my-cosmetics/create',
+  '/my-cosmetics/pouch',
 ] as const;
 const PREPARING_PATHS = ['/my', '/feed'];
 
@@ -93,7 +95,7 @@ export function BottomNav({ className }: { className?: string }) {
       <nav
         className={cn(
           // 문서 끝에 두면 긴 페이지에서 탭이 화면 밖으로 밀림 → 뷰포트 하단 고정
-          'fixed bottom-0 left-1/2 z-40 w-full -translate-x-1/2 border-t border-mono-bright-gray bg-mono-white pb-(--safe-area-bottom)',
+          'border-mono-bright-gray bg-mono-white fixed bottom-0 left-1/2 z-40 w-full -translate-x-1/2 border-t pb-(--safe-area-bottom)',
           BOTTOM_NAV_MAX_WIDTH_CLASS,
           className,
         )}
@@ -134,7 +136,6 @@ export function BottomNav({ className }: { className?: string }) {
                       alt=""
                       width={ICON_PX}
                       height={ICON_PX}
-                      unoptimized
                       className={cn(
                         'object-contain transition-opacity duration-200',
                         active ? 'opacity-0' : 'opacity-100',
@@ -145,7 +146,6 @@ export function BottomNav({ className }: { className?: string }) {
                       alt=""
                       width={ICON_PX}
                       height={ICON_PX}
-                      unoptimized
                       className={cn(
                         'absolute inset-0 m-auto object-contain transition-opacity duration-200',
                         active ? 'opacity-100' : 'opacity-0',

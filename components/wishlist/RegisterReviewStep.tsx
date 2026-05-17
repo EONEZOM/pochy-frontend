@@ -16,10 +16,15 @@ import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 
 interface ReviewStepProps {
-  results: any[];
-  setResults: (results: any[]) => void;
+  results: Record<string, unknown>[];
+  setResults: (results: Record<string, unknown>[]) => void;
   onSave: () => void;
   onCancel: () => void;
+  saveButtonLabel?: string;
+  hidePriceOnDetail?: boolean;
+  isSavePending?: boolean;
+  cardImageObjectFit?: 'cover' | 'contain';
+  hideYoutubeReview?: boolean;
 }
 
 export default function RegisterReviewStep({
@@ -27,6 +32,11 @@ export default function RegisterReviewStep({
   setResults,
   onSave,
   onCancel,
+  saveButtonLabel = '위시리스트 등록하기',
+  hidePriceOnDetail = false,
+  isSavePending = false,
+  cardImageObjectFit = 'cover',
+  hideYoutubeReview = false,
 }: ReviewStepProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
@@ -71,6 +81,8 @@ export default function RegisterReviewStep({
         key={selectedIndex}
         initialData={results[selectedIndex]}
         showScanWarning={true}
+        hidePrice={hidePriceOnDetail}
+        hideYoutubeReview={hideYoutubeReview}
         scanItemIndex={selectedIndex}
         scanItemCount={results.length}
         onScanPrev={handleScanPrev}
@@ -105,6 +117,7 @@ export default function RegisterReviewStep({
               <ResultCard
                 key={`${String(item.product_name)}-${idx}`}
                 item={item}
+                imageObjectFit={cardImageObjectFit}
                 onSelect={() => setSelectedIndex(idx)}
                 onDelete={() => handleDelete(idx)}
               />
@@ -116,10 +129,10 @@ export default function RegisterReviewStep({
           <Button
             type="button"
             onClick={onSave}
-            disabled={results.length === 0}
+            disabled={results.length === 0 || isSavePending}
             className="h-14 w-full rounded-full border-0 bg-[#FF93DB] px-6 text-base font-bold text-[#161618] hover:bg-[#FF85D5] disabled:opacity-40"
           >
-            위시리스트 등록하기
+            {isSavePending ? '등록 중...' : saveButtonLabel}
           </Button>
         </div>
       </div>

@@ -9,7 +9,7 @@
 export interface PouchWappenDetailDto {
   id?: number;
   wappenId?: number;
+  xpoint?: number;
   ypoint?: number;
   zindex?: number;
-  xpoint?: number;
 }

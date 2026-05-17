@@ -166,7 +166,6 @@ function WishlistPageContent() {
                     alt=""
                     width={20}
                     height={20}
-                    unoptimized
                   />
                 </button>
               }
@@ -289,7 +288,6 @@ function WishlistPageContent() {
                 alt=""
                 width={200}
                 height={100}
-                unoptimized
                 className="block h-auto w-full"
                 priority
               />

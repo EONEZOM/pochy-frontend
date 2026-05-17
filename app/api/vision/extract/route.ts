@@ -1,6 +1,7 @@
 import { CATEGORY_SPECS } from '@/constants/category';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import type { ChatCompletionContentPart } from 'openai/resources/chat/completions';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
           role: 'user',
           content: [
             { type: 'text', text: '이미지 속 모든 화장품 정보를 추출해줘.' },
-            ...images.map((img: string) => {
+            ...images.map((img: string): ChatCompletionContentPart => {
               const imageUrl = img.startsWith('data:')
                 ? img
                 : `data:image/jpeg;base64,${img}`;
@@ -86,7 +87,7 @@ export async function POST(req: Request) {
                 },
               };
             }),
-          ] as any,
+          ],
         },
       ],
       response_format: { type: 'json_object' },

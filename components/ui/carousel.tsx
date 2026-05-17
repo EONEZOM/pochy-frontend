@@ -231,7 +231,6 @@ function CarouselPrevious({
         alt=""
         width={24}
         height={24}
-        unoptimized
         className="pointer-events-none size-6 shrink-0 object-contain"
         aria-hidden
       />
@@ -286,7 +285,6 @@ function CarouselNext({
         alt=""
         width={24}
         height={24}
-        unoptimized
         className="pointer-events-none size-6 shrink-0 object-contain"
         aria-hidden
       />

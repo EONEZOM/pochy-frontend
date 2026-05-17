@@ -457,7 +457,6 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
                 alt=""
                 width={18}
                 height={18}
-                unoptimized
                 className="shrink-0"
               />
               수정하기
@@ -546,7 +545,6 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
                         alt="네이버 쇼핑 최저가 기준 안내"
                         width={165}
                         height={75}
-                        unoptimized
                         className="block h-auto w-[165px] max-w-[min(165px,calc(100vw-32px))]"
                       />
                     </PopoverContent>
@@ -702,7 +700,6 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
                     alt=""
                     width={20}
                     height={20}
-                    unoptimized
                     className="mt-0.5 shrink-0"
                     aria-hidden
                   />
@@ -747,10 +744,6 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
                 alt=""
                 fill
                 className="object-cover"
-                unoptimized={
-                  currentCaptureImageSrc.startsWith('data:') ||
-                  currentCaptureImageSrc.endsWith('.svg')
-                }
               />
             </button>
           </div>
@@ -877,10 +870,6 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
                 alt="원본 캡처 화면"
                 fill
                 className="object-contain"
-                unoptimized={
-                  currentCaptureImageSrc.startsWith('data:') ||
-                  currentCaptureImageSrc.endsWith('.svg')
-                }
               />
             </motion.div>
 
@@ -968,7 +957,6 @@ function WishFieldRow({
             alt=""
             width={20}
             height={20}
-            unoptimized
             className="shrink-0"
             aria-hidden
           />

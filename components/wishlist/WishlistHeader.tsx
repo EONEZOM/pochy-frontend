@@ -54,13 +54,7 @@ export function WishlistHeader() {
           aria-label="뒤로 가기"
           onClick={() => router.back()}
         >
-          <Image
-            src="/icons/back.svg"
-            alt=""
-            width={24}
-            height={24}
-            unoptimized
-          />
+          <Image src="/icons/back.svg" alt="" width={24} height={24} />
         </button>
         <div className="min-w-0 flex-1">
           <Input
@@ -85,7 +79,6 @@ export function WishlistHeader() {
                   alt="돋보기아이콘"
                   width={24}
                   height={24}
-                  unoptimized
                 />
               </button>
             }

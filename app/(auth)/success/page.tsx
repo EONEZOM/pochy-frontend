@@ -75,8 +75,16 @@ export default function AuthSuccessPage() {
 
         try {
           if (!needsNicknameSetup) {
-            await ensureDefaultProfileImage();
+            try {
+              await ensureDefaultProfileImage();
+            } catch (firstError) {
+              console.error('[success] default profile save failed', firstError);
+              await ensureDefaultProfileImage();
+            }
           }
+        } catch (error) {
+          console.error('[success] default profile retry failed', error);
+        } finally {
           await Promise.all([
             queryClient.invalidateQueries({
               queryKey: getGetHomeDataQueryKey(),
@@ -85,9 +93,6 @@ export default function AuthSuccessPage() {
               queryKey: getGetMyProfileQueryKey(),
             }),
           ]);
-        } catch (error) {
-          console.error('[success] default profile save failed', error);
-        } finally {
           clearOAuthSignupHints();
         }
 
@@ -196,7 +201,6 @@ function SuccessStatusContent({
         width={63}
         height={63}
         className="size-[100px] shrink-0 object-contain"
-        unoptimized
         priority
       />
       <h1 className="text-mono-jet mt-8 text-xl leading-7 font-bold">

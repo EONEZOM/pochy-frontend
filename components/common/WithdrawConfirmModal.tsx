@@ -83,7 +83,6 @@ export function WithdrawConfirmModal({
             alt=""
             width={30}
             height={30}
-            unoptimized
             className="size-8 shrink-0"
             aria-hidden
           />
