@@ -2,20 +2,22 @@ import type {
   AddCosmeticDetailDto,
   ApiResponseDTOString,
   ApiResponseDTOPouchListDto,
-  CombinedAddDto,
 } from '@/api/model';
 import {
-  addCosmeticsToPouch,
   getPouchList,
-  updatePouch,
   uploadPouchCompositeImage,
 } from '@/api/generated/pouch-controller/pouch-controller';
+import {
+  createPouchMultipart,
+  updatePouchMultipart,
+} from '@/lib/pouch-api';
 import {
   buildCombinedAddDto,
   layersToSavePayload,
   type CanvasLayer,
   type CanvasRect,
 } from '@/lib/pouch-canvas';
+import { clearPouchDraft } from '@/lib/pouch-draft';
 
 export const PENDING_POUCH_NAME_KEY = 'pendingPouchName';
 export const PENDING_POUCH_ID_KEY = 'pendingPouchId';
@@ -37,26 +39,6 @@ const POUCH_ITEM_LAYOUT_BASE_X = 80;
 const POUCH_ITEM_LAYOUT_BASE_Y = 120;
 const POUCH_ITEM_LAYOUT_STEP_X = 72;
 const POUCH_ITEM_LAYOUT_STEP_Y = 72;
-
-/** OpenAPI 미기재 — 신규 파우치 생성 시 백엔드가 받을 수 있는 필드 */
-type AddCosmeticListWithName = {
-  pouchId?: number;
-  name?: string;
-  pouchName?: string;
-  items?: AddCosmeticDetailDto[];
-};
-
-const toCombinedAddDto = (
-  cosmeticList: AddCosmeticListWithName,
-): CombinedAddDto => ({
-  cosmeticList: cosmeticList as CombinedAddDto['cosmeticList'],
-});
-
-const isAxiosError = (err: unknown): err is {
-  response?: { status?: number; data?: unknown };
-} => {
-  return typeof err === 'object' && err !== null && 'response' in err;
-};
 
 export const savePendingPouchName = (name: string) => {
   if (typeof window === 'undefined') {
@@ -215,39 +197,7 @@ const resolvePouchIdAfterAdd = async (
   throw new Error('파우치를 생성하지 못했습니다.');
 };
 
-const patchPouchNameIfNeeded = async (pouchId: number, name: string) => {
-  const trimmedName = name.trim();
-  if (!trimmedName) {
-    return;
-  }
-  try {
-    await updatePouch(pouchId, { request: { name: trimmedName } });
-  } catch {
-    // 1차 POST에 이름이 반영됐을 수 있음 — PATCH 실패는 무시
-  }
-};
-
-const buildBootstrapCosmeticListVariants = (
-  name: string,
-  items: AddCosmeticDetailDto[],
-): AddCosmeticListWithName[] => {
-  const trimmedName = name.trim();
-  const variants: AddCosmeticListWithName[] = [];
-
-  if (trimmedName) {
-    variants.push({ name: trimmedName, items });
-    variants.push({ name: trimmedName, pouchName: trimmedName, items });
-  }
-
-  variants.push({ items });
-
-  return variants;
-};
-
-/**
- * OpenAPI에 POST /api/pouches 없음.
- * 신규 파우치: 이름 + 선택 화장품 전체를 한 번에 POST (분할 추가는 pouchId 확보 후만).
- */
+/** POST /api/pouches — 신규 파우치 + 선택 화장품 */
 const bootstrapPouchWithItems = async (
   name: string,
   items: AddCosmeticDetailDto[],
@@ -256,24 +206,15 @@ const bootstrapPouchWithItems = async (
     throw new Error('파우치에 넣을 화장품을 선택해 주세요.');
   }
 
-  const variants = buildBootstrapCosmeticListVariants(name, items);
-  let lastError: unknown;
+  const createRes = await createPouchMultipart({
+    request: buildCombinedAddDto({
+      pouchName: name,
+      cosmeticItems: items,
+      wappenItems: [],
+    }),
+  });
 
-  for (const cosmeticList of variants) {
-    try {
-      const createRes = await addCosmeticsToPouch(toCombinedAddDto(cosmeticList));
-      const pouchId = await resolvePouchIdAfterAdd(createRes);
-      await patchPouchNameIfNeeded(pouchId, name);
-      return pouchId;
-    } catch (err) {
-      lastError = err;
-      if (!isAxiosError(err) || err.response?.status !== 500) {
-        throw err;
-      }
-    }
-  }
-
-  throw lastError ?? new Error('파우치를 생성하지 못했습니다.');
+  return resolvePouchIdAfterAdd(createRes);
 };
 
 const resolvePouchIdForSave = async (
@@ -359,23 +300,25 @@ export const savePouchDecoration = async (
     throw new Error('파우치에 넣을 화장품을 선택해 주세요.');
   }
 
+  const request = buildCombinedAddDto({
+    pouchName: trimmedName,
+    cosmeticItems,
+    wappenItems,
+  });
+
   let pouchId = await resolvePouchIdForSave(pouchIdParam);
 
   if (pouchId == null) {
-    pouchId = await bootstrapPouchWithItems(trimmedName, cosmeticItems);
-    if (wappenItems.length > 0) {
-      await addCosmeticsToPouch(
-        buildCombinedAddDto(pouchId, [], wappenItems),
-      );
-    }
+    const createRes = await createPouchMultipart({
+      request,
+      pouchImage: compositeBlob,
+    });
+    pouchId = await resolvePouchIdAfterAdd(createRes);
   } else {
-    await patchPouchNameIfNeeded(pouchId, trimmedName);
-    await addCosmeticsToPouch(
-      buildCombinedAddDto(pouchId, cosmeticItems, wappenItems),
-    );
+    await updatePouchMultipart(pouchId, { request });
+    await uploadPouchCompositeImage(pouchId, { pouchImage: compositeBlob });
   }
 
-  await uploadPouchCompositeImage(pouchId, { pouchImage: compositeBlob });
   savePendingPouchId(pouchId);
 
   return pouchId;
@@ -393,13 +336,13 @@ export const savePouchWithCosmetics = async (
   const pouchId = await resolvePouchIdForSave(pouchIdParam);
 
   if (pouchId != null) {
-    await patchPouchNameIfNeeded(pouchId, trimmedName);
-    await addCosmeticsToPouch(
-      toCombinedAddDto({
-        pouchId,
-        items,
+    await updatePouchMultipart(pouchId, {
+      request: buildCombinedAddDto({
+        pouchName: trimmedName,
+        cosmeticItems: items,
+        wappenItems: [],
       }),
-    );
+    });
     return pouchId;
   }
 
@@ -409,6 +352,7 @@ export const savePouchWithCosmetics = async (
 export const clearPouchSetupSession = () => {
   clearPendingPouchName();
   clearPendingPouchId();
+  clearPouchDraft();
 };
 
 export const getPouchSaveErrorMessage = (err: unknown): string => {

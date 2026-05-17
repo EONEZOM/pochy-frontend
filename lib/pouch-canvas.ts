@@ -1,5 +1,7 @@
 import { toBlob } from 'html-to-image';
 
+import { toSameOriginImageProxyUrl } from '@/lib/next-image-src';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import type {
   AddCosmeticDetailDto,
   CombinedAddDto,
@@ -23,6 +25,7 @@ export type CanvasLayer = {
   width: number;
   height: number;
   zIndex: number;
+  rotation?: number;
   myCosmeticId?: number;
   wappenId?: number;
 };
@@ -32,11 +35,27 @@ export type CanvasRect = {
   height: number;
 };
 
-const createLayerId = () => {
+export const createCanvasLayerId = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
   return `layer-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+};
+
+/** layer.id 중복 시 새 id를 부여합니다 (드래프트·복원 데이터 방어). */
+export const ensureUniqueCanvasLayerIds = (
+  layers: CanvasLayer[],
+): CanvasLayer[] => {
+  const seen = new Set<string>();
+  return layers.map((layer) => {
+    if (!seen.has(layer.id)) {
+      seen.add(layer.id);
+      return layer;
+    }
+    const id = createCanvasLayerId();
+    seen.add(id);
+    return { ...layer, id };
+  });
 };
 
 export const createCenteredLayer = (
@@ -55,7 +74,7 @@ export const createCenteredLayer = (
   const y = Math.max(0, (canvasRect.height - size) / 2);
 
   return {
-    id: createLayerId(),
+    id: createCanvasLayerId(),
     kind,
     src,
     x,
@@ -63,6 +82,7 @@ export const createCenteredLayer = (
     width: size,
     height: size,
     zIndex: options.zIndex,
+    rotation: 0,
     myCosmeticId: options.myCosmeticId,
     wappenId: options.wappenId,
   };
@@ -139,21 +159,27 @@ export const layersToSavePayload = (
   return { cosmeticItems, wappenItems };
 };
 
-export const buildCombinedAddDto = (
-  pouchId: number,
-  cosmeticItems: AddCosmeticDetailDto[],
-  wappenItems: WappenItemDto[],
-): CombinedAddDto => {
+export type BuildCombinedAddDtoParams = {
+  pouchName?: string;
+  cosmeticItems: AddCosmeticDetailDto[];
+  wappenItems: WappenItemDto[];
+};
+
+export const buildCombinedAddDto = ({
+  pouchName,
+  cosmeticItems,
+  wappenItems,
+}: BuildCombinedAddDtoParams): CombinedAddDto => {
+  const trimmedName = pouchName?.trim();
   const payload: CombinedAddDto = {
+    ...(trimmedName ? { pouchName: trimmedName } : {}),
     cosmeticList: {
-      pouchId,
       items: cosmeticItems,
     },
   };
 
   if (wappenItems.length > 0) {
     payload.wappenList = {
-      pouchId,
       items: wappenItems,
     };
   }
@@ -177,15 +203,23 @@ export const exportPouchCanvas = async (
   return blob;
 };
 
+const toPouchLayerImageSrc = (raw: string | null | undefined) => {
+  const resolved = resolveMediaUrl(raw);
+  if (!resolved) {
+    return '';
+  }
+  return toSameOriginImageProxyUrl(resolved);
+};
+
 export const getCosmeticImageSrc = (item: {
   captureUrl?: string | null;
   imgUrl?: string | null;
 }) => {
   const capture = item.captureUrl?.trim();
   if (capture) {
-    return capture;
+    return toPouchLayerImageSrc(capture);
   }
-  return item.imgUrl?.trim() ?? '';
+  return toPouchLayerImageSrc(item.imgUrl);
 };
 
 /** OpenAPI imageUrl 추가 전·후 모두 대응 */
@@ -208,7 +242,7 @@ export const getWappenImageSrc = (wappen: {
 }) => {
   const url = wappen.imageUrl?.trim();
   if (url) {
-    return url;
+    return toPouchLayerImageSrc(url);
   }
   if (wappen.wappenId != null) {
     return `/api/wappens/${wappen.wappenId}/image`;
