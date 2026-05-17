@@ -31,7 +31,6 @@ export function MainHomeTopZipperWithLogo({
         src="/figma/main/윗지퍼.svg"
         alt=""
         fill
-        unoptimized
         className={cn(
           'top-[-10px] h-[calc(100%+50px)] origin-bottom object-cover object-bottom',
           imageClassName,
@@ -45,7 +44,6 @@ export function MainHomeTopZipperWithLogo({
           alt="POCHY"
           width={144}
           height={96}
-          unoptimized
           className="h-auto w-[min(200px,34vw)] object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.15)]"
           priority
         />

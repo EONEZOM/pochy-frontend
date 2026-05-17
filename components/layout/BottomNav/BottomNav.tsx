@@ -62,6 +62,8 @@ export const BOTTOM_NAV_HIDDEN_PATHS = [
   '/success',
   '/nickname',
   '/auth',
+  '/my-cosmetics/create',
+  '/my-cosmetics/pouch',
 ] as const;
 const PREPARING_PATHS = ['/my', '/feed'];
 
@@ -134,7 +136,6 @@ export function BottomNav({ className }: { className?: string }) {
                       alt=""
                       width={ICON_PX}
                       height={ICON_PX}
-                      unoptimized
                       className={cn(
                         'object-contain transition-opacity duration-200',
                         active ? 'opacity-0' : 'opacity-100',
@@ -145,7 +146,6 @@ export function BottomNav({ className }: { className?: string }) {
                       alt=""
                       width={ICON_PX}
                       height={ICON_PX}
-                      unoptimized
                       className={cn(
                         'absolute inset-0 m-auto object-contain transition-opacity duration-200',
                         active ? 'opacity-100' : 'opacity-0',

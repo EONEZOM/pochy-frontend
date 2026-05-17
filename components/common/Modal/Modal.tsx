@@ -114,13 +114,7 @@ export function Modal({
         {!hideIcon && (
           <div className="mx-auto mb-3 flex size-6 items-center justify-center">
             {variant === 'warning' ? (
-              <Image
-                src={WARNING_ICON_SRC}
-                alt=""
-                width={24}
-                height={24}
-                unoptimized
-              />
+              <Image src={WARNING_ICON_SRC} alt="" width={24} height={24} />
             ) : null}
             {variant === 'success' ? (
               <CheckCircle2 className="size-6 text-black" />

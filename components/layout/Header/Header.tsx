@@ -20,27 +20,11 @@ import { withViewTransition } from '@/lib/view-transition-navigate';
 const ICON_CONFIG = {
   search: {
     label: '검색',
-    element: (
-      <Image
-        src={HEADER_ICON.search}
-        alt=""
-        width={24}
-        height={24}
-        unoptimized
-      />
-    ),
+    element: <Image src={HEADER_ICON.search} alt="" width={24} height={24} />,
   },
   filter: {
     label: '필터',
-    element: (
-      <Image
-        src={HEADER_ICON.filter}
-        alt=""
-        width={24}
-        height={24}
-        unoptimized
-      />
-    ),
+    element: <Image src={HEADER_ICON.filter} alt="" width={24} height={24} />,
   },
   register: {
     label: '등록',
@@ -148,13 +132,7 @@ export default function Header({
             aria-label={backAriaLabel}
             onClick={handleBack}
           >
-            <Image
-              src={HEADER_ICON.back}
-              alt=""
-              width={24}
-              height={24}
-              unoptimized
-            />
+            <Image src={HEADER_ICON.back} alt="" width={24} height={24} />
           </Button>
         )}
       </div>
@@ -202,7 +180,6 @@ export default function Header({
                   alt="검색"
                   width={18}
                   height={18}
-                  unoptimized
                 />
               </button>
             }
@@ -224,7 +201,6 @@ export default function Header({
                     alt=""
                     width={18}
                     height={18}
-                    unoptimized
                     className="shrink-0"
                   />
                   <span className="text-sm font-semibold">{item.text}</span>

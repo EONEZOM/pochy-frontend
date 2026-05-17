@@ -83,13 +83,7 @@ export function ExtraNav({
               const content = (
                 <>
                   {item.icon && (
-                    <Image
-                      src={item.icon}
-                      alt=""
-                      width={20}
-                      height={20}
-                      unoptimized
-                    />
+                    <Image src={item.icon} alt="" width={20} height={20} />
                   )}
                   <span className="text-sm font-semibold text-zinc-900">
                     {item.label}
@@ -182,7 +176,6 @@ export function ExtraNav({
                     alt=""
                     width={20}
                     height={20}
-                    unoptimized
                     className="transition-all group-hover:brightness-0 group-hover:invert"
                   />
                 )}

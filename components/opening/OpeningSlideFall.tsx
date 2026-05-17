@@ -38,7 +38,6 @@ export const OpeningSlideFall = () => {
               alt=""
               width={456}
               height={2398}
-              unoptimized
               className={cn(SLIDE_IMAGE_CLASS, 'shrink-0')}
               priority
             />
@@ -52,7 +51,6 @@ export const OpeningSlideFall = () => {
               alt=""
               width={456}
               height={2398}
-              unoptimized
               className={cn(SLIDE_IMAGE_CLASS, 'shrink-0')}
             />
           </div>

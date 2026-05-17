@@ -98,7 +98,6 @@ export function MainHomeEmptyView() {
                     alt=""
                     fill
                     sizes="(max-width: 640px) 38vw, 522px"
-                    unoptimized
                     priority={tileIndex < 2}
                     {...(tileIndex === 0
                       ? { fetchPriority: 'high' as const }
