@@ -18,6 +18,7 @@ import {
   resolveDisplayImageSrc,
   shouldBypassNextImageOptimizer,
 } from '@/lib/next-image-src';
+import { buildPouchDetailPath } from '@/lib/pouch-setup';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
 import { useDragScroll } from '@/hooks/useDragScroll';
@@ -116,7 +117,7 @@ const getItemDetailHref = (
     case 1:
       return `/my-cosmetics/${id}`;
     case 2:
-      return null;
+      return buildPouchDetailPath(id, '');
     default:
       return null;
   }

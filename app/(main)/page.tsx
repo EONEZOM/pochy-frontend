@@ -138,13 +138,11 @@ function MainPageContent() {
     sort: 'desc',
     size: 100,
   });
-  const {
-    data: myCosmeticsResponse,
-    isLoading: isMyCosmeticsLoading,
-  } = useSearchMyCosmetics({
-    sort: 'desc',
-    size: 100,
-  });
+  const { data: myCosmeticsResponse, isLoading: isMyCosmeticsLoading } =
+    useSearchMyCosmetics({
+      sort: 'desc',
+      size: 100,
+    });
   const { data: profileResponse } = useGetMyProfile();
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
@@ -250,8 +248,8 @@ function MainPageContent() {
 
   const sections: Array<{ title: string; items: Detail[] }> = [
     { title: 'Wish List', items: wishItems },
-    { title: 'My Pouch', items: myPouchItems },
-    { title: 'Feed', items: homeData?.feed ?? [] },
+    { title: 'My Cosmetics', items: myPouchItems },
+    { title: 'My Pouch', items: homeData?.feed ?? [] },
   ];
 
   const showHomeSkeleton =

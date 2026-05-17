@@ -30,7 +30,7 @@ export function MainHomeListHeader({
 }: MainHomeListHeaderProps) {
   if (isLoading) {
     return (
-      <div className="mx-auto flex w-full max-w-[360px] animate-pulse items-center gap-3">
+      <div className="mx-auto flex w-full animate-pulse items-center gap-3">
         <div className="min-w-0 flex-1 space-y-2 py-0.5">
           <div className="bg-mono-bright-gray h-3 w-16 rounded" />
           <div className="bg-mono-bright-gray h-5 w-40 max-w-full rounded" />
@@ -45,7 +45,7 @@ export function MainHomeListHeader({
   const displayName = nickname?.trim() ? nickname.trim() : '포치';
 
   return (
-    <div className="mx-auto flex w-full max-w-[360px] items-center gap-3">
+    <div className="mx-auto flex w-full items-center gap-3">
       <div className="min-w-0 flex-1">
         <p className="text-right text-xs leading-4 font-bold text-[#FF60CA]">
           반가워요 {displayName}님,
