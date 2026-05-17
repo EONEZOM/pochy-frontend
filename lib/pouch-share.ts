@@ -1,5 +1,9 @@
 import { toBlob } from 'html-to-image';
 
+import { uploadPouchCompositeImageMultipart } from '@/lib/pouch-api';
+import { embedPngTextChunks } from '@/lib/png-text-metadata';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
+
 export const POUCH_SHARE_CAPTURE_ID = 'pouch-share-capture';
 
 export const buildPouchDetailShareUrl = (
@@ -11,6 +15,94 @@ export const buildPouchDetailShareUrl = (
     ? `?name=${encodeURIComponent(name.trim())}`
     : '';
   return `${origin}/my-cosmetics/pouch/${pouchId}${query}`;
+};
+
+/** 카카오 피드 미리보기용 — 공개 HTTPS URL만 사용 (프록시·blob 불가) */
+export const resolveKakaoFeedImageUrl = (
+  imageUrl: string | null | undefined,
+): string | null => {
+  const resolved = resolveMediaUrl(imageUrl)?.trim();
+  if (!resolved || !/^https:\/\//i.test(resolved)) {
+    return null;
+  }
+  return resolved;
+};
+
+export const ensureKakaoShareImageUrl = async ({
+  imageUrl,
+  pouchId,
+  captureBlob,
+}: {
+  imageUrl?: string | null;
+  pouchId: number;
+  captureBlob?: Blob | null;
+}): Promise<string | null> => {
+  const fromList = resolveKakaoFeedImageUrl(imageUrl);
+  if (fromList) {
+    return fromList;
+  }
+  if (!captureBlob || captureBlob.size === 0) {
+    return null;
+  }
+  try {
+    const response = await uploadPouchCompositeImageMultipart(
+      pouchId,
+      captureBlob,
+    );
+    return resolveKakaoFeedImageUrl(response.result);
+  } catch {
+    return null;
+  }
+};
+
+const INVALID_DOWNLOAD_FILENAME_CHARS = /[<>:"/\\|?*\u0000-\u001f]/g;
+
+export const buildPouchShareDownloadFilename = (
+  pouchName: string,
+  pouchId: number,
+): string => {
+  const base =
+    pouchName
+      .trim()
+      .replace(INVALID_DOWNLOAD_FILENAME_CHARS, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80) || `pouch-${pouchId}`;
+  return `${base}.png`;
+};
+
+export type PouchShareImageMetadata = {
+  pouchId: number;
+  pouchName: string;
+  linkUrl?: string;
+};
+
+export const preparePouchSharePng = async (
+  blob: Blob,
+  metadata: PouchShareImageMetadata,
+): Promise<{ blob: Blob; filename: string }> => {
+  const filename = buildPouchShareDownloadFilename(
+    metadata.pouchName,
+    metadata.pouchId,
+  );
+  const description =
+    metadata.linkUrl?.trim() || `POCHY 파우치 · #${metadata.pouchId}`;
+  const comment = JSON.stringify({
+    pouchId: metadata.pouchId,
+    name: metadata.pouchName,
+    linkUrl: metadata.linkUrl ?? null,
+    app: 'POCHY',
+  });
+
+  const withMetadata = await embedPngTextChunks(blob, [
+    { keyword: 'Title', text: metadata.pouchName },
+    { keyword: 'Description', text: description },
+    { keyword: 'Software', text: 'POCHY' },
+    { keyword: 'Comment', text: comment },
+    { keyword: 'pouchId', text: String(metadata.pouchId) },
+  ]);
+
+  return { blob: withMetadata, filename };
 };
 
 export const captureShareElement = async (
@@ -111,12 +203,14 @@ export const shareViaKakao = async (options: {
     window.Kakao?.init(jsKey);
   }
 
+  const feedImageUrl = resolveKakaoFeedImageUrl(options.imageUrl);
+
   window.Kakao?.Share.sendDefault({
     objectType: 'feed',
     content: {
       title: options.title,
       description: options.description,
-      imageUrl: options.imageUrl,
+      ...(feedImageUrl ? { imageUrl: feedImageUrl } : {}),
       link: {
         mobileWebUrl: options.linkUrl,
         webUrl: options.linkUrl,
@@ -134,13 +228,21 @@ export const shareViaKakao = async (options: {
   });
 };
 
-export const shareImageFile = async (blob: Blob, title: string) => {
+export const shareImageFile = async (
+  blob: Blob,
+  metadata: PouchShareImageMetadata,
+) => {
   if (!navigator.share || !navigator.canShare) {
     throw new Error('이 기기에서는 공유를 지원하지 않습니다.');
   }
-  const file = new File([blob], 'pouch-share.png', { type: 'image/png' });
+  const { blob: prepared, filename } = await preparePouchSharePng(blob, metadata);
+  const file = new File([prepared], filename, { type: 'image/png' });
   if (!navigator.canShare({ files: [file] })) {
     throw new Error('이미지 공유를 지원하지 않습니다.');
   }
-  await navigator.share({ title, files: [file] });
+  await navigator.share({
+    title: metadata.pouchName,
+    text: metadata.linkUrl,
+    files: [file],
+  });
 };

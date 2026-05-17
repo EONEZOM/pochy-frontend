@@ -1,10 +1,13 @@
 'use client';
 
+import { useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
+import { resolveDisplayImageSrc } from '@/lib/next-image-src';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 
 const POUCH_COMPLETE_GRADIENT =
   'linear-gradient(180deg, rgba(255, 255, 255, 1) 31%, rgba(255, 198, 236, 1) 100%)';
@@ -19,6 +22,14 @@ export function PouchCompleteView({
   imageUrl,
 }: PouchCompleteViewProps) {
   const router = useRouter();
+
+  const displayImageUrl = useMemo(() => {
+    if (!imageUrl?.trim()) {
+      return null;
+    }
+    const resolved = resolveDisplayImageSrc(resolveMediaUrl(imageUrl));
+    return resolved || null;
+  }, [imageUrl]);
 
   const handleGoToList = () => {
     router.replace('/my-cosmetics');
@@ -45,10 +56,10 @@ export function PouchCompleteView({
           </div>
 
           <div className="relative flex w-full items-center justify-center">
-            {imageUrl ? (
+            {displayImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={imageUrl}
+                src={displayImageUrl}
                 alt={pouchName}
                 className="max-h-[min(50vh,420px)] w-auto max-w-full object-contain"
               />
