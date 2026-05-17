@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -55,12 +55,105 @@ import {
 import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
-import type { MyCosmeticsResponseDTO } from '@/api/model';
+import type { MyCosmeticsResponseDTO, PouchDetailDto } from '@/api/model';
 
 const POUCHY_SRC = '/figma/my/pouchy.svg';
 const SPEECH_BUBBLE_SRC = '/figma/my/말풍선.svg';
 
+const POUCH_EDIT_CANVAS_RECT = {
+  width: 320,
+  height: 460,
+} as const;
+
 type PickerStep = 'select' | 'decorate';
+
+type EditRestorePayload = {
+  selectedOrder: number[];
+  itemMemos: Record<number, string>;
+  layers: CanvasLayer[];
+  nextZIndex: number;
+};
+
+const buildEditRestorePayload = (
+  detail: PouchDetailDto,
+  itemsById: Map<number, MyCosmeticsResponseDTO>,
+  wappenImageUrlById: Map<number, string>,
+): EditRestorePayload => {
+  const cosmeticIds =
+    detail.cosmetics
+      ?.map((c) => c.myCosmeticId)
+      .filter((id): id is number => typeof id === 'number' && id > 0) ?? [];
+
+  const memos: Record<number, string> = {};
+  for (const c of detail.cosmetics ?? []) {
+    if (c.myCosmeticId != null && c.memo?.trim()) {
+      memos[c.myCosmeticId] = c.memo;
+    }
+  }
+
+  const restoredLayers: CanvasLayer[] = [];
+  let nextLayerZIndex = 1;
+
+  for (const c of detail.cosmetics ?? []) {
+    const myCosmeticId = c.myCosmeticId;
+    if (myCosmeticId == null) {
+      continue;
+    }
+    const item = itemsById.get(myCosmeticId);
+    const src = item ? getCosmeticImageSrc(item) : '';
+    if (!src) {
+      continue;
+    }
+    const layerZIndex = c.zindex ?? nextLayerZIndex;
+    const pos = apiPointToLayerPosition(
+      c.xpoint ?? 160,
+      c.ypoint ?? 230,
+      POUCH_EDIT_CANVAS_RECT,
+    );
+    restoredLayers.push({
+      id: createCanvasLayerId(),
+      kind: 'cosmetic',
+      src,
+      myCosmeticId,
+      zIndex: layerZIndex,
+      ...pos,
+    });
+    nextLayerZIndex = Math.max(nextLayerZIndex, layerZIndex) + 1;
+  }
+
+  for (const w of detail.wappens ?? []) {
+    const wappenId = w.wappenId;
+    if (wappenId == null) {
+      continue;
+    }
+    const src = getWappenImageSrc({
+      wappenId,
+      imageUrl: wappenImageUrlById.get(wappenId),
+    });
+    const layerZIndex = w.zindex ?? nextLayerZIndex;
+    const pos = apiPointToLayerPosition(
+      w.xpoint ?? 160,
+      w.ypoint ?? 230,
+      POUCH_EDIT_CANVAS_RECT,
+    );
+    restoredLayers.push({
+      id: createCanvasLayerId(),
+      kind: 'wappen',
+      src,
+      wappenId,
+      zIndex: layerZIndex,
+      ...pos,
+    });
+    nextLayerZIndex = Math.max(nextLayerZIndex, layerZIndex) + 1;
+  }
+
+  return {
+    selectedOrder: cosmeticIds,
+    itemMemos: memos,
+    layers: ensureUniqueCanvasLayerIds(restoredLayers),
+    nextZIndex: nextLayerZIndex,
+  };
+};
 
 type PouchItemsPickerProps = {
   pouchId: string;
@@ -91,9 +184,9 @@ export function PouchItemsPicker({
   const [layers, setLayers] = useState<CanvasLayer[]>([]);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
   const [nextZIndex, setNextZIndex] = useState(1);
-  const [hasInitializedEdit, setHasInitializedEdit] = useState(false);
-  const [isDraftReady, setIsDraftReady] = useState(false);
+  const [isDraftReady, setIsDraftReady] = useState(() => isEditMode || hasNumericPouchId);
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false);
+  const appliedEditRestorePouchIdRef = useRef<number | null>(null);
 
   const isDraftFlow = !isEditMode && !hasNumericPouchId;
 
@@ -192,9 +285,9 @@ export function PouchItemsPicker({
     setIsSheetExpanded(false);
   }, []);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- localStorage 드래프트는 마운트 후 판별 */
   useEffect(() => {
     if (!isDraftFlow) {
-      setIsDraftReady(true);
       return;
     }
 
@@ -222,6 +315,7 @@ export function PouchItemsPicker({
 
     setIsDraftReady(true);
   }, [applyDraft, isDraftFlow, isFresh, isResume]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!isDraftFlow || !isDraftReady || isDraftModalOpen) {
@@ -264,112 +358,42 @@ export function PouchItemsPicker({
     setIsDraftReady(true);
   };
 
-  useEffect(() => {
-    if (!isEditMode || !hasNumericPouchId || hasInitializedEdit) {
-      return;
+  const editRestorePayload = useMemo(() => {
+    if (!isEditMode || !hasNumericPouchId) {
+      return null;
     }
     const detail = pouchDetailData?.result;
-    if (!detail) {
-      return;
+    if (!detail || isLoading) {
+      return null;
     }
-
-    if (isLoading) {
-      return;
-    }
-
     const hasWappensToRestore = (detail.wappens?.length ?? 0) > 0;
     if (hasWappensToRestore && !isWappenListReady) {
-      return;
+      return null;
     }
-
-    const cosmeticIds =
-      detail.cosmetics
-        ?.map((c) => c.myCosmeticId)
-        .filter((id): id is number => typeof id === 'number' && id > 0) ?? [];
-
-    const memos: Record<number, string> = {};
-    for (const c of detail.cosmetics ?? []) {
-      if (c.myCosmeticId != null && c.memo?.trim()) {
-        memos[c.myCosmeticId] = c.memo;
-      }
-    }
-
-    const canvasRect = {
-      width: 320,
-      height: 460,
-    };
-
-    const restoredLayers: CanvasLayer[] = [];
-    let nextLayerZIndex = 1;
-
-    for (const c of detail.cosmetics ?? []) {
-      const myCosmeticId = c.myCosmeticId;
-      if (myCosmeticId == null) {
-        continue;
-      }
-      const item = itemsById.get(myCosmeticId);
-      const src = item ? getCosmeticImageSrc(item) : '';
-      if (!src) {
-        continue;
-      }
-      const layerZIndex = c.zindex ?? nextLayerZIndex;
-      const pos = apiPointToLayerPosition(
-        c.xpoint ?? 160,
-        c.ypoint ?? 230,
-        canvasRect,
-      );
-      restoredLayers.push({
-        id: createCanvasLayerId(),
-        kind: 'cosmetic',
-        src,
-        myCosmeticId,
-        zIndex: layerZIndex,
-        ...pos,
-      });
-      nextLayerZIndex = Math.max(nextLayerZIndex, layerZIndex) + 1;
-    }
-
-    for (const w of detail.wappens ?? []) {
-      const wappenId = w.wappenId;
-      if (wappenId == null) {
-        continue;
-      }
-      const src = getWappenImageSrc({
-        wappenId,
-        imageUrl: wappenImageUrlById.get(wappenId),
-      });
-      const layerZIndex = w.zindex ?? nextLayerZIndex;
-      const pos = apiPointToLayerPosition(
-        w.xpoint ?? 160,
-        w.ypoint ?? 230,
-        canvasRect,
-      );
-      restoredLayers.push({
-        id: createCanvasLayerId(),
-        kind: 'wappen',
-        src,
-        wappenId,
-        zIndex: layerZIndex,
-        ...pos,
-      });
-      nextLayerZIndex = Math.max(nextLayerZIndex, layerZIndex) + 1;
-    }
-
-    setHasInitializedEdit(true);
-    setSelectedOrder(cosmeticIds);
-    setItemMemos(memos);
-    setLayers(ensureUniqueCanvasLayerIds(restoredLayers));
-    setNextZIndex(nextLayerZIndex);
+    return buildEditRestorePayload(detail, itemsById, wappenImageUrlById);
   }, [
-    isEditMode,
     hasNumericPouchId,
-    hasInitializedEdit,
-    pouchDetailData?.result,
-    itemsById,
+    isEditMode,
     isLoading,
     isWappenListReady,
+    itemsById,
+    pouchDetailData?.result,
     wappenImageUrlById,
   ]);
+
+  useEffect(() => {
+    if (!editRestorePayload) {
+      return;
+    }
+    if (appliedEditRestorePouchIdRef.current === numericPouchId) {
+      return;
+    }
+    appliedEditRestorePouchIdRef.current = numericPouchId;
+    setSelectedOrder(editRestorePayload.selectedOrder);
+    setItemMemos(editRestorePayload.itemMemos);
+    setLayers(editRestorePayload.layers);
+    setNextZIndex(editRestorePayload.nextZIndex);
+  }, [editRestorePayload, numericPouchId]);
 
   const handleLayersChange = useCallback((nextLayers: CanvasLayer[]) => {
     setLayers(nextLayers);
