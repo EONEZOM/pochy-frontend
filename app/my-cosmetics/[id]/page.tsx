@@ -37,18 +37,40 @@ export default function MyCosmeticsDetailPage() {
     [listData],
   );
 
-  const initialIndex = listItems.findIndex((v) => String(v.id) === String(cosmeticId));
+  const listItemById = useMemo(
+    () => listItems.find((v) => v.id === selectedId),
+    [listItems, selectedId],
+  );
+
+  const initialIndex = listItems.findIndex((v) => v.id === cosmeticId);
   const safeInitialIndex = initialIndex >= 0 ? initialIndex : 0;
   const activeIndex = currentIndex ?? safeInitialIndex;
 
-  const { data: detailData, isFetching: isDetailFetching } = useGetCosmeticDetail(selectedId, {
+  const {
+    data: detailData,
+    isFetching: isDetailFetching,
+    isError: isDetailError,
+    isFetched: isDetailFetched,
+  } = useGetCosmeticDetail(selectedId, {
     query: {
       enabled: isValidId,
       placeholderData: keepPreviousData,
+      retry: (failureCount, error) => {
+        const status = (error as { response?: { status?: number } })?.response
+          ?.status;
+        if (status === 404) {
+          return false;
+        }
+        if (status === 401 || status === 403) {
+          return false;
+        }
+        return failureCount < 2;
+      },
     },
   });
 
-  const currentItem = detailData?.result as MyCosmeticsResponseDTO | undefined;
+  const detailItem = detailData?.result as MyCosmeticsResponseDTO | undefined;
+  const currentItem = detailItem ?? listItemById;
 
   const categoryLabels = useMemo(
     () => getCategoryLabels(currentItem?.category, currentItem?.subCategory),
@@ -71,10 +93,26 @@ export default function MyCosmeticsDetailPage() {
     return () => { api.off('select', handleSelect); };
   }, [api, listItems]);
 
-  if (isListLoading || !currentItem) {
+  const isPageLoading =
+    isListLoading || (!currentItem && (!isDetailFetched || isDetailFetching));
+
+  if (isPageLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-400">
         화장품 정보를 불러오는 중...
+      </div>
+    );
+  }
+
+  if (!currentItem) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-2 px-5 text-center text-sm text-zinc-400">
+        <p>{'화장품 정보를 찾을 수 없어요.'}</p>
+        {isDetailError ? (
+          <p className="text-xs text-zinc-300">
+            {'삭제되었거나 목록에 없는 제품일 수 있어요.'}
+          </p>
+        ) : null}
       </div>
     );
   }
