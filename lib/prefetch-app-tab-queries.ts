@@ -18,6 +18,7 @@ import type { ApiResponseDTOSliceReadListDto } from '@/api/model';
 import type { ApiResponseDTOProfileDto } from '@/api/model';
 import type { Detail } from '@/api/model';
 import type { ReadListDto } from '@/api/model';
+import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { preloadImageSrcs } from '@/lib/preload-image-srcs';
@@ -28,10 +29,14 @@ const WISH_LIST_DEFAULT_PARAMS = { sort: 'desc', size: 100 } as const;
 /** `/my-cosmetics` 기본 목록과 동일 */
 const MY_COSMETICS_DEFAULT_PARAMS = { sort: 'desc', size: 100 } as const;
 
+const resolvePrefetchImageSrc = (value?: string): string => {
+  return resolveDisplayImageSrc(resolveMediaUrl(value)).trim();
+};
+
 const pushDetailThumb = (out: string[], item?: Detail) => {
-  const u = String(item?.imageUrl ?? '').trim();
-  if (u && /^https?:\/\//i.test(u) && out.length < 24) {
-    out.push(u);
+  const resolved = resolvePrefetchImageSrc(item?.imageUrl);
+  if (resolved && out.length < 24) {
+    out.push(resolved);
   }
 };
 
@@ -55,7 +60,10 @@ const collectWarmUrlsFromCaches = (qc: QueryClient): string[] => {
   for (const row of wish?.result?.content ?? []) {
     const u = pickWishListThumbnailUrl(row as ReadListDto).trim();
     if (u && out.length < 24) {
-      out.push(resolveMediaUrl(u));
+      const resolved = resolvePrefetchImageSrc(u);
+      if (resolved) {
+        out.push(resolved);
+      }
     }
   }
 
@@ -66,7 +74,7 @@ const collectWarmUrlsFromCaches = (qc: QueryClient): string[] => {
     const primary =
       String(row.imgUrl ?? '').trim() || String(row.captureUrl ?? '').trim();
     if (primary && out.length < 24) {
-      const resolved = resolveMediaUrl(primary);
+      const resolved = resolvePrefetchImageSrc(primary);
       if (resolved) {
         out.push(resolved);
       }
@@ -76,7 +84,7 @@ const collectWarmUrlsFromCaches = (qc: QueryClient): string[] => {
   const profile = qc.getQueryData<ApiResponseDTOProfileDto>(
     getGetMyProfileQueryKey(),
   );
-  const avatar = resolveMediaUrl(profile?.result?.profileImageUrl);
+  const avatar = resolvePrefetchImageSrc(profile?.result?.profileImageUrl);
   if (avatar && out.length < 24) {
     out.push(avatar);
   }

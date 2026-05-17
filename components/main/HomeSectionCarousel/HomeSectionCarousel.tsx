@@ -8,12 +8,17 @@
  * - 가로 스크롤 + 마우스 드래그로 이동 (`useDragScroll`)
  */
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ImageIcon } from 'lucide-react';
 
 import type { Detail } from '@/api/model';
-import { shouldBypassNextImageOptimizer } from '@/lib/next-image-src';
+import {
+  resolveDisplayImageSrc,
+  shouldBypassNextImageOptimizer,
+} from '@/lib/next-image-src';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
 import { useDragScroll } from '@/hooks/useDragScroll';
 
@@ -28,26 +33,67 @@ type HomeSectionCarouselProps = {
   items: Detail[];
 };
 
-const isValidImageUrl = (value?: string): boolean => {
-  if (!value) {
-    return false;
+/** 홈 API `Detail.imageUrl`은 상대 경로일 수 있어 media-proxy 경유 표시 URL로 통일합니다. */
+const resolveDetailImageSrc = (value?: string): string => {
+  const resolved = resolveDisplayImageSrc(resolveMediaUrl(value));
+  return resolved.trim() || '';
+};
+
+const TilePlaceholder = () => (
+  <div className="text-mono-dark-gray/50 flex size-full items-center justify-center bg-[#F3F3F3]">
+    <ImageIcon className="size-5" />
+  </div>
+);
+
+const getTileImageClassName = (sectionIndex: number): string => {
+  switch (sectionIndex) {
+    case 1:
+      return 'object-contain p-2';
+    case 2:
+      return 'object-contain p-2';
+    default:
+      return 'object-cover';
+  }
+};
+
+type HomeSectionTileImageProps = {
+  src: string;
+  alt: string;
+  priority?: boolean;
+  fetchHigh?: boolean;
+  imageClassName?: string;
+};
+
+const HomeSectionTileImage = ({
+  src,
+  alt,
+  priority = false,
+  fetchHigh = false,
+  imageClassName = 'object-cover',
+}: HomeSectionTileImageProps) => {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return <TilePlaceholder />;
   }
 
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return false;
-  }
-
-  if (trimmed.startsWith('/')) {
-    return true;
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      sizes={`${TILE_PX}px`}
+      className={imageClassName}
+      unoptimized={shouldBypassNextImageOptimizer(src)}
+      priority={priority}
+      {...(fetchHigh ? { fetchPriority: 'high' as const } : {})}
+      decoding="async"
+      draggable={false}
+      onError={() => {
+        setFailed(true);
+      }}
+    />
+  );
 };
 
 const scrollTrackClass =
@@ -126,30 +172,19 @@ export function HomeSectionCarousel({
         const fetchHigh = isFirstSection && index === 0;
         const detailHref = getItemDetailHref(sectionIndex, item.id);
         const itemKey = `${sectionTitle}-${item.id ?? item.imageUrl ?? index}`;
+        const imageSrc = resolveDetailImageSrc(item.imageUrl);
+        const tileImageClassName = getTileImageClassName(sectionIndex);
 
-        const tileContent = (
-          <>
-            {isValidImageUrl(item.imageUrl) ? (
-              <Image
-                src={item.imageUrl as string}
-                alt={`${sectionTitle} item`}
-                fill
-                sizes={`${TILE_PX}px`}
-                className="object-cover"
-                unoptimized={shouldBypassNextImageOptimizer(
-                  String(item.imageUrl),
-                )}
-                priority={priority}
-                {...(fetchHigh ? { fetchPriority: 'high' as const } : {})}
-                decoding="async"
-                draggable={false}
-              />
-            ) : (
-              <div className="text-mono-dark-gray/50 flex size-full items-center justify-center bg-[#F3F3F3]">
-                <ImageIcon className="size-5" />
-              </div>
-            )}
-          </>
+        const tileContent = imageSrc ? (
+          <HomeSectionTileImage
+            src={imageSrc}
+            alt={`${sectionTitle} item`}
+            priority={priority}
+            fetchHigh={fetchHigh}
+            imageClassName={tileImageClassName}
+          />
+        ) : (
+          <TilePlaceholder />
         );
 
         if (!detailHref) {

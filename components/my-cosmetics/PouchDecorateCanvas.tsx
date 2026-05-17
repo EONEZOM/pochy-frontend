@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Rnd } from 'react-rnd';
 import { RotateCw, X } from 'lucide-react';
@@ -15,6 +15,11 @@ import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
 
 const POUCHY_SRC = '/figma/my/pouchy.svg';
+const POUCH_LAYER_CONTROL_CLASS = 'pouch-layer-control';
+/** ?�이????��·?�전 컨트�??�치 ?�역 (px) */
+const POUCH_LAYER_CONTROL_TOUCH_PX = 30;
+const RND_DRAG_CANCEL_SELECTOR = `.${POUCH_LAYER_CONTROL_CLASS}, .${POUCH_LAYER_CONTROL_CLASS} *`;
+const POUCH_LAYER_CONTROL_TOUCH_CLASS = 'size-[30px]';
 
 type PouchDecorateCanvasProps = {
   layers: CanvasLayer[];
@@ -115,13 +120,17 @@ const LayerRotationHandle = ({
   return (
     <button
       type="button"
-      className="absolute -top-8 left-1/2 z-10 flex size-6 -translate-x-1/2 touch-none items-center justify-center rounded-full bg-black/60 text-white"
+      className={cn(
+        POUCH_LAYER_CONTROL_CLASS,
+        POUCH_LAYER_CONTROL_TOUCH_CLASS,
+        'absolute -top-10 left-1/2 z-20 flex -translate-x-1/2 touch-none items-center justify-center rounded-full bg-black/60 text-white touch-manipulation',
+      )}
       style={{ touchAction: 'none' }}
       onPointerDown={handlePointerDown}
       onClick={(e) => {
         e.stopPropagation();
       }}
-      aria-label={'회전'}
+      aria-label={'?�전'}
     >
       <RotateCw size={12} />
     </button>
@@ -156,15 +165,32 @@ const LayerImage = ({ layer }: LayerImageProps) => {
   );
 };
 
-export function PouchDecorateCanvas({
-  layers,
-  onLayersChange,
-  selectedLayerId,
-  onSelectLayer,
-  backgroundImageUrl,
-  readOnly = false,
-}: PouchDecorateCanvasProps) {
+export const PouchDecorateCanvas = forwardRef<
+  HTMLDivElement,
+  PouchDecorateCanvasProps
+>(function PouchDecorateCanvas(
+  {
+    layers,
+    onLayersChange,
+    selectedLayerId,
+    onSelectLayer,
+    backgroundImageUrl,
+    readOnly = false,
+  },
+  exportRootRef,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleContainerRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      containerRef.current = el;
+      if (exportRootRef && typeof exportRootRef === 'object') {
+        exportRootRef.current = el;
+      }
+    },
+    [exportRootRef],
+  );
+
   const [, setCanvasRect] = useState<CanvasRect>({
     width: 320,
     height: 460,
@@ -217,7 +243,7 @@ export function PouchDecorateCanvas({
   return (
     <div
       id={POUCH_CANVAS_EXPORT_ID}
-      ref={containerRef}
+      ref={handleContainerRef}
       className="relative mx-auto aspect-[320/460] h-full max-h-full w-full max-w-[320px] bg-transparent"
       onClick={() => {
         if (!readOnly) {
@@ -268,6 +294,7 @@ export function PouchDecorateCanvas({
         return (
           <Rnd
             key={layer.id}
+            cancel={RND_DRAG_CANCEL_SELECTOR}
             size={{ width: layer.width, height: layer.height }}
             position={{ x: layer.x, y: layer.y }}
             bounds="parent"
@@ -297,14 +324,21 @@ export function PouchDecorateCanvas({
               <>
                 <button
                   type="button"
-                  className="absolute -top-2 -right-2 z-10 flex size-5 items-center justify-center rounded-full bg-black/60 text-white"
+                  className={cn(
+                    POUCH_LAYER_CONTROL_CLASS,
+                    POUCH_LAYER_CONTROL_TOUCH_CLASS,
+                    'absolute -top-4 -right-4 z-20 flex items-center justify-center rounded-full bg-black/60 text-white touch-manipulation',
+                  )}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleRemoveLayer(layer.id);
                   }}
-                  aria-label={'스티커 제거'}
+                  aria-label={'?�티�??�거'}
                 >
-                  <X size={12} />
+                  <X size={14} />
                 </button>
                 <LayerRotationHandle
                   layer={layer}
@@ -320,4 +354,6 @@ export function PouchDecorateCanvas({
       })}
     </div>
   );
-}
+});
+
+PouchDecorateCanvas.displayName = 'PouchDecorateCanvas';

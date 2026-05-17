@@ -1,7 +1,6 @@
 import type {
   AddCosmeticDetailDto,
   ApiResponseDTOString,
-  ApiResponseDTOPouchListDto,
 } from '@/api/model';
 import { getPouchList } from '@/api/generated/pouch-controller/pouch-controller';
 import {
@@ -16,6 +15,7 @@ import {
   type CanvasLayer,
   type CanvasRect,
 } from '@/lib/pouch-canvas';
+import { savePouchCanvasState } from '@/lib/pouch-canvas-state';
 import { clearPouchDraft } from '@/lib/pouch-draft';
 
 export const PENDING_POUCH_NAME_KEY = 'pendingPouchName';
@@ -121,34 +121,93 @@ export const isDraftPouchId = (pouchId: string) => {
   return pouchId === DRAFT_POUCH_ID;
 };
 
-const parsePouchIdFromAddResponse = (
-  response: ApiResponseDTOString,
-): number | null => {
-  const raw = response.result?.trim();
-  if (!raw) {
-    return null;
+const POUCH_ID_LIST_LOOKUP_DELAY_MS = 400;
+
+const parsePositiveInt = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return Math.trunc(value);
   }
-  const parsed = Number.parseInt(raw, 10);
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Number.parseInt(trimmed, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
   }
   return null;
 };
 
-const extractPouchIds = (list: ApiResponseDTOPouchListDto | undefined) => {
-  const pouches = list?.result?.pouchList ?? [];
-  return pouches
-    .map((pouch) => pouch.pouchId)
-    .filter((id): id is number => typeof id === 'number' && Number.isFinite(id));
+/** 생성 응답 result가 문자열·숫자·JSON 객체 등 여러 형태일 수 있어 유연하게 파싱합니다. */
+const parsePouchIdFromUnknown = (value: unknown): number | null => {
+  const direct = parsePositiveInt(value);
+  if (direct != null) {
+    return direct;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        return parsePouchIdFromUnknown(JSON.parse(trimmed));
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const nested = record.pouchId ?? record.id ?? record.result;
+    return parsePouchIdFromUnknown(nested);
+  }
+
+  return null;
 };
 
-const fetchLatestPouchId = async (): Promise<number | null> => {
-  const list = await fetchPouchList();
-  const ids = extractPouchIds(list);
-  if (ids.length === 0) {
+const parsePouchIdFromAddResponse = (
+  response: ApiResponseDTOString,
+): number | null => {
+  return (
+    parsePouchIdFromUnknown(response.result) ??
+    parsePouchIdFromUnknown(response.message)
+  );
+};
+
+const resolvePouchIdFromListByName = async (
+  pouchName: string,
+): Promise<number | null> => {
+  const normalizedName = pouchName.trim();
+  if (!normalizedName) {
     return null;
   }
-  return Math.max(...ids);
+
+  const lookup = async () => {
+    const list = await fetchPouchList();
+    const pouches = list?.result?.pouchList ?? [];
+    const matches = pouches.filter(
+      (pouch) =>
+        pouch.name?.trim() === normalizedName &&
+        typeof pouch.pouchId === 'number' &&
+        pouch.pouchId > 0,
+    );
+    if (matches.length === 0) {
+      return null;
+    }
+    return Math.max(...matches.map((pouch) => pouch.pouchId as number));
+  };
+
+  const firstAttempt = await lookup();
+  if (firstAttempt != null) {
+    return firstAttempt;
+  }
+
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, POUCH_ID_LIST_LOOKUP_DELAY_MS);
+  });
+  return lookup();
 };
 
 const buildPouchCosmeticItems = (
@@ -184,16 +243,21 @@ const validatePouchSelections = (selections: PouchCosmeticSelection[]) => {
 
 const resolvePouchIdAfterAdd = async (
   addResponse: ApiResponseDTOString,
+  pouchName: string,
 ): Promise<number> => {
   const fromResponse = parsePouchIdFromAddResponse(addResponse);
   if (fromResponse != null) {
     return fromResponse;
   }
-  const latest = await fetchLatestPouchId();
-  if (latest != null) {
-    return latest;
+
+  const fromList = await resolvePouchIdFromListByName(pouchName);
+  if (fromList != null) {
+    return fromList;
   }
-  throw new Error('파우치를 생성하지 못했습니다.');
+
+  throw new Error(
+    '파우치를 생성했지만 ID를 확인하지 못했습니다. 내 화장품에서 목록을 확인해 주세요.',
+  );
 };
 
 /** POST /api/pouches — 신규 파우치 + 선택 화장품 */
@@ -213,7 +277,7 @@ const bootstrapPouchWithItems = async (
     }),
   });
 
-  return resolvePouchIdAfterAdd(createRes);
+  return resolvePouchIdAfterAdd(createRes, name);
 };
 
 const resolvePouchIdForSave = async (
@@ -224,22 +288,16 @@ const resolvePouchIdForSave = async (
     return numericId;
   }
 
+  if (isDraftPouchId(pouchIdParam)) {
+    return null;
+  }
+
   const pendingId = readPendingPouchId();
   if (pendingId != null && pendingId > 0) {
     return pendingId;
   }
 
-  if (isDraftPouchId(pouchIdParam)) {
-    return null;
-  }
-
-  const list = await fetchPouchList();
-  const ids = extractPouchIds(list);
-  if (ids.length === 0) {
-    return null;
-  }
-
-  return Math.max(...ids);
+  throw new Error('유효하지 않은 파우치 ID입니다.');
 };
 
 export type PouchCosmeticSelection = {
@@ -303,26 +361,41 @@ export const savePouchDecoration = async (
     throw new Error('파우치에 넣을 화장품을 선택해 주세요.');
   }
 
-  const request = buildCombinedAddDto({
-    pouchName: trimmedName,
-    cosmeticItems,
-    wappenItems,
-  });
-
   let pouchId = await resolvePouchIdForSave(pouchIdParam);
 
   if (pouchId == null) {
-    const createRes = await createPouchMultipart({
-      request,
-      pouchImage: compositeBlob,
+    const createRequest = buildCombinedAddDto({
+      pouchName: trimmedName,
+      cosmeticItems,
+      wappenItems,
     });
-    pouchId = await resolvePouchIdAfterAdd(createRes);
+    const createRes = await createPouchMultipart({ request: createRequest });
+    pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
+    await uploadPouchCompositeImageMultipart(pouchId, compositeBlob);
   } else {
-    await updatePouchMultipart(pouchId, { request });
+    const updateRequest = buildCombinedAddDto({
+      pouchName: trimmedName,
+      cosmeticItems,
+      wappenItems,
+    });
+    await updatePouchMultipart(pouchId, { request: updateRequest });
     await uploadPouchCompositeImageMultipart(pouchId, compositeBlob);
   }
 
   savePendingPouchId(pouchId);
+
+  savePouchCanvasState(pouchId, {
+    layers,
+    selectedOrder: selections.map((s) => s.myCosmeticId),
+    itemMemos: Object.fromEntries(
+      selections
+        .filter((s) => s.memo?.trim())
+        .map((s) => [s.myCosmeticId, s.memo!.trim()]),
+    ),
+    nextZIndex:
+      layers.reduce((max, layer) => Math.max(max, layer.zIndex), 0) + 1,
+    canvasRect,
+  });
 
   return pouchId;
 };

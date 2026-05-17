@@ -1,8 +1,11 @@
 /**
- * 파우치 생성·수정용 수동 멀티파트 래퍼
+ * 파우치 생성·수정용 API 래퍼
  *
- * Orval 생성 `createPouch` / `updatePouch`는 JSON으로 Blob을 보내
- * Spring @RequestPart(JSON) + 이미지 파트 패턴과 맞지 않을 수 있습니다.
+ * - 생성(POST): multipart `request`(CombinedAddDto) — Spring @RequestPart 패턴
+ * - 수정(PATCH): application/json `{ request: CombinedAddDto }` (OpenAPI 기준)
+ * - 합성 이미지: PATCH `/api/pouches/{id}/image` multipart
+ *
+ * Orval `updatePouch`의 request 타입은 UpdateDto이나, 실제 수정 본문은 CombinedAddDto입니다.
  *
  * @see lib/wish-cosmetics.ts
  */
@@ -17,6 +20,10 @@ import { normalizeMultipartImageFile } from '@/lib/wish-cosmetics';
 export type PouchMultipartPayload = {
   request: CombinedAddDto;
   pouchImage?: File | Blob;
+};
+
+type PouchJsonRequestBody = {
+  request: CombinedAddDto;
 };
 
 const appendCombinedRequest = (formData: FormData, request: CombinedAddDto) => {
@@ -58,26 +65,27 @@ export const createPouchMultipart = async ({
 };
 
 /**
- * PATCH /api/pouches/{pouchId}
- * Swagger request 타입은 UpdateDto이나, 실제로는 CombinedAddDto(이름·화장품·와펜)를 받습니다.
+ * PATCH /api/pouches/{pouchId} — 이름·화장품·와펜 (JSON)
+ * 합성 이미지는 `uploadPouchCompositeImageMultipart`로 별도 전송합니다.
  */
 export const updatePouchMultipart = async (
   pouchId: number,
   { request, pouchImage }: PouchMultipartPayload,
 ): Promise<ApiResponseDTOUpdateDto> => {
-  const formData = new FormData();
-  appendCombinedRequest(formData, request);
+  const body: PouchJsonRequestBody = { request };
 
-  if (pouchImage) {
-    const file = toPouchImageFile(pouchImage);
-    formData.append('pouchImage', file, file.name);
-  }
-
-  return customInstance({
+  const response = await customInstance<ApiResponseDTOUpdateDto>({
     url: `/api/pouches/${pouchId}`,
     method: 'PATCH',
-    data: formData,
+    headers: { 'Content-Type': 'application/json' },
+    data: body,
   });
+
+  if (pouchImage) {
+    await uploadPouchCompositeImageMultipart(pouchId, pouchImage);
+  }
+
+  return response;
 };
 
 /** PATCH /api/pouches/{pouchId}/image — 합성 이미지 업로드 */

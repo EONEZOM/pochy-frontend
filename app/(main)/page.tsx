@@ -12,10 +12,13 @@ import { MainHomeTopZipperWithLogo } from '@/components/main/MainHomeTopZipperWi
 import { useGetHomeData } from '@/api/generated/home/home';
 import { useGetMyProfile } from '@/api/generated/member-controller/member-controller';
 import { extractProfileImageUrl } from '@/lib/member-profile';
+import { useSearchMyCosmetics } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import type { Detail } from '@/api/model';
+import type { MyCosmeticsResponseDTO } from '@/api/model';
 import type { ReadListDto } from '@/api/model';
 import { isPendingNicknameSetup } from '@/lib/pending-nickname-setup';
+import { pickMyCosmeticsHomeThumbnailUrl } from '@/lib/my-cosmetics-display-image';
 import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
 import { useBottomNavVisibility } from '@/providers/bottom-nav-visibility';
 import { cn } from '@/lib/utils';
@@ -79,7 +82,7 @@ function MainHomeListView({
     >
       <MainHomeTopZipperWithLogo imageClassName="-translate-y-[70px]" />
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-4 pb-1">
+      <div className="-mt-5 flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-4 pb-1">
         <div className="mx-auto w-full shrink-0">
           <MainHomeListHeader
             nickname={nickname}
@@ -88,7 +91,7 @@ function MainHomeListView({
           />
         </div>
 
-        <div className="relative z-20 mx-auto mt-3 grid min-h-0 w-full max-w-[360px] flex-1 grid-rows-3 gap-2 overflow-hidden sm:gap-2.5">
+        <div className="relative z-20 mx-auto mt-3 grid min-h-0 w-full flex-1 grid-rows-3 gap-2 overflow-hidden sm:gap-2.5">
           {sections.map((section, sectionIndex) => (
             <section
               key={section.title}
@@ -135,6 +138,13 @@ function MainPageContent() {
     sort: 'desc',
     size: 100,
   });
+  const {
+    data: myCosmeticsResponse,
+    isLoading: isMyCosmeticsLoading,
+  } = useSearchMyCosmetics({
+    sort: 'desc',
+    size: 100,
+  });
   const { data: profileResponse } = useGetMyProfile();
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
@@ -148,7 +158,8 @@ function MainPageContent() {
     return fromHome || null;
   }, [homeData?.profileUrl, profileResponse?.result]);
 
-  const isMainQueriesPending = isHomeLoading || isWishListLoading;
+  const isMainQueriesPending =
+    isHomeLoading || isWishListLoading || isMyCosmeticsLoading;
   const [hasSlowMainLoadingTimedOut, setHasSlowMainLoadingTimedOut] =
     React.useState(false);
 
@@ -185,6 +196,7 @@ function MainPageContent() {
     if (
       isHomeLoading ||
       isWishListLoading ||
+      isMyCosmeticsLoading ||
       isHomeError ||
       hasServerNickname
     ) {
@@ -195,9 +207,20 @@ function MainPageContent() {
     hasServerNickname,
     isHomeError,
     isHomeLoading,
+    isMyCosmeticsLoading,
     isWishListLoading,
     router,
   ]);
+
+  const myCosmeticsById = React.useMemo(() => {
+    const map = new Map<number, MyCosmeticsResponseDTO>();
+    for (const item of myCosmeticsResponse?.result?.content ?? []) {
+      if (item.id != null) {
+        map.set(item.id, item as MyCosmeticsResponseDTO);
+      }
+    }
+    return map;
+  }, [myCosmeticsResponse?.result?.content]);
 
   const wishItems: Detail[] = (wishListResponse?.result?.content ?? []).flatMap(
     (item) => {
@@ -211,15 +234,30 @@ function MainPageContent() {
     },
   );
 
+  const myPouchItems: Detail[] = React.useMemo(() => {
+    return (homeData?.myList ?? []).flatMap((row) => {
+      const id = row.id;
+      if (id == null || !Number.isFinite(id)) {
+        return [];
+      }
+      const cosmetic = myCosmeticsById.get(id);
+      const imageUrl = cosmetic
+        ? pickMyCosmeticsHomeThumbnailUrl(cosmetic, row.imageUrl)
+        : String(row.imageUrl ?? '').trim();
+      return [{ id, imageUrl } satisfies Detail];
+    });
+  }, [homeData?.myList, myCosmeticsById]);
+
   const sections: Array<{ title: string; items: Detail[] }> = [
     { title: 'Wish List', items: wishItems },
-    { title: 'My Pouch', items: homeData?.myList ?? [] },
+    { title: 'My Pouch', items: myPouchItems },
     { title: 'Feed', items: homeData?.feed ?? [] },
   ];
 
-  const showHomeSkeleton = isHomeLoading || isWishListLoading;
+  const showHomeSkeleton =
+    isHomeLoading || isWishListLoading || isMyCosmeticsLoading;
 
-  const myListItems = homeData?.myList ?? [];
+  const myListItems = myPouchItems;
   const feedListItems = homeData?.feed ?? [];
   const isAllSectionsEmpty =
     !showHomeSkeleton &&
@@ -261,6 +299,7 @@ function MainPageContent() {
   if (
     !isHomeLoading &&
     !isWishListLoading &&
+    !isMyCosmeticsLoading &&
     !hasServerNickname &&
     !isHomeError
   ) {

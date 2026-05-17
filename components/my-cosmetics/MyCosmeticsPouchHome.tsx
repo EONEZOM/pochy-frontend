@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Plus, Share2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Share2, SquarePen } from 'lucide-react';
 
 import {
   Carousel,
@@ -24,6 +24,10 @@ import { cn } from '@/lib/utils';
 
 const POUCH_HOME_GRADIENT =
   'linear-gradient(180deg, rgba(255, 255, 255, 1) 31%, rgba(255, 198, 236, 1) 100%)';
+
+const POUCH_TOUCH_OVERLAY_SRC = '/figma/my/touch.svg';
+
+const actionIconClass = 'size-5 text-[#161618]';
 
 const arrowButtonClass =
   'flex size-10 shrink-0 items-center justify-center rounded-full bg-white shadow-sm transition-opacity disabled:pointer-events-none disabled:opacity-35';
@@ -68,10 +72,13 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
 
   return (
     <div
-      className="relative flex min-h-[calc(var(--app-height)-5.5rem)] flex-col"
+      className={cn(
+        'pointer-events-auto fixed top-0 bottom-14 left-1/2 z-0 flex w-full max-w-120 min-w-90 -translate-x-1/2 flex-col',
+        'pt-[var(--safe-area-top)]',
+      )}
       style={{ background: POUCH_HOME_GRADIENT }}
     >
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-5">
+      <div className="relative z-10 flex min-h-full flex-1 flex-col items-center justify-center px-5">
         <div className="rounded-lg bg-white px-2 py-1.5">
           <span className="text-mono-jet text-base font-bold">{pouchName}</span>
         </div>
@@ -87,8 +94,8 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
             <ChevronLeft className="size-5 text-[#161618]" />
           </button>
 
-          <Carousel setApi={setApi} className="w-full">
-            <CarouselContent>
+          <Carousel setApi={setApi} className="min-w-0 flex-1">
+            <CarouselContent className="ml-0">
               {pouches.map((pouch) => {
                 const id = pouch.pouchId;
                 if (id == null) {
@@ -97,30 +104,43 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
                 const name = pouch.name?.trim() ?? '';
                 const href = buildPouchDetailPath(id, name);
                 return (
-                  <CarouselItem key={id}>
+                  <CarouselItem
+                    key={id}
+                    className="flex items-center justify-center pl-0"
+                  >
                     <Link
                       href={href}
-                      className="flex items-center justify-center"
+                      className="flex w-full items-center justify-center"
                     >
-                      {pouch.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={resolveDisplayImageSrc(
-                            resolveMediaUrl(pouch.imageUrl),
-                          )}
-                          alt={name}
-                          className="max-h-[min(42vh,360px)] w-auto max-w-full object-contain"
-                        />
-                      ) : (
+                      <div className="relative mx-auto flex max-h-[min(42vh,360px)] w-full max-w-[280px] items-center justify-center">
+                        {pouch.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={resolveDisplayImageSrc(
+                              resolveMediaUrl(pouch.imageUrl),
+                            )}
+                            alt={name}
+                            className="mx-auto block h-auto max-h-full w-auto max-w-full object-contain"
+                          />
+                        ) : (
+                          <Image
+                            src="/figma/my/pouchy.svg"
+                            alt=""
+                            width={220}
+                            height={320}
+                            unoptimized
+                            className="mx-auto h-auto max-h-full w-auto max-w-full object-contain opacity-70"
+                          />
+                        )}
                         <Image
-                          src="/figma/my/pouchy.svg"
+                          src={POUCH_TOUCH_OVERLAY_SRC}
                           alt=""
-                          width={220}
-                          height={320}
+                          width={36}
+                          height={46}
                           unoptimized
-                          className="h-auto max-h-[360px] w-auto object-contain opacity-70"
+                          className="pointer-events-none absolute top-1/2 left-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
                         />
-                      )}
+                      </div>
                     </Link>
                   </CarouselItem>
                 );
@@ -157,12 +177,7 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
               router.push(buildPouchEditItemsPath(pouchId, pouchName));
             }}
           >
-            <Image
-              src="/icons/PenNewSquare.svg"
-              alt=""
-              width={16}
-              height={16}
-            />
+            <SquarePen className={actionIconClass} strokeWidth={2} />
           </button>
           <button
             type="button"
@@ -182,7 +197,7 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
               router.push(buildPouchSharePath(pouchId, pouchName));
             }}
           >
-            <Share2 className="size-4 text-[#161618]" />
+            <Share2 className={actionIconClass} strokeWidth={2} />
           </button>
         </div>
       </div>

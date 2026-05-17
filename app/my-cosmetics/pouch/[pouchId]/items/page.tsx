@@ -12,8 +12,15 @@ function PouchItemsPageContent() {
   const pouchId = String(params.pouchId ?? '');
   const nameFromQuery = searchParams.get('name') ?? '';
   const pouchName = nameFromQuery || readPendingPouchName() || '';
+  const mode = searchParams.get('mode') ?? '';
 
-  return <PouchItemsPicker pouchId={pouchId} pouchName={pouchName} />;
+  return (
+    <PouchItemsPicker
+      key={`${pouchId}-${mode}`}
+      pouchId={pouchId}
+      pouchName={pouchName}
+    />
+  );
 }
 
 export default function PouchItemsPage() {

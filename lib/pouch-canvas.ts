@@ -349,6 +349,26 @@ export const getCanvasRectFromElement = (
   };
 };
 
+/** 저장 시 캔버스 크기와 복원 시 DOM 크기가 다를 때 레이어 좌표·크기를 비율 스케일합니다. */
+export const scaleLayersToCanvasRect = (
+  layers: CanvasLayer[],
+  fromRect: CanvasRect,
+  toRect: CanvasRect,
+): CanvasLayer[] => {
+  if (fromRect.width <= 0 || fromRect.height <= 0) {
+    return layers;
+  }
+  const scaleX = toRect.width / fromRect.width;
+  const scaleY = toRect.height / fromRect.height;
+  return layers.map((layer) => ({
+    ...layer,
+    x: layer.x * scaleX,
+    y: layer.y * scaleY,
+    width: layer.width * scaleX,
+    height: layer.height * scaleY,
+  }));
+};
+
 export const getWappenImageSrc = (wappen: {
   wappenId?: number;
   imageUrl?: string | null;
