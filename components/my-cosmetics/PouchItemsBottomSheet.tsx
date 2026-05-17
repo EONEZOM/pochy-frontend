@@ -2,22 +2,24 @@
 
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
-import { ChevronDown } from 'lucide-react';
 
 import {
   FILTER_CATEGORIES,
   type FilterMainCategory,
   type FilterSubCategory,
 } from '@/constants/category';
+import { PouchSheetChrome } from '@/components/my-cosmetics/PouchSheetChrome';
 import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea';
 import { WishCardImage } from '@/components/wishlist/WishCardImage';
 import type { MyCosmeticsResponseDTO } from '@/api/model';
 import { cn } from '@/lib/utils';
 
-export const POUCH_ITEMS_SHEET_SNAP_COLLAPSED = 0.4;
-export const POUCH_ITEMS_SHEET_SNAP_EXPANDED = 0.6;
-export const POUCH_ITEMS_SHEET_TOGGLE_RESERVE = '3rem';
-export const POUCH_ITEMS_SHEET_BOTTOM_OFFSET = '40px';
+export {
+  POUCH_ITEMS_SHEET_SNAP_COLLAPSED,
+  POUCH_ITEMS_SHEET_SNAP_EXPANDED,
+  POUCH_ITEMS_SHEET_TOGGLE_RESERVE,
+  POUCH_ITEMS_SHEET_BOTTOM_OFFSET,
+} from '@/components/my-cosmetics/pouch-sheet-constants';
 
 const POUCH_ITEM_MEMO_MAX_LEN = 60;
 
@@ -80,53 +82,14 @@ export function PouchItemsBottomSheet({
     setCurrentSub('All');
   };
 
-  const sheetHeight = isExpanded
-    ? `calc(var(--app-height) * ${POUCH_ITEMS_SHEET_SNAP_EXPANDED})`
-    : `calc(var(--app-height) * ${POUCH_ITEMS_SHEET_SNAP_COLLAPSED})`;
-
   return (
-    <div
-      className="absolute inset-x-0 z-30 mx-auto flex w-full max-w-120 min-w-90 flex-col items-center"
-      style={{ bottom: POUCH_ITEMS_SHEET_BOTTOM_OFFSET }}
+    <PouchSheetChrome
+      ariaLabel={'파우치 화장품 선택'}
+      isExpanded={isExpanded}
+      onExpandedChange={onExpandedChange}
     >
-      <button
-        type="button"
-        className={cn(
-          'border-mono-bright-gray text-mono-dark-gray mb-2 flex size-11 shrink-0 items-center justify-center rounded-full border bg-white shadow-[0_2px_8px_rgba(0,0,0,0.12)]',
-          'transition-transform active:scale-95',
-        )}
-        aria-label={
-          isExpanded
-            ? '\uC2DC\uD2B8 \uC811\uAE30'
-            : '\uC2DC\uD2B8 \uD3BC\uCE58\uAE30'
-        }
-        aria-expanded={isExpanded}
-        onClick={() => {
-          onExpandedChange(!isExpanded);
-        }}
-      >
-        <ChevronDown
-          className={cn(
-            'size-7 transition-transform duration-300',
-            isExpanded && 'rotate-180',
-          )}
-        />
-      </button>
-
-      <section
-        aria-label={'\uD30C\uC6B0\uCE58 \uD654\uC7A5\uD488 \uC120\uD0DD'}
-        className={cn(
-          'flex w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-[0_-4px_4px_rgba(0,0,0,0.1)]',
-          'transition-[height] duration-300 ease-out',
-        )}
-        style={{ height: sheetHeight, maxHeight: '100%' }}
-      >
-        <div className="flex shrink-0 flex-col items-center pt-3 pb-2">
-          <div className="bg-mono-bright-gray h-2 w-[120px] rounded-full opacity-50" />
-        </div>
-
         <h2 className="text-mono-jet shrink-0 px-5 pb-3 text-center text-sm font-normal">
-          {'\uD30C\uC6B0\uCE58\uC5D0 \uB123\uC744 \uD654\uC7A5\uD488\uC744 \uACE8\uB77C\uBCF4\uC138\uC694'}
+          {'파우치에 넣을 화장품을 골라보세요'}
         </h2>
 
         <CategoryFilterArea
@@ -141,11 +104,11 @@ export function PouchItemsBottomSheet({
         <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-28">
           {isLoading ? (
             <p className="text-mono-dark-gray py-8 text-center text-sm">
-              {'\uD654\uC7A5\uD488\uC744 \uBD88\uB7EC\uC624\uB294 \uC911...'}
+              {'화장품을 불러오는 중...'}
             </p>
           ) : filteredItems.length === 0 ? (
             <p className="text-mono-dark-gray py-8 text-center text-sm">
-              {'\uB4F1\uB85D\uB41C \uD654\uC7A5\uD488\uC774 \uC5C6\uC5B4\uC694.'}
+              {'등록된 화장품이 없어요.'}
             </p>
           ) : (
             <ul className="mx-auto flex w-full flex-col gap-4">
@@ -208,7 +171,7 @@ export function PouchItemsBottomSheet({
                           aria-pressed={isSelected}
                         >
                           <span className="truncate text-sm leading-4 font-bold text-[#B7B7B7]">
-                            {item.brand || '\uBE0C\uB79C\uB4DC\uBA85'}
+                            {item.brand || '브랜드명'}
                           </span>
                           <span className="line-clamp-2 text-[11px] leading-[150%] font-normal text-[#161618]">
                             {item.name}
@@ -229,11 +192,11 @@ export function PouchItemsBottomSheet({
                                 onMemoChange(id, e.target.value);
                               }}
                               placeholder={
-                                '\uC790\uC720\uB86D\uAC8C \uBA54\uBAA8\uB97C \uB0A8\uACA8\uBCF4\uC138\uC694'
+                                '자유롭게 메모를 남겨보세요'
                               }
                               rows={2}
                               className="w-full resize-none border-0 bg-transparent p-0 text-[11px] leading-[150%] font-normal text-[#161618] outline-none placeholder:text-[#161618]"
-                              aria-label={`${item.name ?? '\uD654\uC7A5\uD488'} \uBA54\uBAA8`}
+                              aria-label={`${item.name ?? '화장품'} 메모`}
                             />
                             <Image
                               src="/icons/PenNewSquare.svg"
@@ -254,7 +217,6 @@ export function PouchItemsBottomSheet({
             </ul>
           )}
         </div>
-      </section>
-    </div>
+    </PouchSheetChrome>
   );
 }
