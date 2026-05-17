@@ -47,7 +47,7 @@ export function ScanResultCard({ result }: ScanResultCardProps) {
             {result.brand || 'UNKNOWN'}
           </p>
           <h3 className="text-mono-jet mt-1 text-lg font-black leading-tight">
-            {result.product_name || '\uBD84\uC11D \uC2E4\uD328'}
+            {result.product_name || '분석 실패'}
           </h3>
           <p className="text-mono-dark-gray mt-1 text-xs font-semibold">{result.product_type}</p>
         </div>
@@ -74,7 +74,7 @@ export function ScanResultEmpty() {
     <div className="border-mono-gray flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed">
       <Image src="/icons/imgplus.svg" alt="" width={32} height={32} unoptimized className="opacity-20" />
       <p className="text-mono-dark-gray text-xs font-bold uppercase tracking-widest">
-        {'\uBD84\uC11D \uACB0\uACFC \uB300\uAE30\uC911'}
+        {'분석 결과 대기중'}
       </p>
     </div>
   );

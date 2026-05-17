@@ -21,7 +21,7 @@ export function ScanUploader({
     if (file) {
       onFileSelect(file);
     }
-    // \uB3D9\uC77C \uD30C\uC77C \uC7AC\uC120\uD0DD \uD5C8\uC6A9
+    // 동일 파일 재선택 허용
     e.target.value = '';
   };
 
@@ -33,10 +33,10 @@ export function ScanUploader({
         </div>
         <div className="text-center">
           <p className="text-mono-jet text-sm font-bold">
-            {'\uD654\uC7A5\uD488 \uC0AC\uC9C4 \uC5C5\uB85C\uB4DC'}
+            {'화장품 사진 업로드'}
           </p>
           <p className="text-mono-dark-gray mt-1 text-xs">
-            {'\uC2E4\uC81C \uC81C\uD488 \uC0AC\uC9C4\uC744 \uC62C\uB824\uC8FC\uC138\uC694'}
+            {'실제 제품 사진을 올려주세요'}
           </p>
         </div>
         <input
