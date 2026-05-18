@@ -66,7 +66,7 @@ export function PouchSheetChrome({
       <section
         aria-label={ariaLabel}
         className={cn(
-          'flex w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-[0_-4px_4px_rgba(0,0,0,0.1)]',
+          'flex min-h-0 w-full flex-col overflow-x-hidden rounded-t-3xl bg-white shadow-[0_-4px_4px_rgba(0,0,0,0.1)]',
           'transition-[height] duration-300 ease-out',
         )}
         style={{ height: sheetHeight, maxHeight: '100%' }}

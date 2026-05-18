@@ -21,13 +21,14 @@ export function PouchDraftResumeModal({
       closeOnOverlayClick={false}
       closeOnCancel={false}
       closeOnConfirm={false}
-      title={'이전에 만들던 기록이 있습니다'}
-      description={'삭제 하고 다시 만들겠습니까?'}
+      title="이전에 만들던 기록이 있습니다"
+      description="삭제 하고 다시 만들겠습니까?"
       showCancel
-      cancelText={'새로하기'}
-      confirmText={'이어하기'}
+      cancelText="새로하기"
+      confirmText="이어하기"
       onCancel={onStartFresh}
       onConfirm={onResume}
+      className="w-full max-w-[340px] rounded-[24px] px-10 py-4 shadow-xl [&_h2]:text-xl [&_h2]:leading-7 [&_button]:h-10 [&_button]:min-h-10 [&_button]:rounded-full [&_button]:px-8 [&_button]:text-base [&_button]:font-bold"
     />
   );
 }

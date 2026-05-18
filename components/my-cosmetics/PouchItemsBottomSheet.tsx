@@ -101,7 +101,7 @@ export function PouchItemsBottomSheet({
           onSubChange={setCurrentSub}
         />
 
-        <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto px-5 pt-2 pb-28">
+        <div className="scrollbar-hide min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-5 pt-2 pb-36 [-webkit-overflow-scrolling:touch]">
           {isLoading ? (
             <p className="text-mono-dark-gray py-8 text-center text-sm">
               {'화장품을 불러오는 중...'}
@@ -181,6 +181,12 @@ export function PouchItemsBottomSheet({
                         {isSelected ? (
                           <div
                             className="relative min-h-[41px] w-full rounded bg-[#F3F3F3] px-3 py-2 pr-8"
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                            }}
+                            onTouchStart={(e) => {
+                              e.stopPropagation();
+                            }}
                             onClick={(e) => {
                               e.stopPropagation();
                             }}
@@ -191,11 +197,14 @@ export function PouchItemsBottomSheet({
                               onChange={(e) => {
                                 onMemoChange(id, e.target.value);
                               }}
+                              onFocus={() => {
+                                onExpandedChange(true);
+                              }}
                               placeholder={
                                 '자유롭게 메모를 남겨보세요'
                               }
                               rows={2}
-                              className="w-full resize-none border-0 bg-transparent p-0 text-[11px] leading-[150%] font-normal text-[#161618] outline-none placeholder:text-[#161618]"
+                              className="relative z-10 w-full touch-manipulation resize-none border-0 bg-transparent p-0 text-[11px] leading-[150%] font-normal text-[#161618] outline-none placeholder:text-[#161618]"
                               aria-label={`${item.name ?? '화장품'} 메모`}
                             />
                             <Image
