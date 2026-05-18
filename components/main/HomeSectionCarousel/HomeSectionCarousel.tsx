@@ -41,7 +41,7 @@ const resolveDetailImageSrc = (value?: string): string => {
 };
 
 const TilePlaceholder = () => (
-  <div className="text-mono-dark-gray/50 flex size-full items-center justify-center bg-[#F3F3F3]">
+  <div className="text-mono-dark-gray/50 flex size-full items-center justify-center bg-transparent">
     <ImageIcon className="size-5" />
   </div>
 );
@@ -101,7 +101,7 @@ const scrollTrackClass =
   'scrollbar-hide flex touch-pan-x gap-3 overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]';
 
 const tileClassName =
-  'relative size-[100px] shrink-0 overflow-hidden rounded-xl border-2 border-white bg-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]';
+  'relative size-[100px] shrink-0 overflow-hidden rounded-xl border-2 border-white bg-transparent shadow-[0_2px_10px_rgba(0,0,0,0.08)]';
 
 const getItemDetailHref = (
   sectionIndex: number,
@@ -148,7 +148,7 @@ export function HomeSectionCarousel({
         {Array.from({ length: 5 }).map((_, index) => (
           <div
             key={`${sectionTitle}-skeleton-${index}`}
-            className="bg-mono-white text-mono-dark-gray/40 flex size-[100px] shrink-0 items-center justify-center rounded-xl border-2 border-white shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
+            className="text-mono-dark-gray/40 flex size-[100px] shrink-0 items-center justify-center rounded-xl border-2 border-white bg-transparent shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
           >
             <ImageIcon className="size-4" />
           </div>

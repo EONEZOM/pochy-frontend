@@ -6,8 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface WappenDto {
-  wappenId?: number;
+export interface CosmeticsDto {
+  cosmeticId?: number;
+  memo?: string;
   xpoint?: number;
   ypoint?: number;
   zindex?: number;

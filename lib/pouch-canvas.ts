@@ -5,6 +5,9 @@ import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import type {
   AddCosmeticDetailDto,
   CombinedAddDto,
+  CosmeticsDto,
+  PouchUpdateDto,
+  WappenDto,
   WappenItemDto,
 } from '@/api/model';
 import type { PouchCosmeticSelection } from '@/lib/pouch-setup';
@@ -13,6 +16,27 @@ export const POUCH_CANVAS_EXPORT_ID = 'pouch-canvas-export';
 export const DEFAULT_LAYER_SIZE = 96;
 export const POUCH_CANVAS_WIDTH = 320;
 export const POUCH_CANVAS_HEIGHT = 460;
+
+/** 화장품 스티커 PNG 알파 외곽선 — Rnd 박스가 아닌 이미지 실루엣에 적용 (html-to-image 캡처 포함) */
+export const buildCosmeticStickerOutlineFilter = (
+  color = '#ffffff',
+  widthPx = 1.25,
+): string => {
+  const w = widthPx;
+  const stroke = [
+    `drop-shadow(${w}px 0 0 ${color})`,
+    `drop-shadow(-${w}px 0 0 ${color})`,
+    `drop-shadow(0 ${w}px 0 ${color})`,
+    `drop-shadow(0 -${w}px 0 ${color})`,
+    `drop-shadow(${w}px ${w}px 0 ${color})`,
+    `drop-shadow(-${w}px ${w}px 0 ${color})`,
+    `drop-shadow(${w}px -${w}px 0 ${color})`,
+    `drop-shadow(-${w}px -${w}px 0 ${color})`,
+  ].join(' ');
+  return `${stroke} drop-shadow(0 2px 6px rgba(0,0,0,0.14))`;
+};
+
+export const COSMETIC_STICKER_IMAGE_FILTER = buildCosmeticStickerOutlineFilter();
 
 export type CanvasLayerKind = 'cosmetic' | 'wappen';
 
@@ -26,6 +50,8 @@ export type CanvasLayer = {
   height: number;
   zIndex: number;
   rotation?: number;
+  /** 파우치 내 배치 행 id (`PouchItemDetailDto.id`, API 전송용 아님) */
+  pouchItemId?: number;
   myCosmeticId?: number;
   wappenId?: number;
 };
@@ -112,6 +138,39 @@ export const layerCenterToApiPoint = (
   return { xpoint, ypoint, zindex: layer.zIndex };
 };
 
+export const layerSizeToApi = (
+  layer: CanvasLayer,
+  canvasRect: CanvasRect,
+): number => {
+  if (canvasRect.width <= 0) {
+    return DEFAULT_LAYER_SIZE;
+  }
+  return clampApiCoordinate(
+    (layer.width / canvasRect.width) * POUCH_CANVAS_WIDTH,
+    POUCH_CANVAS_WIDTH,
+  );
+};
+
+export const apiSizeToLayerWidth = (
+  size: number | undefined,
+  canvasRect: CanvasRect,
+): number => {
+  if (size == null || !Number.isFinite(size) || size <= 0) {
+    return DEFAULT_LAYER_SIZE;
+  }
+  if (canvasRect.width <= 0) {
+    return DEFAULT_LAYER_SIZE;
+  }
+  return (size / POUCH_CANVAS_WIDTH) * canvasRect.width;
+};
+
+const layerRotationToApi = (rotation: number | undefined): number => {
+  if (rotation == null || !Number.isFinite(rotation)) {
+    return 0;
+  }
+  return Math.round(rotation);
+};
+
 const dedupeCosmeticItemsByMyCosmeticId = (
   items: AddCosmeticDetailDto[],
 ): AddCosmeticDetailDto[] => {
@@ -163,6 +222,8 @@ export const mergeSelectionsIntoCosmeticItems = (
       xpoint: centerX,
       ypoint: centerY,
       zindex: nextZIndex,
+      size: DEFAULT_LAYER_SIZE,
+      rotationAngle: 0,
       ...(memo ? { memo } : {}),
     });
     nextZIndex += 1;
@@ -175,15 +236,16 @@ export const apiPointToLayerPosition = (
   xpoint: number,
   ypoint: number,
   canvasRect: CanvasRect,
-  size: number = DEFAULT_LAYER_SIZE,
+  apiSize?: number,
 ) => {
+  const width = apiSizeToLayerWidth(apiSize, canvasRect);
   const centerX = (xpoint / POUCH_CANVAS_WIDTH) * canvasRect.width;
   const centerY = (ypoint / POUCH_CANVAS_HEIGHT) * canvasRect.height;
   return {
-    x: Math.max(0, centerX - size / 2),
-    y: Math.max(0, centerY - size / 2),
-    width: size,
-    height: size,
+    x: Math.max(0, centerX - width / 2),
+    y: Math.max(0, centerY - width / 2),
+    width,
+    height: width,
   };
 };
 
@@ -214,6 +276,8 @@ export const layersToSavePayload = (
         xpoint,
         ypoint,
         zindex,
+        size: layerSizeToApi(layer, canvasRect),
+        rotationAngle: layerRotationToApi(layer.rotation),
         ...(memo ? { memo } : {}),
       });
     }
@@ -224,6 +288,8 @@ export const layersToSavePayload = (
         xpoint,
         ypoint,
         zindex,
+        size: layerSizeToApi(layer, canvasRect),
+        rotationAngle: layerRotationToApi(layer.rotation),
       });
     }
   }
@@ -232,6 +298,115 @@ export const layersToSavePayload = (
     cosmeticItems: dedupeCosmeticItemsByMyCosmeticId(cosmeticItems),
     wappenItems,
   };
+};
+
+const dedupeCosmeticsByCosmeticId = (
+  items: CosmeticsDto[],
+): CosmeticsDto[] => {
+  const byCosmeticId = new Map<number, CosmeticsDto>();
+  for (const item of items) {
+    const cosmeticId = item.cosmeticId;
+    if (cosmeticId == null || !Number.isFinite(cosmeticId) || cosmeticId <= 0) {
+      continue;
+    }
+    const existing = byCosmeticId.get(cosmeticId);
+    if (!existing || (item.zindex ?? 0) >= (existing.zindex ?? 0)) {
+      byCosmeticId.set(cosmeticId, item);
+    }
+  }
+  return [...byCosmeticId.values()].sort(
+    (a, b) => (a.zindex ?? 0) - (b.zindex ?? 0),
+  );
+};
+
+export const layersToUpdatePayload = (
+  layers: CanvasLayer[],
+  selections: PouchCosmeticSelection[],
+  canvasRect: CanvasRect,
+): {
+  cosmeticList: CosmeticsDto[];
+  wappenList: WappenDto[];
+} => {
+  const memoByCosmeticId = new Map(
+    selections.map((s) => [s.myCosmeticId, s.memo?.trim()]),
+  );
+
+  const cosmeticList: CosmeticsDto[] = [];
+  const wappenList: WappenDto[] = [];
+  const sorted = [...layers].sort((a, b) => a.zIndex - b.zIndex);
+
+  for (const layer of sorted) {
+    const { xpoint, ypoint, zindex } = layerCenterToApiPoint(layer, canvasRect);
+    const size = layerSizeToApi(layer, canvasRect);
+    const rotationAngle = layerRotationToApi(layer.rotation);
+
+    if (layer.kind === 'cosmetic' && layer.myCosmeticId != null) {
+      const memo = memoByCosmeticId.get(layer.myCosmeticId);
+      cosmeticList.push({
+        cosmeticId: layer.myCosmeticId,
+        xpoint,
+        ypoint,
+        zindex,
+        size,
+        rotationAngle,
+        ...(memo ? { memo } : {}),
+      });
+    }
+
+    if (layer.kind === 'wappen' && layer.wappenId != null) {
+      wappenList.push({
+        wappenId: layer.wappenId,
+        xpoint,
+        ypoint,
+        zindex,
+        size,
+        rotationAngle,
+      });
+    }
+  }
+
+  return { cosmeticList: dedupeCosmeticsByCosmeticId(cosmeticList), wappenList };
+};
+
+export const mergeSelectionsIntoCosmeticList = (
+  cosmeticList: CosmeticsDto[],
+  selections: PouchCosmeticSelection[],
+  myCosmeticIdsOnCanvas: ReadonlySet<number> = new Set(),
+): CosmeticsDto[] => {
+  const merged = dedupeCosmeticsByCosmeticId(cosmeticList);
+  const byCosmeticId = new Map(
+    merged.map((item) => [item.cosmeticId as number, item]),
+  );
+  const centerX = Math.round(POUCH_CANVAS_WIDTH / 2);
+  const centerY = Math.round(POUCH_CANVAS_HEIGHT / 2);
+  let nextZIndex =
+    merged.reduce((max, item) => Math.max(max, item.zindex ?? 0), 0) + 1;
+
+  for (const selection of selections) {
+    const myCosmeticId = selection.myCosmeticId;
+    if (!Number.isFinite(myCosmeticId) || myCosmeticId <= 0) {
+      continue;
+    }
+    if (myCosmeticIdsOnCanvas.has(myCosmeticId)) {
+      continue;
+    }
+    const memo = selection.memo?.trim();
+    if (byCosmeticId.has(myCosmeticId)) {
+      continue;
+    }
+    byCosmeticId.set(myCosmeticId, {
+      cosmeticId: myCosmeticId,
+      xpoint: centerX,
+      ypoint: centerY,
+      zindex: nextZIndex,
+      size: DEFAULT_LAYER_SIZE,
+      rotationAngle: 0,
+      ...(memo ? { memo } : {}),
+    });
+    nextZIndex += 1;
+  }
+
+  return dedupeCosmeticsByCosmeticId([...byCosmeticId.values()]);
 };
 
 export type BuildCombinedAddDtoParams = {
@@ -257,6 +432,34 @@ export const buildCombinedAddDto = ({
     payload.wappenList = {
       items: wappenItems,
     };
+  }
+
+  return payload;
+};
+
+export type BuildPouchUpdateDtoParams = {
+  pouchName?: string;
+  cosmeticList: CosmeticsDto[];
+  wappenList: WappenDto[];
+};
+
+/** PATCH /api/pouches/{id} — `PouchUpdateDto` (수정 전용) */
+export const buildPouchUpdateDto = ({
+  pouchName,
+  cosmeticList,
+  wappenList,
+}: BuildPouchUpdateDtoParams): PouchUpdateDto => {
+  const trimmedName = pouchName?.trim();
+  const payload: PouchUpdateDto = {
+    cosmeticList,
+  };
+
+  if (trimmedName) {
+    payload.theme = trimmedName;
+  }
+
+  if (wappenList.length > 0) {
+    payload.wappenList = wappenList;
   }
 
   return payload;
@@ -316,12 +519,30 @@ export const exportPouchCanvas = async (
   return blob;
 };
 
+const sanitizeAbsoluteImageUrl = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.pathname.includes(' ')) {
+      return url;
+    }
+    parsed.pathname = parsed.pathname
+      .split('/')
+      .map((segment) => encodeURIComponent(decodeURIComponent(segment)))
+      .join('/');
+    return parsed.toString();
+  } catch {
+    return url.replace(/ /g, '%20');
+  }
+};
+
 const toPouchLayerImageSrc = (raw: string | null | undefined) => {
   const resolved = resolveMediaUrl(raw);
   if (!resolved) {
     return '';
   }
-  return toSameOriginImageProxyUrl(resolved);
+  const absolute =
+    /^https?:\/\//i.test(resolved) ? sanitizeAbsoluteImageUrl(resolved) : resolved;
+  return toSameOriginImageProxyUrl(absolute);
 };
 
 export const getCosmeticImageSrc = (item: {

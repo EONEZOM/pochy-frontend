@@ -6,12 +6,15 @@ import { getPouchList } from '@/api/generated/pouch-controller/pouch-controller'
 import {
   createPouchMultipart,
   updatePouchMultipart,
-  uploadPouchCompositeImageMultipart,
 } from '@/lib/pouch-api';
 import {
   buildCombinedAddDto,
+  buildPouchUpdateDto,
+  DEFAULT_LAYER_SIZE,
   layersToSavePayload,
+  layersToUpdatePayload,
   mergeSelectionsIntoCosmeticItems,
+  mergeSelectionsIntoCosmeticList,
   type CanvasLayer,
   type CanvasRect,
 } from '@/lib/pouch-canvas';
@@ -223,6 +226,8 @@ const buildPouchCosmeticItems = (
       xpoint: x,
       ypoint: y,
       zindex: z,
+      size: DEFAULT_LAYER_SIZE,
+      rotationAngle: 0,
       ...(memo ? { memo } : {}),
     };
   });
@@ -347,39 +352,63 @@ export const savePouchDecoration = async (
   validatePouchSelections(selections);
 
   const trimmedName = name.trim();
-  const { cosmeticItems: layerCosmeticItems, wappenItems } = layersToSavePayload(
-    layers,
-    selections,
-    canvasRect,
-  );
-  const cosmeticItems = mergeSelectionsIntoCosmeticItems(
-    layerCosmeticItems,
-    selections,
-  );
-
-  if (cosmeticItems.length === 0) {
-    throw new Error('파우치에 넣을 화장품을 선택해 주세요.');
-  }
-
   let pouchId = await resolvePouchIdForSave(pouchIdParam);
 
   if (pouchId == null) {
+    const { cosmeticItems: layerCosmeticItems, wappenItems } = layersToSavePayload(
+      layers,
+      selections,
+      canvasRect,
+    );
+    const cosmeticItems = mergeSelectionsIntoCosmeticItems(
+      layerCosmeticItems,
+      selections,
+    );
+
+    if (cosmeticItems.length === 0) {
+      throw new Error('파우치에 넣을 화장품을 선택해 주세요.');
+    }
+
     const createRequest = buildCombinedAddDto({
       pouchName: trimmedName,
       cosmeticItems,
       wappenItems,
     });
-    const createRes = await createPouchMultipart({ request: createRequest });
-    pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
-    await uploadPouchCompositeImageMultipart(pouchId, compositeBlob);
-  } else {
-    const updateRequest = buildCombinedAddDto({
-      pouchName: trimmedName,
-      cosmeticItems,
-      wappenItems,
+    const createRes = await createPouchMultipart({
+      request: createRequest,
+      pouchImage: compositeBlob,
     });
-    await updatePouchMultipart(pouchId, { request: updateRequest });
-    await uploadPouchCompositeImageMultipart(pouchId, compositeBlob);
+    pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
+  } else {
+    const { cosmeticList: layerCosmeticList, wappenList } = layersToUpdatePayload(
+      layers,
+      selections,
+      canvasRect,
+    );
+    const myCosmeticIdsOnCanvas = new Set(
+      layers
+        .filter((layer) => layer.kind === 'cosmetic' && layer.myCosmeticId != null)
+        .map((layer) => layer.myCosmeticId as number),
+    );
+    const cosmeticList = mergeSelectionsIntoCosmeticList(
+      layerCosmeticList,
+      selections,
+      myCosmeticIdsOnCanvas,
+    );
+
+    if (cosmeticList.length === 0) {
+      throw new Error('파우치에 넣을 화장품을 선택해 주세요.');
+    }
+
+    const updateRequest = buildPouchUpdateDto({
+      pouchName: trimmedName,
+      cosmeticList,
+      wappenList,
+    });
+    await updatePouchMultipart(pouchId, {
+      request: updateRequest,
+      pouchImage: compositeBlob,
+    });
   }
 
   savePendingPouchId(pouchId);
@@ -412,11 +441,20 @@ export const savePouchWithCosmetics = async (
   const pouchId = await resolvePouchIdForSave(pouchIdParam);
 
   if (pouchId != null) {
+    const cosmeticList = items.map((item) => ({
+      cosmeticId: item.myCosmeticId,
+      memo: item.memo,
+      xpoint: item.xpoint,
+      ypoint: item.ypoint,
+      zindex: item.zindex,
+      size: item.size,
+      rotationAngle: item.rotationAngle,
+    }));
     await updatePouchMultipart(pouchId, {
-      request: buildCombinedAddDto({
+      request: buildPouchUpdateDto({
         pouchName: trimmedName,
-        cosmeticItems: items,
-        wappenItems: [],
+        cosmeticList,
+        wappenList: [],
       }),
     });
     return pouchId;

@@ -27,8 +27,8 @@ import type {
 import type {
   ApiResponseDTOPouchDetailDto,
   ApiResponseDTOPouchListDto,
+  ApiResponseDTOPouchUpdateDto,
   ApiResponseDTOString,
-  ApiResponseDTOUpdateDto,
   CreatePouchBody,
   GetPouchListParams,
   UpdatePouchBody,
@@ -290,7 +290,7 @@ export const updatePouch = (
 ) => {
 
 
-      return customInstance<ApiResponseDTOUpdateDto>(
+      return customInstance<ApiResponseDTOPouchUpdateDto>(
       {url: `/api/pouches/${pouchId}`, method: 'PATCH',
       headers: {'Content-Type': 'application/json', },
       data: updatePouchBody, signal

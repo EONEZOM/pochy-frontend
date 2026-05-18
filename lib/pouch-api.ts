@@ -1,32 +1,47 @@
 /**
  * 파우치 생성·수정용 API 래퍼
  *
- * - 생성(POST): multipart `request`(CombinedAddDto) — Spring @RequestPart 패턴
- * - 수정(PATCH): application/json `{ request: CombinedAddDto }` (OpenAPI 기준)
- * - 합성 이미지: PATCH `/api/pouches/{id}/image` multipart
- *
- * Orval `updatePouch`의 request 타입은 UpdateDto이나, 실제 수정 본문은 CombinedAddDto입니다.
+ * - 생성(POST): multipart `request`(CombinedAddDto) + optional `pouchImage`
+ * - 수정(PATCH): multipart `request`(PouchUpdateDto) + optional `pouchImage`
+ * - Spring @RequestPart 패턴 (위시 화장품 수정과 동일)
  *
  * @see lib/wish-cosmetics.ts
  */
 import { customInstance } from '@/api/axios-instance';
+import {
+  getPouchDetail,
+  getPouchList,
+} from '@/api/generated/pouch-controller/pouch-controller';
 import type {
+  ApiResponseDTOPouchUpdateDto,
   ApiResponseDTOString,
-  ApiResponseDTOUpdateDto,
   CombinedAddDto,
+  CosmeticsDto,
+  PouchDetailDto,
+  PouchUpdateDto,
+  WappenDto,
 } from '@/api/model';
+import { buildPouchUpdateDto } from '@/lib/pouch-canvas';
 import { normalizeMultipartImageFile } from '@/lib/wish-cosmetics';
 
-export type PouchMultipartPayload = {
+export type CreatePouchMultipartPayload = {
   request: CombinedAddDto;
   pouchImage?: File | Blob;
 };
 
-type PouchJsonRequestBody = {
-  request: CombinedAddDto;
+export type UpdatePouchMultipartPayload = {
+  request: PouchUpdateDto;
+  pouchImage?: File | Blob;
 };
 
-const appendCombinedRequest = (formData: FormData, request: CombinedAddDto) => {
+const POUCH_LIST_PAGE_PARAMS = {
+  pageable: { page: 0, size: 20 },
+} as const;
+
+const appendJsonRequestPart = (
+  formData: FormData,
+  request: CombinedAddDto | PouchUpdateDto,
+) => {
   formData.append(
     'request',
     new Blob([JSON.stringify(request)], { type: 'application/json' }),
@@ -44,13 +59,56 @@ const toPouchImageFile = (image: File | Blob): File => {
   );
 };
 
+/**
+ * GET 상세 → PATCH `request` 본문 (기존 화장품·와펜·크기·회전 유지)
+ * `CosmeticsDto.cosmeticId` = 내 화장품 id (`myCosmeticId`, 파우치 행 id 아님)
+ */
+export const detailToPouchUpdateDto = (detail: PouchDetailDto): PouchUpdateDto => {
+  const cosmeticList: CosmeticsDto[] = (detail.cosmetics ?? [])
+    .filter((item) => item.myCosmeticId != null && item.myCosmeticId > 0)
+    .map((item) => ({
+      cosmeticId: item.myCosmeticId,
+      memo: item.memo,
+      xpoint: item.xpoint,
+      ypoint: item.ypoint,
+      zindex: item.zindex,
+      size: item.size,
+      rotationAngle: item.rotationAngle,
+    }));
+
+  const wappenList: WappenDto[] = (detail.wappens ?? [])
+    .filter((item) => item.wappenId != null)
+    .map((item) => ({
+      wappenId: item.wappenId,
+      xpoint: item.xpoint,
+      ypoint: item.ypoint,
+      zindex: item.zindex,
+      size: item.size,
+      rotationAngle: item.rotationAngle,
+    }));
+
+  return buildPouchUpdateDto({
+    pouchName: detail.name,
+    cosmeticList,
+    wappenList,
+  });
+};
+
+const resolvePouchImageUrlFromList = async (
+  pouchId: number,
+): Promise<string | null> => {
+  const listRes = await getPouchList(POUCH_LIST_PAGE_PARAMS);
+  const match = listRes.result?.pouchList?.find((item) => item.pouchId === pouchId);
+  return match?.imageUrl?.trim() || null;
+};
+
 /** POST /api/pouches — 신규 파우치 생성 */
 export const createPouchMultipart = async ({
   request,
   pouchImage,
-}: PouchMultipartPayload): Promise<ApiResponseDTOString> => {
+}: CreatePouchMultipartPayload): Promise<ApiResponseDTOString> => {
   const formData = new FormData();
-  appendCombinedRequest(formData, request);
+  appendJsonRequestPart(formData, request);
 
   if (pouchImage) {
     const file = toPouchImageFile(pouchImage);
@@ -64,42 +122,42 @@ export const createPouchMultipart = async ({
   });
 };
 
-/**
- * PATCH /api/pouches/{pouchId} — 이름·화장품·와펜 (JSON)
- * 합성 이미지는 `uploadPouchCompositeImageMultipart`로 별도 전송합니다.
- */
+/** PATCH /api/pouches/{pouchId} — 화장품·와펜·합성 이미지 (multipart) */
 export const updatePouchMultipart = async (
   pouchId: number,
-  { request, pouchImage }: PouchMultipartPayload,
-): Promise<ApiResponseDTOUpdateDto> => {
-  const body: PouchJsonRequestBody = { request };
-
-  const response = await customInstance<ApiResponseDTOUpdateDto>({
-    url: `/api/pouches/${pouchId}`,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    data: body,
-  });
+  { request, pouchImage }: UpdatePouchMultipartPayload,
+): Promise<ApiResponseDTOPouchUpdateDto> => {
+  const formData = new FormData();
+  appendJsonRequestPart(formData, request);
 
   if (pouchImage) {
-    await uploadPouchCompositeImageMultipart(pouchId, pouchImage);
+    const file = toPouchImageFile(pouchImage);
+    formData.append('pouchImage', file, file.name);
   }
 
-  return response;
-};
-
-/** PATCH /api/pouches/{pouchId}/image — 합성 이미지 업로드 */
-export const uploadPouchCompositeImageMultipart = async (
-  pouchId: number,
-  pouchImage: File | Blob,
-): Promise<ApiResponseDTOString> => {
-  const formData = new FormData();
-  const file = toPouchImageFile(pouchImage);
-  formData.append('pouchImage', file, file.name);
-
   return customInstance({
-    url: `/api/pouches/${pouchId}/image`,
+    url: `/api/pouches/${pouchId}`,
     method: 'PATCH',
     data: formData,
   });
+};
+
+/**
+ * 공유용 합성 이미지 업로드 — 상세 조회 후 PATCH (기존 구성 유지)
+ * 공개 HTTPS URL은 목록 `imageUrl`에서 조회합니다.
+ */
+export const uploadPouchShareImageMultipart = async (
+  pouchId: number,
+  pouchImage: File | Blob,
+): Promise<string | null> => {
+  const detailRes = await getPouchDetail(pouchId);
+  const detail = detailRes.result;
+  if (!detail) {
+    return null;
+  }
+
+  const request = detailToPouchUpdateDto(detail);
+  await updatePouchMultipart(pouchId, { request, pouchImage });
+
+  return resolvePouchImageUrlFromList(pouchId);
 };

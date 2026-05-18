@@ -15,8 +15,8 @@ export interface SliceReadListDto {
   content?: ReadListDto[];
   number?: number;
   sort?: SortObject;
+  numberOfElements?: number;
   first?: boolean;
   last?: boolean;
-  numberOfElements?: number;
   empty?: boolean;
 }

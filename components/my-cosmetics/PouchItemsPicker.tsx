@@ -232,13 +232,16 @@ const buildEditRestorePayload = (
       resolveApiCoord(c.xpoint, POUCH_EDIT_DEFAULT_X),
       resolveApiCoord(c.ypoint, POUCH_EDIT_DEFAULT_Y),
       POUCH_EDIT_CANVAS_RECT,
+      c.size,
     );
     restoredLayers.push({
       id: createCanvasLayerId(),
       kind: 'cosmetic',
       src,
+      pouchItemId: c.id,
       myCosmeticId: linkId,
       zIndex: layerZIndex,
+      rotation: c.rotationAngle ?? 0,
       ...pos,
     });
     nextLayerZIndex = Math.max(nextLayerZIndex, layerZIndex) + 1;
@@ -261,6 +264,7 @@ const buildEditRestorePayload = (
       resolveApiCoord(w.xpoint, POUCH_EDIT_DEFAULT_X),
       resolveApiCoord(w.ypoint, POUCH_EDIT_DEFAULT_Y),
       POUCH_EDIT_CANVAS_RECT,
+      w.size,
     );
     restoredLayers.push({
       id: createCanvasLayerId(),
@@ -268,6 +272,7 @@ const buildEditRestorePayload = (
       src,
       wappenId,
       zIndex: layerZIndex,
+      rotation: w.rotationAngle ?? 0,
       ...pos,
     });
     nextLayerZIndex = Math.max(nextLayerZIndex, layerZIndex) + 1;

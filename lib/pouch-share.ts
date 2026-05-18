@@ -1,6 +1,8 @@
 import { toBlob } from 'html-to-image';
 
-import { uploadPouchCompositeImageMultipart } from '@/lib/pouch-api';
+import {
+  uploadPouchShareImageMultipart,
+} from '@/lib/pouch-api';
 import { embedPngTextChunks } from '@/lib/png-text-metadata';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 
@@ -45,11 +47,11 @@ export const ensureKakaoShareImageUrl = async ({
     return null;
   }
   try {
-    const response = await uploadPouchCompositeImageMultipart(
+    const uploadedUrl = await uploadPouchShareImageMultipart(
       pouchId,
       captureBlob,
     );
-    return resolveKakaoFeedImageUrl(response.result);
+    return resolveKakaoFeedImageUrl(uploadedUrl);
   } catch {
     return null;
   }

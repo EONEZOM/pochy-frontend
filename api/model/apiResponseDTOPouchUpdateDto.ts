@@ -7,7 +7,9 @@
  */
 import type { PouchUpdateDto } from './pouchUpdateDto';
 
-export type UpdatePouchBody = {
-  pouchImage?: Blob;
-  request: PouchUpdateDto;
-};
+export interface ApiResponseDTOPouchUpdateDto {
+  code?: string;
+  message?: string;
+  result?: PouchUpdateDto;
+  success?: boolean;
+}

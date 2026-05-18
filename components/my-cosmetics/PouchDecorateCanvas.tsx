@@ -6,6 +6,7 @@ import { Rnd } from 'react-rnd';
 import { RotateCw, X } from 'lucide-react';
 
 import {
+  COSMETIC_STICKER_IMAGE_FILTER,
   POUCH_CANVAS_EXPORT_ID,
   type CanvasLayer,
   type CanvasRect,
@@ -144,6 +145,7 @@ type LayerImageProps = {
 const LayerImage = ({ layer }: LayerImageProps) => {
   const rotation = layer.rotation ?? 0;
   const imageSrc = resolveLayerImageSrc(resolveMediaUrl(layer.src));
+  const isCosmeticSticker = layer.kind === 'cosmetic';
 
   return (
     <div
@@ -154,13 +156,21 @@ const LayerImage = ({ layer }: LayerImageProps) => {
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageSrc}
-          alt=""
-          crossOrigin="anonymous"
-          className="h-full w-full object-contain drop-shadow-md"
-          draggable={false}
-        />
+      <img
+        src={imageSrc}
+        alt=""
+        crossOrigin="anonymous"
+        className={cn(
+          'h-full w-full object-contain',
+          !isCosmeticSticker && 'drop-shadow-md',
+        )}
+        style={
+          isCosmeticSticker
+            ? { filter: COSMETIC_STICKER_IMAGE_FILTER }
+            : undefined
+        }
+        draggable={false}
+      />
     </div>
   );
 };

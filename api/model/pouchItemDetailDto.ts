@@ -14,8 +14,10 @@ export interface PouchItemDetailDto {
   subCategory?: string;
   feature?: string;
   memo?: string;
+  size?: number;
+  rotationAngle?: number;
   myCosmeticId?: number;
-  xpoint?: number;
-  ypoint?: number;
   zindex?: number;
+  ypoint?: number;
+  xpoint?: number;
 }
