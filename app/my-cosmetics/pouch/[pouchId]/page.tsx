@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 
+import { useGetPouchDetail } from '@/api/generated/pouch-controller/pouch-controller';
 import { PouchDetailView } from '@/components/my-cosmetics/PouchDetailView';
 import { fetchPouchList, getPouchListQueryKey } from '@/lib/pouch-setup';
 
@@ -14,15 +15,25 @@ function PouchDetailPageContent() {
   const pouchId = Number.parseInt(pouchIdRaw, 10);
   const nameFromQuery = searchParams.get('name') ?? '';
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading: isListLoading } = useQuery({
     queryKey: getPouchListQueryKey(),
     queryFn: fetchPouchList,
     enabled: Number.isFinite(pouchId) && pouchId > 0,
   });
 
+  const { data: detailData, isLoading: isDetailLoading } = useGetPouchDetail(
+    pouchId,
+    { query: { enabled: Number.isFinite(pouchId) && pouchId > 0 } },
+  );
+
   const pouch = data?.result?.pouchList?.find((p) => p.pouchId === pouchId);
-  const pouchName = nameFromQuery || pouch?.name?.trim() || '\uC0C8 \uD30C\uC6B0\uCE58';
+  const pouchName =
+    nameFromQuery ||
+    detailData?.result?.name?.trim() ||
+    pouch?.name?.trim() ||
+    '\uC0C8 \uD30C\uC6B0\uCE58';
   const imageUrl = pouch?.imageUrl ?? null;
+  const isLoading = isListLoading || isDetailLoading;
 
   if (!Number.isFinite(pouchId) || pouchId <= 0) {
     return (

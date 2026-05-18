@@ -10,7 +10,7 @@ import {
   getPouchSheetHeightCSSValue,
 } from '@/components/my-cosmetics/pouch-sheet-constants';
 import { POUCH_ITEMS_SHEET_BOTTOM_OFFSET } from '@/components/my-cosmetics/PouchSheetChrome';
-import { buildPouchSharePath } from '@/lib/pouch-setup';
+import { buildPouchEditItemsPath, buildPouchSharePath } from '@/lib/pouch-setup';
 import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 
@@ -42,6 +42,14 @@ export function PouchDetailView({
         }}
         className="shrink-0 border-b border-zinc-100 pt-[var(--safe-area-top)]"
         rightIcons={[
+          {
+            kind: 'register',
+            ariaLabel: '파우치 수정',
+            iconSrc: '/icons/PenNewSquare.svg',
+            onClick: () => {
+              router.push(buildPouchEditItemsPath(pouchId, pouchName));
+            },
+          },
           {
             kind: 'share',
             ariaLabel: '공유하기',

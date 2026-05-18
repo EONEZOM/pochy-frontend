@@ -203,10 +203,10 @@ function PouchDetailItemText({
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
       <span className="truncate text-sm leading-4 font-bold text-[#B7B7B7]">
-        {item.brand || '브랜드명'}
+        {(item.brand ?? '').trim() || '브랜드명'}
       </span>
       <span className="line-clamp-2 text-[11px] leading-[150%] font-normal text-[#161618]">
-        {item.name}
+        {(item.name ?? '').trim() || '제품명'}
       </span>
       {memo ? (
         <p className="line-clamp-2 text-[11px] leading-[150%] font-normal text-[#161618]">

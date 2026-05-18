@@ -27,7 +27,7 @@ export const POUCH_REGISTER_RETURN_PATH_KEY = 'myCosmeticsRegisterReturnPath';
 export const DRAFT_POUCH_ID = 'draft';
 
 export const POUCH_LIST_PAGE_PARAMS = {
-  pageable: { page: 0, size: 20 },
+  pageable: { page: 0, size: 100 },
 } as const;
 
 export const getPouchListQueryKey = () =>
