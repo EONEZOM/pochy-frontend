@@ -7,7 +7,7 @@
  *
  * 3단계 AI 파이프라인:
  *   1. YOLO 객체 인식 → 크롭
- *   2. GPT Vision (`/api/my-cosmetics/vision`)
+ *   2. GPT Vision (`/api/vision/extract` + 네이버 보강)
  *   3. @imgly/background-removal 배경 제거
  *
  * 단계 완료 후 RegisterReviewStep(위시 스캔 결과 UI)으로 전환.
@@ -24,9 +24,9 @@ import { Modal } from '@/components/common/Modal';
 import RegisterReviewStep from '@/components/wishlist/RegisterReviewStep';
 import { WishScanAnalyzeLoading } from '@/components/wishlist/WishScanAnalyzeLoading';
 import type { NukkiResult } from '@/components/my-cosmetics/NukkiResultCard';
-import { detectWithYolo, cropBox } from '@/utils/yolo-detect';
 import { getSearchMyCosmeticsQueryKey } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import { registerMyCosmeticsFromScan } from '@/lib/my-cosmetics-register';
+import { runMyCosmeticsScanPipeline } from '@/lib/my-cosmetics-scan-pipeline';
 import {
   nukkiResultToScanFormData,
   scanFormDataToNukkiResult,
@@ -191,79 +191,14 @@ export default function MyCosmeticsRegisterPage() {
     }, 2800);
 
     try {
-      const allCrops: string[] = [];
+      const nukkiResults = await runMyCosmeticsScanPipeline(
+        images.map((img) => img.previewUrl),
+        loadImageElement,
+      );
 
-      for (let i = 0; i < images.length; i++) {
-        const imgElement = await loadImageElement(images[i].previewUrl);
-        const boxes = await detectWithYolo(imgElement);
-
-        if (boxes.length > 0) {
-          boxes.forEach((box) => allCrops.push(cropBox(imgElement, box)));
-        } else {
-          const canvas = document.createElement('canvas');
-          canvas.width = imgElement.naturalWidth;
-          canvas.height = imgElement.naturalHeight;
-          canvas.getContext('2d')?.drawImage(imgElement, 0, 0);
-          allCrops.push(canvas.toDataURL('image/jpeg', 0.9));
-        }
-      }
-
-      const visionRes = await fetch('/api/my-cosmetics/vision', {
-        method: 'POST',
-        body: JSON.stringify({ images: allCrops }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const visionData = await visionRes.json();
-
-      if (!visionRes.ok) {
-        throw new Error(visionData.error ?? 'GPT 분석 실패');
-      }
-
-      const gptResults: Array<{
-        is_cosmetic: boolean;
-        brand: string;
-        product_name: string;
-        product_type: string;
-        key_features: string[];
-        confidence_score: number;
-      }> = visionData.results ?? [];
-
-      const cosmeticItems = gptResults
-        .map((item, i) => ({ item, crop: allCrops[i], idx: i }))
-        .filter(({ item }) => item.is_cosmetic);
-
-      if (cosmeticItems.length === 0) {
+      if (nukkiResults.length === 0) {
         setIsScanFailModalOpen(true);
         return;
-      }
-
-      const { removeBackground } = await import('@imgly/background-removal');
-      const nukkiResults: NukkiResult[] = [];
-
-      for (let i = 0; i < cosmeticItems.length; i++) {
-        const { item, crop, idx } = cosmeticItems[i];
-
-        let nukkiSrc = crop;
-        let nukkiBlob: Blob | undefined;
-        try {
-          const blob = await removeBackground(crop, { model: 'isnet_quint8' });
-          nukkiBlob = blob;
-          nukkiSrc = URL.createObjectURL(blob);
-        } catch {
-          // 누끼 실패 시 원본 크롭 사용
-        }
-
-        nukkiResults.push({
-          id: idx,
-          src: nukkiSrc,
-          nukkiBlob,
-          cropBase64: crop,
-          brand: item.brand,
-          product_name: item.product_name,
-          product_type: item.product_type,
-          key_features: item.key_features,
-          confidence_score: item.confidence_score,
-        });
       }
 
       setResults(nukkiResults);

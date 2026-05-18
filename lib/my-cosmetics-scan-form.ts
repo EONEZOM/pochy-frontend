@@ -45,7 +45,7 @@ const mapProductTypeToCategories = (
   return { main_category: 'Etc', sub_category: 'Other' };
 };
 
-const resolveProductTypeLabel = (
+export const resolveProductTypeLabel = (
   mainCategory: string,
   subCategory: string,
   fallback: string,

@@ -9,7 +9,7 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { images } = await req.json();
+    const { images, hint } = await req.json();
     const MAX_IMAGES_PER_REQUEST = 9;
 
     if (!images || !Array.isArray(images) || images.length === 0) {
@@ -73,7 +73,13 @@ export async function POST(req: Request) {
         {
           role: 'user',
           content: [
-            { type: 'text', text: '이미지 속 모든 화장품 정보를 추출해줘.' },
+            {
+              type: 'text',
+              text:
+                typeof hint === 'string' && hint.trim().length > 0
+                  ? hint.trim()
+                  : '이미지 속 모든 화장품 정보를 추출해줘.',
+            },
             ...images.map((img: string): ChatCompletionContentPart => {
               const imageUrl = img.startsWith('data:')
                 ? img

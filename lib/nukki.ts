@@ -27,14 +27,18 @@ const toFallbackBlob = async (
   return source;
 };
 
+export type BackgroundRemovalModel = 'isnet' | 'isnet_quint8';
+
 export const removeProductBackground = async (
   source: string | Blob | File,
+  options?: { model?: BackgroundRemovalModel },
 ): Promise<RemoveProductBackgroundResult> => {
   const { url: inputUrl, revoke } = toInputUrl(source);
+  const model = options?.model ?? 'isnet_quint8';
 
   try {
     const { removeBackground } = await import('@imgly/background-removal');
-    const blob = await removeBackground(inputUrl, { model: 'isnet_quint8' });
+    const blob = await removeBackground(inputUrl, { model });
     const previewUrl = URL.createObjectURL(blob);
     return { blob, previewUrl };
   } catch {
