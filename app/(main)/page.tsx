@@ -158,8 +158,14 @@ function MainPageContent() {
 
   const isMainQueriesPending =
     isHomeLoading || isWishListLoading || isMyCosmeticsLoading;
+  /** SSR·클라이언트 캐시 불일치로 스켈레톤/본문이 갈라지는 hydration 방지 */
+  const [hasMounted, setHasMounted] = React.useState(false);
   const [hasSlowMainLoadingTimedOut, setHasSlowMainLoadingTimedOut] =
     React.useState(false);
+
+  React.useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   React.useEffect(() => {
     if (!isMainQueriesPending) {
@@ -253,7 +259,10 @@ function MainPageContent() {
   ];
 
   const showHomeSkeleton =
-    isHomeLoading || isWishListLoading || isMyCosmeticsLoading;
+    !hasMounted ||
+    isHomeLoading ||
+    isWishListLoading ||
+    isMyCosmeticsLoading;
 
   const myListItems = myPouchItems;
   const feedListItems = homeData?.feed ?? [];
