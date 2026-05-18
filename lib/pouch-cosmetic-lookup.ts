@@ -8,7 +8,40 @@ import {
 } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import type { MyCosmeticsResponseDTO, PouchItemDetailDto } from '@/api/model';
 
-const POUCH_COSMETIC_SEARCH_SIZE = 500;
+export const POUCH_COSMETIC_SEARCH_SIZE = 500;
+
+type PouchItemWithCosmeticId = PouchItemDetailDto & {
+  cosmeticId?: number;
+};
+
+const isPouchRowId = (item: PouchItemDetailDto, candidateId: number): boolean => {
+  const rowId = item.id;
+  return rowId != null && rowId > 0 && rowId === candidateId;
+};
+
+/**
+ * 파우치 행의 내 화장품 ID (myCosmeticId 우선, 런타임 cosmeticId 폴백).
+ * 행 id와 동일한 값은 파우치 아이템 PK일 수 있어 상세 API(/api/my-cosmetics/{id}) 호출에서 제외합니다.
+ */
+export const getPouchRowMyCosmeticId = (
+  item: PouchItemDetailDto,
+): number | undefined => {
+  const myCosmeticId = item.myCosmeticId;
+  if (myCosmeticId != null && myCosmeticId > 0) {
+    if (isPouchRowId(item, myCosmeticId)) {
+      return undefined;
+    }
+    return myCosmeticId;
+  }
+  const cosmeticId = (item as PouchItemWithCosmeticId).cosmeticId;
+  if (cosmeticId != null && cosmeticId > 0) {
+    if (isPouchRowId(item, cosmeticId)) {
+      return undefined;
+    }
+    return cosmeticId;
+  }
+  return undefined;
+};
 
 export type PouchDetailEnrichedRow = PouchItemDetailDto & {
   imgUrl?: string;
@@ -75,8 +108,8 @@ export const collectPouchCosmeticLookupIds = (
 ): number[] => {
   const ids = new Set<number>();
   for (const item of pouchCosmetics ?? []) {
-    const myCosmeticId = item.myCosmeticId;
-    if (myCosmeticId != null && myCosmeticId > 0) {
+    const myCosmeticId = getPouchRowMyCosmeticId(item);
+    if (myCosmeticId != null) {
       ids.add(myCosmeticId);
     }
   }
@@ -88,8 +121,8 @@ export const resolvePouchRowCosmeticMatch = (
   cosmeticsById: Map<number, MyCosmeticsResponseDTO>,
   cosmeticsByNameBrand: Map<string, MyCosmeticsResponseDTO>,
 ): MyCosmeticsResponseDTO | undefined => {
-  const myCosmeticId = item.myCosmeticId;
-  if (myCosmeticId != null && myCosmeticId > 0) {
+  const myCosmeticId = getPouchRowMyCosmeticId(item);
+  if (myCosmeticId != null) {
     const byId = cosmeticsById.get(myCosmeticId);
     if (byId) {
       return byId;
@@ -106,8 +139,9 @@ const resolvePouchProductDedupeKey = (item: PouchDetailEnrichedRow): string | nu
   if (item.linkCosmeticId != null && item.linkCosmeticId > 0) {
     return `cosmetic:${item.linkCosmeticId}`;
   }
-  if (item.myCosmeticId != null && item.myCosmeticId > 0) {
-    return `my-cosmetic:${item.myCosmeticId}`;
+  const myCosmeticId = getPouchRowMyCosmeticId(item);
+  if (myCosmeticId != null) {
+    return `my-cosmetic:${myCosmeticId}`;
   }
   return cosmeticNameBrandKey(item.brand, item.name);
 };
@@ -197,7 +231,9 @@ export const usePouchCosmeticsById = (
     return { cosmeticsById: byId, cosmeticsByNameBrand: byNameBrand };
   }, [detailQueries, listMap, listNameBrandMap]);
 
-  const isDetailsLoading = detailQueries.some((query) => query.isLoading);
+  const isDetailsLoading = detailQueries.some(
+    (query) => query.isLoading || (query.isFetching && !query.isError),
+  );
 
   return {
     cosmeticsById,

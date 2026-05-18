@@ -66,6 +66,7 @@ import {
 import { readPouchCanvasState } from '@/lib/pouch-canvas-state';
 import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import {
+  POUCH_COSMETIC_SEARCH_SIZE,
   resolvePouchRowCosmeticMatch,
   usePouchCosmeticsById,
 } from '@/lib/pouch-cosmetic-lookup';
@@ -89,6 +90,13 @@ type EditRestorePayload = {
   layers: CanvasLayer[];
   nextZIndex: number;
   sourceCanvasRect?: CanvasRect;
+};
+
+const EMPTY_EDIT_RESTORE_PAYLOAD: EditRestorePayload = {
+  selectedOrder: [],
+  itemMemos: {},
+  layers: [],
+  nextZIndex: 1,
 };
 
 const buildEditRestorePayloadFromCache = (
@@ -326,6 +334,8 @@ export function PouchItemsPicker({
   const canvasExportRef = useRef<HTMLDivElement | null>(null);
 
   const isDraftFlow = !isEditMode && !hasNumericPouchId;
+  const isExistingPouchFlow = hasNumericPouchId && !isDraftFlow;
+  const isPouchRestoreFlow = isEditMode || isExistingPouchFlow;
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -335,7 +345,7 @@ export function PouchItemsPicker({
 
   useEffect(() => {
     queueMicrotask(() => {
-      if (!isEditMode || !hasNumericPouchId) {
+      if (!isPouchRestoreFlow || !hasNumericPouchId) {
         setCacheRestorePayload(null);
         return;
       }
@@ -346,7 +356,7 @@ export function PouchItemsPicker({
       }
       setCacheRestorePayload(buildEditRestorePayloadFromCache(cached));
     });
-  }, [hasNumericPouchId, isEditMode, numericPouchId]);
+  }, [hasNumericPouchId, isPouchRestoreFlow, numericPouchId]);
 
   const getCanvasExportElement = useCallback((): HTMLElement | null => {
     return (
@@ -356,13 +366,13 @@ export function PouchItemsPicker({
   }, []);
 
   const { data, isLoading } = useSearchMyCosmetics({
-    size: 100,
+    size: POUCH_COSMETIC_SEARCH_SIZE,
     sort: 'desc',
   });
 
   const { data: pouchDetailData, isLoading: isPouchDetailLoading } =
     useGetPouchDetail(numericPouchId, {
-      query: { enabled: isEditMode && hasNumericPouchId },
+      query: { enabled: isPouchRestoreFlow && hasNumericPouchId },
     });
 
   const pouchDetailCosmetics = pouchDetailData?.result?.cosmetics;
@@ -370,16 +380,18 @@ export function PouchItemsPicker({
     cosmeticsById: editCosmeticsById,
     cosmeticsByNameBrand: editCosmeticsByNameBrand,
     isLoading: isEditCosmeticsLookupLoading,
-  } = usePouchCosmeticsById(isEditMode ? pouchDetailCosmetics : undefined);
+  } = usePouchCosmeticsById(
+    isPouchRestoreFlow ? pouchDetailCosmetics : undefined,
+  );
 
   const { data: pouchListData } = useQuery({
     queryKey: getPouchListQueryKey(),
     queryFn: fetchPouchList,
-    enabled: isEditMode && hasNumericPouchId,
+    enabled: isPouchRestoreFlow && hasNumericPouchId,
   });
 
   const editPouchImageUrl = useMemo(() => {
-    if (!isEditMode || !hasNumericPouchId) {
+    if (!isPouchRestoreFlow || !hasNumericPouchId) {
       return null;
     }
     const pouch = pouchListData?.result?.pouchList?.find(
@@ -389,7 +401,7 @@ export function PouchItemsPicker({
     return url || null;
   }, [
     hasNumericPouchId,
-    isEditMode,
+    isPouchRestoreFlow,
     numericPouchId,
     pouchListData?.result?.pouchList,
   ]);
@@ -401,11 +413,14 @@ export function PouchItemsPicker({
     return resolveDisplayImageSrc(resolveMediaUrl(editPouchImageUrl));
   }, [editPouchImageUrl]);
 
-  const { data: wappenListData, isSuccess: isWappenListReady } =
-    useGetWappenList(
-      { pageable: { page: 0, size: 100 } },
-      { query: { enabled: isEditMode } },
-    );
+  const {
+    data: wappenListData,
+    isFetched: isWappenListFetched,
+    isError: isWappenListError,
+  } = useGetWappenList(
+    { pageable: { page: 0, size: 100 } },
+    { query: { enabled: isPouchRestoreFlow } },
+  );
 
   const wappenImageUrlById = useMemo(() => {
     const map = new Map<number, string>();
@@ -546,16 +561,21 @@ export function PouchItemsPicker({
   };
 
   const editRestorePayload = useMemo(() => {
-    if (!isEditMode || !hasNumericPouchId) {
+    if (!isPouchRestoreFlow || !hasNumericPouchId) {
       return null;
     }
 
     const detail = pouchDetailData?.result;
-    if (!detail || isPouchDetailLoading || isEditCosmeticsLookupLoading) {
-      return cacheRestorePayload;
-    }
-    const hasWappensToRestore = (detail.wappens?.length ?? 0) > 0;
-    if (hasWappensToRestore && !isWappenListReady) {
+    const hasWappensToRestore = (detail?.wappens?.length ?? 0) > 0;
+    const isWappenGatePending =
+      hasWappensToRestore && !isWappenListFetched && !isWappenListError;
+
+    if (
+      !detail ||
+      isPouchDetailLoading ||
+      isEditCosmeticsLookupLoading ||
+      isWappenGatePending
+    ) {
       return cacheRestorePayload;
     }
 
@@ -570,31 +590,34 @@ export function PouchItemsPicker({
       return mergeEditRestorePayload(apiPayload, cacheRestorePayload);
     }
 
-    return cacheRestorePayload;
+    return cacheRestorePayload ?? EMPTY_EDIT_RESTORE_PAYLOAD;
   }, [
     cacheRestorePayload,
     editCosmeticsById,
     editCosmeticsByNameBrand,
     hasNumericPouchId,
     isEditCosmeticsLookupLoading,
-    isEditMode,
     isPouchDetailLoading,
-    isWappenListReady,
+    isPouchRestoreFlow,
+    isWappenListError,
+    isWappenListFetched,
     pouchDetailData?.result,
     wappenImageUrlById,
   ]);
 
-  const isEditRestoreReady = !isEditMode || editRestorePayload != null;
+  const isEditRestoreReady =
+    !isPouchRestoreFlow || editRestorePayload != null;
 
   const isEditRestoreLoading =
     isClientMounted &&
-    isEditMode &&
+    isPouchRestoreFlow &&
     hasNumericPouchId &&
     editRestorePayload == null &&
     (isPouchDetailLoading ||
       isEditCosmeticsLookupLoading ||
       ((pouchDetailData?.result?.wappens?.length ?? 0) > 0 &&
-        !isWappenListReady));
+        !isWappenListFetched &&
+        !isWappenListError));
 
   const isBlockingLoad = (isDraftFlow && !isDraftReady) || isEditRestoreLoading;
 
@@ -607,7 +630,11 @@ export function PouchItemsPicker({
   }, []);
 
   useEffect(() => {
-    if (!isEditMode || !editRestorePayload || hasUserEditedCanvasRef.current) {
+    if (
+      !isPouchRestoreFlow ||
+      !editRestorePayload ||
+      hasUserEditedCanvasRef.current
+    ) {
       return;
     }
     if (hasAppliedEditSelectionPreloadRef.current) {
@@ -619,7 +646,7 @@ export function PouchItemsPicker({
       setItemMemos(editRestorePayload.itemMemos);
       setNextZIndex(editRestorePayload.nextZIndex);
     });
-  }, [editRestorePayload, isEditMode]);
+  }, [editRestorePayload, isPouchRestoreFlow]);
 
   useLayoutEffect(() => {
     if (step !== 'decorate') {
@@ -699,7 +726,11 @@ export function PouchItemsPicker({
       alert('파우치에 넣을 화장품을 선택해 주세요.');
       return;
     }
-    if (isEditMode && editRestorePayload && !hasUserEditedCanvasRef.current) {
+    if (
+      isPouchRestoreFlow &&
+      editRestorePayload &&
+      !hasUserEditedCanvasRef.current
+    ) {
       const payload = filterRestorePayloadForSelection(
         editRestorePayload,
         selectedOrder,
@@ -802,10 +833,13 @@ export function PouchItemsPicker({
         queryKey: getPouchListQueryKey(),
       });
       await queryClient.invalidateQueries({
-        queryKey: getSearchMyCosmeticsQueryKey({ size: 100, sort: 'desc' }),
+        queryKey: getSearchMyCosmeticsQueryKey({
+          size: POUCH_COSMETIC_SEARCH_SIZE,
+          sort: 'desc',
+        }),
       });
 
-      if (isEditMode) {
+      if (isPouchRestoreFlow) {
         router.replace('/my-cosmetics');
       } else {
         router.replace(buildPouchCompletePath(savedPouchId, displayName));
@@ -826,9 +860,10 @@ export function PouchItemsPicker({
     step === 'select' ? (
       <PouchNextButton
         isDisabled={
-          selectedOrder.length === 0 || (isEditMode && !isEditRestoreReady)
+          selectedOrder.length === 0 ||
+          (isPouchRestoreFlow && !isEditRestoreReady)
         }
-        isLoading={isEditMode && !isEditRestoreReady}
+        isLoading={isPouchRestoreFlow && !isEditRestoreReady}
         onClick={handleNextSelect}
       />
     ) : (
