@@ -32,7 +32,7 @@ const POUCH_IMAGE_MIN_SIDE_PX = 320;
 
 export type CreatePouchMultipartPayload = {
   request: CombinedAddDto;
-  pouchImage?: File | Blob;
+  pouchImage: File | Blob;
 };
 
 export type UpdatePouchMultipartPayload = {
@@ -64,11 +64,17 @@ export const isPouchMultipartServerError = (err: unknown): boolean => {
   return status === 500 || status === 413 || status === 502 || status === 503;
 };
 
-/** POST 필수 `pouchImage` 충족용 1×1 PNG (실제 합성은 PATCH /image로 업로드) */
+const POUCH_PLACEHOLDER_SIDE_PX = 32;
+
+/** POST 필수 `pouchImage` 충족용 소형 투명 PNG (실제 합성은 PATCH /image로 업로드) */
 export const createMinimalPouchPlaceholderImage = async (): Promise<File> => {
   const canvas = document.createElement('canvas');
-  canvas.width = 1;
-  canvas.height = 1;
+  canvas.width = POUCH_PLACEHOLDER_SIDE_PX;
+  canvas.height = POUCH_PLACEHOLDER_SIDE_PX;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (value) => {
@@ -85,6 +91,10 @@ export const createMinimalPouchPlaceholderImage = async (): Promise<File> => {
     new File([blob], 'pouch.png', { type: 'image/png' }),
     'pouch.png',
   );
+};
+
+const isPouchPlaceholderImage = (image: File | Blob): boolean => {
+  return image instanceof File && image.name === 'pouch.png' && image.size < 8192;
 };
 
 const loadImageElement = (src: string): Promise<HTMLImageElement> => {
@@ -225,12 +235,21 @@ export const createPouchMultipart = async ({
   request,
   pouchImage,
 }: CreatePouchMultipartPayload): Promise<ApiResponseDTOString> => {
+  if (!pouchImage) {
+    throw new Error('파우치 생성에는 pouchImage가 필요합니다.');
+  }
+
   const formData = new FormData();
 
-  if (pouchImage) {
-    const file = await toPouchImageFile(pouchImage);
-    formData.append('pouchImage', file, file.name);
-  }
+  const file = isPouchPlaceholderImage(pouchImage)
+    ? normalizeMultipartImageFile(
+        pouchImage instanceof File
+          ? pouchImage
+          : new File([pouchImage], 'pouch.png', { type: 'image/png' }),
+        'pouch.png',
+      )
+    : await toPouchImageFile(pouchImage);
+  formData.append('pouchImage', file, file.name);
 
   appendJsonRequestPart(formData, request);
 

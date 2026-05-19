@@ -514,9 +514,16 @@ export const getPouchSaveErrorMessage = (err: unknown): string => {
     data?.message?.trim() ||
     (typeof data?.detail === 'string' ? data.detail.trim() : '') ||
     (typeof data?.error === 'string' ? data.error.trim() : '');
+  const serverCode = data?.code?.trim();
 
+  if (serverMessage && serverCode) {
+    return `${serverMessage} (${serverCode})`;
+  }
   if (serverMessage) {
     return serverMessage;
+  }
+  if (serverCode) {
+    return `파우치 저장에 실패했습니다. (${serverCode})`;
   }
   if (err instanceof Error && err.message.trim()) {
     return err.message;

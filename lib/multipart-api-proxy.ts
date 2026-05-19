@@ -3,9 +3,31 @@ import { type NextRequest, NextResponse } from 'next/server';
 /** Spring @RequestPart JSON 파트 키 */
 const JSON_REQUEST_PART_KEYS = new Set(['request', 'data']);
 
+const DEFAULT_JSON_PART_FILE_NAME = 'request.json';
+
+const resolveJsonPartFileName = (value: Blob): string => {
+  if (value instanceof File && value.name.trim()) {
+    return value.name;
+  }
+  return DEFAULT_JSON_PART_FILE_NAME;
+};
+
+const appendJsonPart = (
+  outgoing: FormData,
+  key: string,
+  payload: string | ArrayBuffer,
+  fileName: string,
+) => {
+  const body = typeof payload === 'string' ? payload : new Uint8Array(payload);
+  outgoing.append(
+    key,
+    new File([body], fileName, { type: 'application/json' }),
+  );
+};
+
 /**
  * Next Route Handler에서 파싱한 FormData를 백엔드로 재전송할 때
- * JSON 파트에 application/json Content-Type을 보장합니다.
+ * JSON 파트에 application/json Content-Type과 파일명을 보장합니다.
  */
 export const rebuildMultipartFormData = async (
   incoming: FormData,
@@ -15,17 +37,16 @@ export const rebuildMultipartFormData = async (
   for (const [key, value] of incoming.entries()) {
     if (JSON_REQUEST_PART_KEYS.has(key)) {
       if (typeof value === 'string') {
-        outgoing.append(
-          key,
-          new Blob([value], { type: 'application/json' }),
-        );
+        appendJsonPart(outgoing, key, value, DEFAULT_JSON_PART_FILE_NAME);
         continue;
       }
       if (value instanceof Blob) {
         const buffer = await value.arrayBuffer();
-        outgoing.append(
+        appendJsonPart(
+          outgoing,
           key,
-          new Blob([buffer], { type: 'application/json' }),
+          buffer,
+          resolveJsonPartFileName(value),
         );
         continue;
       }
@@ -34,6 +55,25 @@ export const rebuildMultipartFormData = async (
   }
 
   return outgoing;
+};
+
+export const logIncomingMultipartFormData = (
+  formData: FormData,
+  logLabel: string,
+  method = 'POST',
+): void => {
+  console.log(`[${logLabel}][${method}] FormData keys:`, [...formData.keys()]);
+  formData.forEach((value, key) => {
+    if (typeof value === 'string') {
+      console.log(
+        `[${logLabel}][${method}] part key="${key}" value="${value.slice(0, 120)}"`,
+      );
+      return;
+    }
+    console.log(
+      `[${logLabel}][${method}] part key="${key}" file="${value.name}" size=${value.size} type="${value.type}"`,
+    );
+  });
 };
 
 export const forwardProxyAuthHeaders = (request: NextRequest): Headers => {
@@ -56,6 +96,12 @@ export const parseBackendProxyResponse = async (
   const contentType = response.headers.get('content-type') ?? '';
   if (contentType.includes('application/json')) {
     const data = await response.json();
+    if (!response.ok) {
+      console.error(
+        `[${logLabel}] backend error status=${response.status}:`,
+        JSON.stringify(data).slice(0, 800),
+      );
+    }
     return NextResponse.json(data, { status: response.status });
   }
   const text = await response.text();
@@ -73,8 +119,11 @@ export const proxyMultipartPost = async (
 ): Promise<NextResponse> => {
   try {
     const incomingFormData = await request.formData();
+    logIncomingMultipartFormData(incomingFormData, logLabel, 'POST');
     const outgoingFormData = await rebuildMultipartFormData(incomingFormData);
     const authorization = request.headers.get('Authorization');
+
+    console.log(`[${logLabel}][POST] forwarding to backend:`, backendUrl);
 
     const response = await fetch(backendUrl, {
       method: 'POST',
@@ -127,7 +176,9 @@ export const proxyMultipartPatch = async (
     const outgoingFormData = new FormData();
     outgoingFormData.append(
       'request',
-      new Blob([JSON.stringify(requestDto)], { type: 'application/json' }),
+      new File([JSON.stringify(requestDto)], DEFAULT_JSON_PART_FILE_NAME, {
+        type: 'application/json',
+      }),
     );
 
     const response = await fetch(backendUrl, {

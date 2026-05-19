@@ -29,6 +29,13 @@ export async function GET(request: NextRequest) {
 
 /** multipart POST — Vercel rewrite 대신 JSON @RequestPart Content-Type 보장 */
 export async function POST(request: NextRequest) {
+  console.log('[pouches][POST] request start');
+  console.log('[pouches][POST] Content-Type:', request.headers.get('Content-Type'));
+  console.log(
+    '[pouches][POST] Authorization:',
+    request.headers.get('Authorization') ? 'present' : 'missing',
+  );
+  console.log('[pouches][POST] backend URL:', BACKEND_URL);
   return proxyMultipartPost(request, BACKEND_URL, 'pouches');
 }
 
