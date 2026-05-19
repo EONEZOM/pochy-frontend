@@ -53,6 +53,8 @@ import {
 import {
   POUCH_CANVAS_EXPORT_ID,
   apiPointToLayerPosition,
+  buildSelectionsFromCosmeticLayers,
+  countCosmeticLayersOnCanvas,
   createCanvasLayerId,
   createCenteredLayer,
   ensureUniqueCanvasLayerIds,
@@ -61,7 +63,6 @@ import {
   getCosmeticImageSrc,
   getWappenImageSrc,
   scaleLayersToCanvasRect,
-  seedCosmeticLayersFromSelection,
   type CanvasLayer,
   type CanvasRect,
 } from '@/lib/pouch-canvas';
@@ -927,28 +928,6 @@ export function PouchItemsPicker({
       alert('파우치에 넣을 화장품을 선택해 주세요.');
       return;
     }
-
-    const validIds = sanitizeSelectedOrder(selectedOrder, validCosmeticIds);
-    const itemsById = new Map<number, MyCosmeticsResponseDTO>();
-    for (const item of items) {
-      if (item.id != null && item.id > 0) {
-        itemsById.set(item.id, item);
-      }
-    }
-
-    const canvasEl = getCanvasExportElement();
-    const canvasRect = getCanvasRectFromElement(canvasEl);
-    const { layers: seededLayers, nextZIndex: seededNextZ } =
-      seedCosmeticLayersFromSelection(
-        layers,
-        validIds,
-        itemsById,
-        canvasRect,
-        (item) => getCosmeticImageSrc(item),
-      );
-
-    setLayers(seededLayers);
-    setNextZIndex(seededNextZ);
     setStep('decorate');
     setIsSheetExpanded(false);
   };
@@ -1001,8 +980,8 @@ export function PouchItemsPicker({
   };
 
   const handleComplete = async () => {
-    if (selectedOrder.length === 0) {
-      alert('파우치에 넣을 화장품을 선택해 주세요.');
+    if (countCosmeticLayersOnCanvas(layers) === 0) {
+      alert('스티커로 파우치에 넣은 화장품이 없습니다.');
       return;
     }
 
@@ -1015,17 +994,15 @@ export function PouchItemsPicker({
     setIsSaving(true);
     try {
       const canvasRect = getCanvasRectFromElement(canvasEl);
-      const validSelectedIds = sanitizeSelectedOrder(
-        selectedOrder,
-        validCosmeticIds,
+      const selections = buildSelectionsFromCosmeticLayers(layers, itemMemos);
+      const validSelections = selections.filter((selection) =>
+        validCosmeticIds.has(selection.myCosmeticId),
       );
-      const selections = validSelectedIds.map((myCosmeticId) => {
-        const memo = itemMemos[myCosmeticId]?.trim();
-        return {
-          myCosmeticId,
-          ...(memo ? { memo } : {}),
-        };
-      });
+
+      if (validSelections.length === 0) {
+        alert('스티커로 파우치에 넣은 화장품이 없습니다.');
+        return;
+      }
 
       flushSync(() => {
         setSelectedLayerId(null);
@@ -1035,7 +1012,7 @@ export function PouchItemsPicker({
       const savedPouchId = await savePouchDecoration(
         pouchId,
         displayName,
-        selections,
+        validSelections,
         layers,
         canvasRect,
         compositeBlob,

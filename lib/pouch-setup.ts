@@ -12,6 +12,7 @@ import {
 import {
   buildCombinedAddDto,
   buildCosmeticItemsForSave,
+  buildCosmeticItemsFromSelectionsGrid,
   buildCosmeticListForSave,
   buildPouchUpdateDto,
   DEFAULT_CANVAS_RECT,
@@ -120,7 +121,8 @@ export const isDraftPouchId = (pouchId: string) => {
   return pouchId === DRAFT_POUCH_ID;
 };
 
-const POUCH_ID_LIST_LOOKUP_DELAY_MS = 400;
+const POUCH_ID_LIST_LOOKUP_MAX_ATTEMPTS = 5;
+const POUCH_ID_LIST_LOOKUP_DELAY_MS = 500;
 
 const parsePositiveInt = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
@@ -171,7 +173,8 @@ const parsePouchIdFromAddResponse = (
 ): number | null => {
   return (
     parsePouchIdFromUnknown(response.result) ??
-    parsePouchIdFromUnknown(response.message)
+    parsePouchIdFromUnknown(response.message) ??
+    parsePouchIdFromUnknown(response)
   );
 };
 
@@ -198,15 +201,19 @@ const resolvePouchIdFromListByName = async (
     return Math.max(...matches.map((pouch) => pouch.pouchId as number));
   };
 
-  const firstAttempt = await lookup();
-  if (firstAttempt != null) {
-    return firstAttempt;
+  for (let attempt = 0; attempt < POUCH_ID_LIST_LOOKUP_MAX_ATTEMPTS; attempt += 1) {
+    const pouchId = await lookup();
+    if (pouchId != null) {
+      return pouchId;
+    }
+    if (attempt < POUCH_ID_LIST_LOOKUP_MAX_ATTEMPTS - 1) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, POUCH_ID_LIST_LOOKUP_DELAY_MS);
+      });
+    }
   }
 
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, POUCH_ID_LIST_LOOKUP_DELAY_MS);
-  });
-  return lookup();
+  return null;
 };
 
 const isPouchImageUploadServerError = (err: unknown): boolean => {
@@ -238,7 +245,7 @@ const savePouchDecorationWithImage = async (
 const buildPouchCosmeticItems = (
   selections: PouchCosmeticSelection[],
 ): AddCosmeticDetailDto[] => {
-  return buildCosmeticItemsForSave([], selections, DEFAULT_CANVAS_RECT);
+  return buildCosmeticItemsFromSelectionsGrid(selections);
 };
 
 const validatePouchSelections = (selections: PouchCosmeticSelection[]) => {
@@ -438,7 +445,17 @@ export const savePouchWithCosmetics = async (
   const pouchId = await resolvePouchIdForSave(pouchIdParam);
 
   if (pouchId != null) {
-    const cosmeticList = buildCosmeticListForSave([], selections, DEFAULT_CANVAS_RECT);
+    const cosmeticList = buildCosmeticItemsFromSelectionsGrid(selections).map(
+      (item) => ({
+        cosmeticId: item.myCosmeticId,
+        memo: item.memo,
+        xpoint: item.xpoint,
+        ypoint: item.ypoint,
+        zindex: item.zindex,
+        size: item.size,
+        rotationAngle: item.rotationAngle,
+      }),
+    );
     await updatePouchMultipart(pouchId, {
       request: buildPouchUpdateDto({
         pouchName: trimmedName,

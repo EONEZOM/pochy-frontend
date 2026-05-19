@@ -331,42 +331,77 @@ export const buildDefaultCosmeticApiPoint = (selectionIndex: number) => {
 
 const POUCH_API_MEMO_MAX_LEN = 60;
 
+/** 캔버스에 올린 cosmetic 스티커만 선택 목록으로 변환 (zIndex 순, ID 중복 1회) */
+export const buildSelectionsFromCosmeticLayers = (
+  layers: CanvasLayer[],
+  itemMemos: Record<number, string> = {},
+): PouchCosmeticSelection[] => {
+  const seen = new Set<number>();
+  const result: PouchCosmeticSelection[] = [];
+  const sorted = [...layers]
+    .filter((layer) => layer.kind === 'cosmetic' && layer.myCosmeticId != null)
+    .sort((a, b) => a.zIndex - b.zIndex);
+
+  for (const layer of sorted) {
+    const myCosmeticId = layer.myCosmeticId as number;
+    if (!Number.isFinite(myCosmeticId) || myCosmeticId <= 0 || seen.has(myCosmeticId)) {
+      continue;
+    }
+    seen.add(myCosmeticId);
+    const memo = itemMemos[myCosmeticId]?.trim();
+    result.push({
+      myCosmeticId,
+      ...(memo ? { memo } : {}),
+    });
+  }
+
+  return result;
+};
+
+export const countCosmeticLayersOnCanvas = (layers: CanvasLayer[]): number => {
+  const seen = new Set<number>();
+  for (const layer of layers) {
+    if (
+      layer.kind === 'cosmetic' &&
+      layer.myCosmeticId != null &&
+      layer.myCosmeticId > 0
+    ) {
+      seen.add(layer.myCosmeticId);
+    }
+  }
+  return seen.size;
+};
+
+/** 꾸미기 없이 선택만 저장할 때 — 기본 그리드 배치 */
+export const buildCosmeticItemsFromSelectionsGrid = (
+  selections: PouchCosmeticSelection[],
+): AddCosmeticDetailDto[] => {
+  return selections.map(({ myCosmeticId, memo }, index) => ({
+    myCosmeticId,
+    ...buildDefaultCosmeticApiPoint(index),
+    ...(memo?.trim() ? { memo: memo.trim().slice(0, POUCH_API_MEMO_MAX_LEN) } : {}),
+  }));
+};
+
 /**
- * 선택 목록 순서를 기준으로 저장용 화장품 항목을 만듭니다.
- * 캔버스 레이어에 해당 ID가 있으면 위치·크기를 사용하고, 없으면 기본 그리드에 배치합니다.
+ * 저장용 화장품 항목 — 캔버스에 올린 cosmetic 레이어만 포함합니다.
  */
 export const buildCosmeticItemsForSave = (
   layers: CanvasLayer[],
   selections: PouchCosmeticSelection[],
   canvasRect: CanvasRect,
 ): AddCosmeticDetailDto[] => {
-  const { cosmeticItems: fromLayers } = layersToSavePayload(
-    layers,
-    selections,
-    canvasRect,
+  const memoByCosmeticId = new Map(
+    selections.map((selection) => [selection.myCosmeticId, selection.memo?.trim()]),
   );
-  const byMyCosmeticId = new Map<number, AddCosmeticDetailDto>();
-  for (const item of fromLayers) {
-    const id = item.myCosmeticId;
-    if (id != null && id > 0) {
-      byMyCosmeticId.set(id, item);
-    }
-  }
+  const { cosmeticItems } = layersToSavePayload(layers, selections, canvasRect);
 
-  return selections.map((selection, index) => {
-    const myCosmeticId = selection.myCosmeticId;
-    const memo = selection.memo?.trim();
-    const fromLayer = byMyCosmeticId.get(myCosmeticId);
-    if (fromLayer) {
-      return {
-        ...fromLayer,
-        myCosmeticId,
-        ...(memo ? { memo: memo.slice(0, POUCH_API_MEMO_MAX_LEN) } : {}),
-      };
-    }
+  return cosmeticItems.map((item) => {
+    const myCosmeticId = item.myCosmeticId;
+    const memo =
+      myCosmeticId != null ? memoByCosmeticId.get(myCosmeticId) : undefined;
     return {
-      myCosmeticId,
-      ...buildDefaultCosmeticApiPoint(index),
+      ...item,
       ...(memo ? { memo: memo.slice(0, POUCH_API_MEMO_MAX_LEN) } : {}),
     };
   });
