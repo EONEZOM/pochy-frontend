@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { WithdrawConfirmModal } from '@/components/common/WithdrawConfirmModal';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/common/Button';
 import { Input } from '@/components/ui/input';
 import { getGetHomeDataQueryKey } from '@/api/generated/home/home';
 import {
@@ -196,18 +196,18 @@ export default function MyPage() {
       >
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex shrink-0 flex-col items-center">
-            <div className="border-mono-white relative size-20 shrink-0 rounded-full border-[3px] shadow-[0_3px_3px_rgba(0,0,0,0.2)]">
+            <div className="border-mono-white relative size-20 shrink-0 overflow-hidden rounded-full border-[3px] shadow-[0_3px_3px_rgba(0,0,0,0.2)]">
               {resolvedProfileImageUrl && !isEnsuringProfileImage ? (
                 <Image
                   src={resolvedProfileImageUrl}
                   alt=""
-                  width={80}
-                  height={80}
-                  className="bg-mono-gray size-[74px] rounded-full object-cover"
+                  fill
+                  sizes="80px"
+                  className="object-cover object-center"
                   onError={handleProfileImageError}
                 />
               ) : (
-                <div className="bg-mono-gray size-[74px] rounded-full" />
+                <div className="bg-mono-gray size-full" aria-hidden />
               )}
             </div>
             <p className="text-mono-jet mt-2 line-clamp-1 text-center text-sm leading-5 font-bold sm:text-base">
@@ -291,9 +291,11 @@ export default function MyPage() {
 
             <Button
               type="button"
+              variant="solid"
+              size="lg"
               onClick={handleComplete}
               disabled={isSaving || !hasNicknameChange}
-              className="border-mono-bright-gray text-mono-jet hover:bg-brand-lavender/90 bg-brand-lavender mb-[10px] h-12 w-full rounded-full border text-sm leading-5 font-bold shadow-none disabled:opacity-50 sm:h-14 sm:text-base"
+              className="border-mono-bright-gray enabled:bg-brand-lavender enabled:text-mono-jet enabled:hover:bg-brand-lavender/90 mb-[10px] h-12 w-full shadow-none enabled:border-transparent sm:h-14 disabled:border-mono-bright-gray disabled:bg-transparent disabled:text-mono-dark-gray"
             >
               {isSaving ? '저장 중...' : '완료'}
             </Button>
