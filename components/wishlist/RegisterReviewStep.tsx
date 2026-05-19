@@ -10,7 +10,9 @@
  */
 
 import { useState } from 'react';
-import ProductDetailForm from '@/components/wishlist/ProductDetailForm';
+import ProductDetailForm, {
+  type ProductDetailFormImageSelectResult,
+} from '@/components/wishlist/ProductDetailForm';
 import ResultCard from '@/components/wishlist/ResultCard';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
@@ -25,6 +27,12 @@ interface ReviewStepProps {
   isSavePending?: boolean;
   cardImageObjectFit?: 'cover' | 'contain';
   hideYoutubeReview?: boolean;
+  onImageFileSelected?: (
+    file: File,
+  ) => Promise<ProductDetailFormImageSelectResult>;
+  onOfficialImageUrlSelected?: (
+    imageUrl: string,
+  ) => Promise<ProductDetailFormImageSelectResult>;
 }
 
 export default function RegisterReviewStep({
@@ -37,6 +45,8 @@ export default function RegisterReviewStep({
   isSavePending = false,
   cardImageObjectFit = 'cover',
   hideYoutubeReview = false,
+  onImageFileSelected,
+  onOfficialImageUrlSelected,
 }: ReviewStepProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
@@ -92,6 +102,8 @@ export default function RegisterReviewStep({
         submitLabel="확인"
         onBack={() => setSelectedIndex(null)}
         onSubmit={handleDetailSubmit}
+        onImageFileSelected={onImageFileSelected}
+        onOfficialImageUrlSelected={onOfficialImageUrlSelected}
       />
     );
   }

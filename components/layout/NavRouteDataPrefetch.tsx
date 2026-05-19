@@ -30,17 +30,19 @@ const isPreHomePath = (pathname: string): boolean => {
   );
 };
 
-const scheduleIdle = (fn: () => void): void => {
-  if (typeof requestIdleCallback === 'function') {
-    requestIdleCallback(() => fn(), { timeout: 2800 });
-  } else {
-    setTimeout(fn, 320);
+const scheduleEarlyPrefetch = (fn: () => void): void => {
+  if (typeof requestAnimationFrame === 'function') {
+    requestAnimationFrame(() => {
+      setTimeout(fn, 100);
+    });
+    return;
   }
+  setTimeout(fn, 100);
 };
 
 /**
- * 메인 앱 하단 탭에 해당하는 API·썸네일을 유휴 시점에 미리 채워,
- * 탭 전환 직후 리스트·이미지가 바로 보이도록 합니다.
+ * 메인 앱 하단 탭에 해당하는 API를 앱 진입 직후 미리 채웁니다.
+ * 이미지 warm은 각 페이지의 useWarmRouteImages 훅이 담당합니다.
  */
 export function NavRouteDataPrefetch() {
   const pathname = usePathname() ?? '/';
@@ -54,7 +56,7 @@ export function NavRouteDataPrefetch() {
       return;
     }
     let cancelled = false;
-    scheduleIdle(() => {
+    scheduleEarlyPrefetch(() => {
       if (cancelled) {
         return;
       }
@@ -62,7 +64,7 @@ export function NavRouteDataPrefetch() {
         preloadMainHomeAssets();
       }
       if (shouldPrefetchTabs) {
-        void prefetchMainAppTabQueries(queryClient);
+        void prefetchMainAppTabQueries(queryClient, pathname);
       }
     });
     return () => {

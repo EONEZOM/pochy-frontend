@@ -18,6 +18,7 @@ import { useSearchMyCosmetics } from '@/api/generated/my-cosmetics-controller/my
 import { getSearchMyCosmeticsQueryKey } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import { useGetPouchDetail } from '@/api/generated/pouch-controller/pouch-controller';
 import { useGetWappenList } from '@/api/generated/wappen-controller/wappen-controller';
+import { useWarmMyCosmeticsItems } from '@/hooks/useWarmRouteImages';
 import { ExtraNav } from '@/components/common/ExtraNav';
 import { Modal } from '@/components/common/Modal/Modal';
 import { Header } from '@/components/layout/Header';
@@ -507,6 +508,26 @@ export function PouchItemsPicker({
       .map((id) => itemsById.get(id))
       .filter((item): item is MyCosmeticsResponseDTO => item != null);
   }, [items, selectedOrder]);
+
+  const warmItems = useMemo(() => {
+    if (step === 'decorate' && decorateCosmeticItems.length > 0) {
+      return decorateCosmeticItems;
+    }
+    if (selectedOrder.length > 0) {
+      const itemsById = new Map<number, MyCosmeticsResponseDTO>();
+      for (const item of items) {
+        if (item.id != null) {
+          itemsById.set(item.id, item);
+        }
+      }
+      return selectedOrder
+        .map((id) => itemsById.get(id))
+        .filter((item): item is MyCosmeticsResponseDTO => item != null);
+    }
+    return items.slice(0, 48);
+  }, [decorateCosmeticItems, items, selectedOrder, step]);
+
+  useWarmMyCosmeticsItems(warmItems);
 
   const displayName = pouchName.trim() || readPendingPouchName() || '새 파우치';
   const pouchItemsPath = buildPouchItemsPath(pouchId, displayName);

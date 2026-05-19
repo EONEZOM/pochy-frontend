@@ -21,6 +21,7 @@ import {
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
 import { useDragScroll } from '@/hooks/useDragScroll';
+import { usePrefetchDetailOnInteraction } from '@/hooks/usePrefetchDetailOnInteraction';
 
 /** 메인 리스트 타일 (Figma 938:9532 기준) */
 const TILE_PX = 96;
@@ -74,6 +75,7 @@ type HomeSectionTileImageProps = {
   imageClassName?: string;
   /** 파우치·누끼 PNG 투명 영역 — Next 최적화 시 검정 배경으로 깨지는 것 방지 */
   preferUnoptimized?: boolean;
+  loading?: 'lazy' | 'eager';
 };
 
 const HomeSectionTileImage = ({
@@ -83,6 +85,7 @@ const HomeSectionTileImage = ({
   fetchHigh = false,
   imageClassName = 'object-cover',
   preferUnoptimized = false,
+  loading = 'lazy',
 }: HomeSectionTileImageProps) => {
   const [failed, setFailed] = useState(false);
 
@@ -101,6 +104,7 @@ const HomeSectionTileImage = ({
         preferUnoptimized || shouldBypassNextImageOptimizer(src)
       }
       priority={priority}
+      loading={loading}
       {...(fetchHigh ? { fetchPriority: 'high' as const } : {})}
       decoding="async"
       draggable={false}
@@ -160,6 +164,7 @@ export function HomeSectionCarousel({
   showSkeleton,
   items,
 }: HomeSectionCarouselProps) {
+  const getDetailInteractionHandlers = usePrefetchDetailOnInteraction();
   const { registerRef, onDragStart, isDrag, checkIsClickForbidden } =
     useDragScroll();
 
@@ -198,9 +203,8 @@ export function HomeSectionCarousel({
   return (
     <div {...trackProps}>
       {items.map((item, index) => {
-        const isFirstSection = sectionIndex === 0;
-        const priority = isFirstSection && index < 3;
-        const fetchHigh = isFirstSection && index === 0;
+        const priority = index < 3;
+        const fetchHigh = sectionIndex === 0 && index === 0;
         const detailHref = getItemDetailHref(sectionIndex, item.id);
         const itemKey = `${sectionTitle}-${item.id ?? item.imageUrl ?? index}`;
         const imageSrc = resolveDetailImageSrc(item.imageUrl);
@@ -215,6 +219,7 @@ export function HomeSectionCarousel({
             fetchHigh={fetchHigh}
             imageClassName={tileImageClassName}
             preferUnoptimized={preferUnoptimized}
+            loading={priority ? 'eager' : 'lazy'}
           />
         ) : (
           <TilePlaceholder />
@@ -228,6 +233,7 @@ export function HomeSectionCarousel({
           <Link
             key={itemKey}
             href={detailHref}
+            {...getDetailInteractionHandlers(detailHref)}
             onClick={(event) => {
               if (checkIsClickForbidden()) {
                 event.preventDefault();

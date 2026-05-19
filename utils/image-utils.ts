@@ -251,10 +251,102 @@ export const isValidProductBbox = (bbox: NormalizedBBox): boolean => {
   return true;
 };
 
+/** bbox 높이가 크롭 대비 지나치게 작으면 상단만 잡힌 것으로 간주 */
+export const isBboxHeightSuspiciouslySmall = (
+  bbox: NormalizedBBox,
+  minHeightRatio = 0.7,
+): boolean => {
+  const height = clamp01(bbox.y_max) - clamp01(bbox.y_min);
+  return height < minHeightRatio;
+};
+
+const VERTICAL_BBOX_ASPECT_THRESHOLD = 1.1;
+const MISSING_BOTTOM_CAP_Y_MAX_THRESHOLD = 0.82;
+
+/** 튜브·병 등 세로형 용기 bbox */
+export const isVerticalProductBbox = (bbox: NormalizedBBox): boolean => {
+  const width = clamp01(bbox.x_max) - clamp01(bbox.x_min);
+  const height = clamp01(bbox.y_max) - clamp01(bbox.y_min);
+  if (width <= 0) {
+    return false;
+  }
+  return height / width >= VERTICAL_BBOX_ASPECT_THRESHOLD;
+};
+
+/** 세로형인데 하단 캡·뚜껑이 bbox 밖으로 잘린 것으로 추정 */
+export const isBboxLikelyMissingBottomCap = (bbox: NormalizedBBox): boolean => {
+  if (!isVerticalProductBbox(bbox)) {
+    return false;
+  }
+  return clamp01(bbox.y_max) < MISSING_BOTTOM_CAP_Y_MAX_THRESHOLD;
+};
+
+/** bbox 하단을 아래로 확장 (검정 캡·뚜껑 여유) */
+export const extendBboxBottom = (
+  bbox: NormalizedBBox,
+  extraRatio = 0.12,
+): NormalizedBBox => {
+  const yMin = clamp01(bbox.y_min);
+  const yMax = clamp01(bbox.y_max);
+  const height = yMax - yMin;
+
+  return {
+    x_min: clamp01(bbox.x_min),
+    y_min: yMin,
+    x_max: clamp01(bbox.x_max),
+    y_max: clamp01(yMax + height * extraRatio),
+  };
+};
+
+export const unionNormalizedBboxes = (
+  a: NormalizedBBox,
+  b: NormalizedBBox,
+): NormalizedBBox => ({
+  x_min: clamp01(Math.min(a.x_min, b.x_min)),
+  y_min: clamp01(Math.min(a.y_min, b.y_min)),
+  x_max: clamp01(Math.max(a.x_max, b.x_max)),
+  y_max: clamp01(Math.max(a.y_max, b.y_max)),
+});
+
+export type BboxCropMargins =
+  | number
+  | {
+      horizontal?: number;
+      top?: number;
+      bottom?: number;
+    };
+
+export const resolveBboxCropMargins = (
+  bbox: NormalizedBBox,
+  baseMarginRatio = 0.1,
+): { horizontal: number; top: number; bottom: number } => {
+  const bottom = isVerticalProductBbox(bbox) ? 0.15 : baseMarginRatio;
+  return {
+    horizontal: baseMarginRatio,
+    top: baseMarginRatio,
+    bottom,
+  };
+};
+
+const normalizeCropMargins = (
+  margin: BboxCropMargins,
+  bbox: NormalizedBBox,
+): { horizontal: number; top: number; bottom: number } => {
+  if (typeof margin === 'number') {
+    return resolveBboxCropMargins(bbox, margin);
+  }
+  const base = resolveBboxCropMargins(bbox, 0.1);
+  return {
+    horizontal: margin.horizontal ?? base.horizontal,
+    top: margin.top ?? base.top,
+    bottom: margin.bottom ?? base.bottom,
+  };
+};
+
 export const cropDataUrlByNormalizedBBox = (
   dataUrl: string,
   bbox: NormalizedBBox,
-  marginRatio = 0.05,
+  margin: BboxCropMargins = 0.05,
   quality = 0.92,
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -275,13 +367,15 @@ export const cropDataUrlByNormalizedBBox = (
 
       const boxW = xMax - xMin;
       const boxH = yMax - yMin;
-      const padX = boxW * marginRatio;
-      const padY = boxH * marginRatio;
+      const margins = normalizeCropMargins(margin, bbox);
+      const padX = boxW * margins.horizontal;
+      const padTop = boxH * margins.top;
+      const padBottom = boxH * margins.bottom;
 
       xMin = Math.max(0, xMin - padX);
-      yMin = Math.max(0, yMin - padY);
+      yMin = Math.max(0, yMin - padTop);
       xMax = Math.min(imgW, xMax + padX);
-      yMax = Math.min(imgH, yMax + padY);
+      yMax = Math.min(imgH, yMax + padBottom);
 
       const cropW = Math.max(1, Math.floor(xMax - xMin));
       const cropH = Math.max(1, Math.floor(yMax - yMin));

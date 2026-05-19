@@ -15,6 +15,7 @@ import { WishCardImage } from '@/components/wishlist/WishCardImage';
 import type { MyCosmeticsResponseDTO } from '@/api/model';
 import { resolveStoredCosmeticCategories } from '@/lib/cosmetic-category-normalize';
 import { getMyCosmeticsWishCardImageProps } from '@/lib/my-cosmetics-display-image';
+import { useWarmMyCosmeticsItems } from '@/hooks/useWarmRouteImages';
 import { cn } from '@/lib/utils';
 
 export {
@@ -58,6 +59,8 @@ export function PouchItemsBottomSheet({
   const [currentCategory, setCurrentCategory] =
     useState<FilterMainCategory>('All');
   const [currentSub, setCurrentSub] = useState<FilterSubCategory>('All');
+
+  useWarmMyCosmeticsItems(items);
 
   const selectedIds = useMemo(() => new Set(selectedOrder), [selectedOrder]);
 

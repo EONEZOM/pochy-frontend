@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/Header';
 import { PouchPublicShareBottomSheet } from '@/components/my-cosmetics/PouchPublicShareBottomSheet';
 import { getPouchSheetHeightCSSValue } from '@/components/my-cosmetics/pouch-sheet-constants';
 import type { FindFeedCosmeticsDto } from '@/api/model';
+import { useWarmPouchShareImages } from '@/hooks/useWarmRouteImages';
 import {
   buildPouchPublicShareDisplayRows,
   resolvePouchPublicCompositeImageUrl,
@@ -44,6 +45,8 @@ export function PouchPublicShareView({
     () => buildPouchPublicShareDisplayRows(shareDetail?.cosmetics, feedCosmetics),
     [feedCosmetics, shareDetail?.cosmetics],
   );
+
+  useWarmPouchShareImages(displayImageUrl, displayRows);
 
   return (
     <div

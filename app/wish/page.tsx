@@ -20,6 +20,8 @@ import {
   pickWishCaptureImageUrl,
   pickWishOfficialImageUrl,
 } from '@/lib/wish-display-image';
+import { usePrefetchDetailOnInteraction } from '@/hooks/usePrefetchDetailOnInteraction';
+import { useWarmWishListImages } from '@/hooks/useWarmRouteImages';
 import { cn } from '@/lib/utils';
 
 type WishListItem = {
@@ -60,6 +62,7 @@ function WishlistPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const getDetailInteractionHandlers = usePrefetchDetailOnInteraction();
   const [isRegisterMenuOpen, setIsRegisterMenuOpen] = useState(false);
 
   const searchQuery = searchParams.get('q') || '';
@@ -93,6 +96,8 @@ function WishlistPageContent() {
     }
     return items;
   }, [data?.result?.content, sortOrder]);
+
+  useWarmWishListImages(filteredItems);
 
   const handleMainChange = (category: FilterMainCategory) => {
     const params = new URLSearchParams(searchParams);
@@ -232,6 +237,7 @@ function WishlistPageContent() {
                         key={item.id}
                         href={`/wish/${item.id}`}
                         className="group flex w-full min-w-0 flex-col"
+                        {...getDetailInteractionHandlers(`/wish/${item.id}`)}
                       >
                         <div
                           className={cn(

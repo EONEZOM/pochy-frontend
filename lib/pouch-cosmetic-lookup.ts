@@ -12,7 +12,7 @@ import type {
   PouchItemDetailDto,
 } from '@/api/model';
 
-export const POUCH_COSMETIC_SEARCH_SIZE = 500;
+export const POUCH_COSMETIC_SEARCH_SIZE = 100;
 
 type PouchItemWithCosmeticId = PouchItemDetailDto & {
   cosmeticId?: number;
@@ -175,32 +175,6 @@ export const buildSelectionRestoreFromPouchDetailWithLookup = (
       cosmeticsByNameBrand,
     );
     const linkId = matched?.id;
-    if (linkId == null || linkId <= 0 || seenSelectedIds.has(linkId)) {
-      continue;
-    }
-    seenSelectedIds.add(linkId);
-    selectedOrder.push(linkId);
-    const memo = row.memo?.trim();
-    if (memo) {
-      itemMemos[linkId] = memo;
-    }
-  }
-
-  return { selectedOrder, itemMemos };
-};
-
-/** 파우치 상세만으로 선택·메모 복원 (lookup 없이 myCosmeticId만, zindex 순) */
-export const buildSelectionRestoreFromPouchDetail = (
-  detail: PouchDetailDto,
-): PouchSelectionRestore => {
-  const selectedOrder: number[] = [];
-  const seenSelectedIds = new Set<number>();
-  const itemMemos: Record<number, string> = {};
-
-  const rows = sortPouchCosmeticRowsByZindex(detail.cosmetics ?? []);
-
-  for (const row of rows) {
-    const linkId = getPouchRowMyCosmeticId(row);
     if (linkId == null || linkId <= 0 || seenSelectedIds.has(linkId)) {
       continue;
     }

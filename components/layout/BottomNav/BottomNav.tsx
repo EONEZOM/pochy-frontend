@@ -121,6 +121,12 @@ export function BottomNav({ className }: { className?: string }) {
                     }
                     void prefetchQueriesForNavHref(queryClient, item.href);
                   }}
+                  onTouchStart={() => {
+                    if (isPreparingPath) {
+                      return;
+                    }
+                    void prefetchQueriesForNavHref(queryClient, item.href);
+                  }}
                   onClick={(event) => {
                     if (isPreparingPath) {
                       event.preventDefault();

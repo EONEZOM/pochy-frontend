@@ -1,5 +1,5 @@
 import { COSMETIC_CATEGORIES } from '@/constants/category';
-import type { NukkiResult } from '@/components/my-cosmetics/NukkiResultCard';
+import type { NukkiResult } from '@/types/nukki-result';
 import {
   mapProductTypeToCategories,
   resolveStoredCosmeticCategories,

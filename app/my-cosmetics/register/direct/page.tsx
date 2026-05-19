@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 import ProductDetailForm, {
-  type ProductDetailFormImageSelectResult,
   type ProductDetailFormSubmitData,
 } from '@/components/wishlist/ProductDetailForm';
 import { getSearchMyCosmeticsQueryKey } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import { ProductImageType } from '@/api/model/productImageType';
 import { registerMyCosmeticsDirect } from '@/lib/my-cosmetics-direct';
-import { removeProductBackground } from '@/lib/nukki';
+import { applyProductImageNukki } from '@/lib/nukki-product-image';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import {
   clearPouchRegisterReturnPath,
@@ -53,15 +52,8 @@ export default function MyCosmeticsDirectRegisterPage() {
   const queryClient = useQueryClient();
   const [isPending, setIsPending] = useState(false);
 
-  const applyProductImageNukki = useCallback(
-    async (source: string | File): Promise<ProductDetailFormImageSelectResult> => {
-      const { blob, previewUrl, didRemoveBackground } =
-        await removeProductBackground(source);
-      return {
-        official_image: previewUrl,
-        nukkiBlob: didRemoveBackground ? blob : undefined,
-      };
-    },
+  const handleProductImageNukki = useCallback(
+    (source: string | File) => applyProductImageNukki(source),
     [],
   );
 
@@ -146,8 +138,8 @@ export default function MyCosmeticsDirectRegisterPage() {
       submitLabel={isPending ? '등록 중...' : '등록하기'}
       onBack={() => router.back()}
       onSubmit={handleDirectSave}
-      onImageFileSelected={applyProductImageNukki}
-      onOfficialImageUrlSelected={applyProductImageNukki}
+      onImageFileSelected={handleProductImageNukki}
+      onOfficialImageUrlSelected={handleProductImageNukki}
     />
   );
 }

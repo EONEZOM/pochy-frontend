@@ -1,143 +1,105 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { getGetHomeDataQueryKey, getGetHomeDataQueryOptions } from '@/api/generated/home/home';
+import { getGetHomeDataQueryOptions } from '@/api/generated/home/home';
 import {
-  getReadWishCosmeticsListQueryKey,
   getReadWishCosmeticsListQueryOptions,
 } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import {
-  getSearchMyCosmeticsQueryKey,
   getSearchMyCosmeticsQueryOptions,
 } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import {
-  getGetMyProfileQueryKey,
   getGetMyProfileQueryOptions,
 } from '@/api/generated/member-controller/member-controller';
-import type { ApiResponseDTOGetHomeData } from '@/api/model';
-import type { ApiResponseDTOSliceMyCosmeticsResponseDTO } from '@/api/model';
-import type { ApiResponseDTOSliceReadListDto } from '@/api/model';
-import type { ApiResponseDTOProfileDto } from '@/api/model';
-import type { Detail } from '@/api/model';
-import type { ReadListDto } from '@/api/model';
-import { pickMyCosmeticsStickerImageUrl } from '@/lib/my-cosmetics-display-image';
-import { resolveDisplayImageSrc } from '@/lib/next-image-src';
-import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
-import { resolveMediaUrl } from '@/lib/resolve-media-url';
+import {
+  collectImageUrlsForRoute,
+  MY_COSMETICS_DEFAULT_PARAMS,
+  WISH_LIST_DEFAULT_PARAMS,
+  type RouteImageHref,
+} from '@/lib/collect-route-image-urls';
 import { preloadImageSrcs } from '@/lib/preload-image-srcs';
+import { fetchPouchList, getPouchListQueryKey } from '@/lib/pouch-setup';
 
-/** `/wish` 기본 URL(필터 없음)과 동일한 쿼리 키 — `JSON.stringify` 시 undefined 키는 생략되어 홈과 맞습니다. */
-const WISH_LIST_DEFAULT_PARAMS = { sort: 'desc', size: 100 } as const;
+type TabHref = '/' | '/wish' | '/my-cosmetics' | '/profile';
 
-/** `/my-cosmetics` 기본 목록과 동일 */
-const MY_COSMETICS_DEFAULT_PARAMS = { sort: 'desc', size: 100 } as const;
-
-const resolvePrefetchImageSrc = (value?: string): string => {
-  return resolveDisplayImageSrc(resolveMediaUrl(value)).trim();
+const resolveTabHref = (pathname: string): TabHref => {
+  if (pathname === '/') {
+    return '/';
+  }
+  if (pathname === '/wish' || pathname.startsWith('/wish/')) {
+    return '/wish';
+  }
+  if (pathname === '/my-cosmetics' || pathname.startsWith('/my-cosmetics/')) {
+    return '/my-cosmetics';
+  }
+  if (pathname === '/profile' || pathname.startsWith('/profile/')) {
+    return '/profile';
+  }
+  return '/';
 };
 
-const pushDetailThumb = (out: string[], item?: Detail) => {
-  const resolved = resolvePrefetchImageSrc(item?.imageUrl);
-  if (resolved && out.length < 24) {
-    out.push(resolved);
+const ADJACENT_TABS: Record<TabHref, TabHref[]> = {
+  '/': ['/', '/wish'],
+  '/wish': ['/wish', '/'],
+  '/my-cosmetics': ['/my-cosmetics', '/wish'],
+  '/profile': ['/profile', '/my-cosmetics'],
+};
+
+export const warmImagesForRoute = (
+  qc: QueryClient,
+  href: RouteImageHref,
+): void => {
+  preloadImageSrcs(collectImageUrlsForRoute(qc, href));
+};
+
+const prefetchTabQueries = async (
+  qc: QueryClient,
+  tab: TabHref,
+): Promise<void> => {
+  if (tab === '/') {
+    await Promise.all([
+      qc.prefetchQuery(getGetHomeDataQueryOptions()),
+      qc.prefetchQuery(getReadWishCosmeticsListQueryOptions(WISH_LIST_DEFAULT_PARAMS)),
+      qc.prefetchQuery(getSearchMyCosmeticsQueryOptions(MY_COSMETICS_DEFAULT_PARAMS)),
+    ]);
+    return;
+  }
+  if (tab === '/wish') {
+    await qc.prefetchQuery(
+      getReadWishCosmeticsListQueryOptions(WISH_LIST_DEFAULT_PARAMS),
+    );
+    return;
+  }
+  if (tab === '/my-cosmetics') {
+    await Promise.all([
+      qc.prefetchQuery(getSearchMyCosmeticsQueryOptions(MY_COSMETICS_DEFAULT_PARAMS)),
+      qc.prefetchQuery({
+        queryKey: getPouchListQueryKey(),
+        queryFn: fetchPouchList,
+      }),
+    ]);
+    return;
+  }
+  if (tab === '/profile') {
+    await qc.prefetchQuery(getGetMyProfileQueryOptions());
   }
 };
 
-const collectWarmUrlsFromCaches = (qc: QueryClient): string[] => {
-  const out: string[] = [];
-
-  const home = qc.getQueryData<ApiResponseDTOGetHomeData>(getGetHomeDataQueryKey());
-  for (const row of home?.result?.myList ?? []) {
-    pushDetailThumb(out, row);
-  }
-  for (const row of home?.result?.feed ?? []) {
-    pushDetailThumb(out, row);
-  }
-  for (const row of home?.result?.wishList ?? []) {
-    pushDetailThumb(out, row);
-  }
-
-  const wish = qc.getQueryData<ApiResponseDTOSliceReadListDto>(
-    getReadWishCosmeticsListQueryKey(WISH_LIST_DEFAULT_PARAMS),
-  );
-  for (const row of wish?.result?.content ?? []) {
-    const u = pickWishListThumbnailUrl(row as ReadListDto).trim();
-    if (u && out.length < 24) {
-      const resolved = resolvePrefetchImageSrc(u);
-      if (resolved) {
-        out.push(resolved);
-      }
-    }
-  }
-
-  const my = qc.getQueryData<ApiResponseDTOSliceMyCosmeticsResponseDTO>(
-    getSearchMyCosmeticsQueryKey(MY_COSMETICS_DEFAULT_PARAMS),
-  );
-  for (const row of my?.result?.content ?? []) {
-    const primary = pickMyCosmeticsStickerImageUrl(row);
-    if (primary && out.length < 24) {
-      const resolved = resolvePrefetchImageSrc(primary);
-      if (resolved) {
-        out.push(resolved);
-      }
-    }
-  }
-
-  const profile = qc.getQueryData<ApiResponseDTOProfileDto>(
-    getGetMyProfileQueryKey(),
-  );
-  const avatar = resolvePrefetchImageSrc(profile?.result?.profileImageUrl);
-  if (avatar && out.length < 24) {
-    out.push(avatar);
-  }
-
-  return out;
-};
-
-export const warmCachedTabImages = (qc: QueryClient): void => {
-  preloadImageSrcs(collectWarmUrlsFromCaches(qc));
-};
-
-/** 하단 탭 주요 화면 API를 한꺼번에 미리 채웁니다. */
+/** 현재 탭 + 인접 탭 API만 미리 채웁니다 (이미지 warm은 페이지 훅 담당). */
 export const prefetchMainAppTabQueries = async (
   qc: QueryClient,
+  pathname = '/',
 ): Promise<void> => {
-  await Promise.all([
-    qc.prefetchQuery(getGetHomeDataQueryOptions()),
-    qc.prefetchQuery(getReadWishCosmeticsListQueryOptions(WISH_LIST_DEFAULT_PARAMS)),
-    qc.prefetchQuery(getSearchMyCosmeticsQueryOptions(MY_COSMETICS_DEFAULT_PARAMS)),
-    qc.prefetchQuery(getGetMyProfileQueryOptions()),
+  const currentTab = resolveTabHref(pathname);
+  const tabs = new Set<TabHref>([
+    currentTab,
+    ...(ADJACENT_TABS[currentTab] ?? []),
   ]);
-  warmCachedTabImages(qc);
+  await Promise.all([...tabs].map((tab) => prefetchTabQueries(qc, tab)));
 };
 
-/** 탭 hover 등 — 해당 화면에 맞춰 최소 요청만 수행합니다. */
+/** 탭 hover/touch — 해당 화면 API prefetch만 */
 export const prefetchQueriesForNavHref = async (
   qc: QueryClient,
   href: string,
 ): Promise<void> => {
-  if (href === '/') {
-    await Promise.all([
-      qc.prefetchQuery(getGetHomeDataQueryOptions()),
-      qc.prefetchQuery(getReadWishCosmeticsListQueryOptions(WISH_LIST_DEFAULT_PARAMS)),
-    ]);
-    warmCachedTabImages(qc);
-    return;
-  }
-  if (href === '/wish') {
-    await qc.prefetchQuery(
-      getReadWishCosmeticsListQueryOptions(WISH_LIST_DEFAULT_PARAMS),
-    );
-    warmCachedTabImages(qc);
-    return;
-  }
-  if (href === '/my-cosmetics') {
-    await qc.prefetchQuery(
-      getSearchMyCosmeticsQueryOptions(MY_COSMETICS_DEFAULT_PARAMS),
-    );
-    warmCachedTabImages(qc);
-    return;
-  }
-  if (href === '/profile') {
-    await qc.prefetchQuery(getGetMyProfileQueryOptions());
-    warmCachedTabImages(qc);
-  }
+  await prefetchTabQueries(qc, resolveTabHref(href));
 };

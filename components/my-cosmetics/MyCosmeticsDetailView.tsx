@@ -11,7 +11,11 @@ import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Download, Share2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 
 import {
   getGetCosmeticDetailQueryKey,
@@ -46,6 +50,7 @@ import {
   getMyCosmeticsWishCardImageProps,
   pickMyCosmeticsStickerImageUrl,
 } from '@/lib/my-cosmetics-display-image';
+import { useWarmMyCosmeticsItems } from '@/hooks/useWarmRouteImages';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
 
@@ -127,6 +132,8 @@ export function MyCosmeticsDetailView({
     [listData],
   );
 
+  useWarmMyCosmeticsItems(listItems);
+
   const initialIndex = listItems.findIndex((v) => v.id === routeCosmeticId);
   const safeInitialIndex = initialIndex >= 0 ? initialIndex : 0;
 
@@ -196,30 +203,32 @@ export function MyCosmeticsDetailView({
     COSMETIC_CATEGORIES.find((c) => c.value === draft.category)
       ?.subCategories ?? [];
 
-  const { mutateAsync: saveMyCosmetic, isPending: isSavePending } = useMutation({
-    mutationFn: async (input: { cosmeticId: number; request: DraftForm }) => {
-      return updateMyCosmeticItem(input.cosmeticId, {
-        request: {
-          brand: input.request.brand || undefined,
-          name: input.request.name || undefined,
-          category: input.request.category || undefined,
-          subCategory: input.request.subCategory || undefined,
-          feature: input.request.feature || undefined,
-          memo: input.request.memo || undefined,
-        },
-      });
+  const { mutateAsync: saveMyCosmetic, isPending: isSavePending } = useMutation(
+    {
+      mutationFn: async (input: { cosmeticId: number; request: DraftForm }) => {
+        return updateMyCosmeticItem(input.cosmeticId, {
+          request: {
+            brand: input.request.brand || undefined,
+            name: input.request.name || undefined,
+            category: input.request.category || undefined,
+            subCategory: input.request.subCategory || undefined,
+            feature: input.request.feature || undefined,
+            memo: input.request.memo || undefined,
+          },
+        });
+      },
+      onSuccess: async (_, variables) => {
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: getGetCosmeticDetailQueryKey(variables.cosmeticId),
+          }),
+          queryClient.invalidateQueries({
+            queryKey: getSearchMyCosmeticsQueryKey({ size: 100, sort: 'desc' }),
+          }),
+        ]);
+      },
     },
-    onSuccess: async (_, variables) => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: getGetCosmeticDetailQueryKey(variables.cosmeticId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: getSearchMyCosmeticsQueryKey({ size: 100, sort: 'desc' }),
-        }),
-      ]);
-    },
-  });
+  );
 
   const handleCancelEdit = useCallback(() => {
     if (returnTo) {
@@ -376,10 +385,7 @@ export function MyCosmeticsDetailView({
           >
             <CarouselContent className="-ml-0">
               {listItems.map((item, index) => (
-                <CarouselItem
-                  key={item.id}
-                  className="basis-full pl-0"
-                >
+                <CarouselItem key={item.id} className="basis-full pl-0">
                   <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-2xl bg-zinc-100">
                     <WishCardImage
                       {...getMyCosmeticsWishCardImageProps(item)}

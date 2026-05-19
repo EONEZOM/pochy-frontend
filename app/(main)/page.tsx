@@ -12,15 +12,10 @@ import { MainHomeTopZipperWithLogo } from '@/components/main/MainHomeTopZipperWi
 import { useGetHomeData } from '@/api/generated/home/home';
 import { useGetMyProfile } from '@/api/generated/member-controller/member-controller';
 import { extractProfileImageUrl } from '@/lib/member-profile';
-import { useSearchMyCosmetics } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
-import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import type { Detail } from '@/api/model';
-import type { MyCosmeticsResponseDTO } from '@/api/model';
-import type { ReadListDto } from '@/api/model';
 import { isPendingNicknameSetup } from '@/lib/pending-nickname-setup';
 import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
-import { pickMyCosmeticsHomeThumbnailUrl } from '@/lib/my-cosmetics-display-image';
-import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
+import { useWarmHomeSectionImages } from '@/hooks/useWarmRouteImages';
 import { useBottomNavVisibility } from '@/providers/bottom-nav-visibility';
 import { cn } from '@/lib/utils';
 
@@ -46,16 +41,14 @@ const MAIN_HOME_GRADIENT_BG =
 const MAIN_HOME_LIST_LAYOUT =
   'flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden overscroll-none';
 
-const parseWishCosmeticsId = (item: ReadListDto): number | null => {
-  const raw = item.wishCosmeticsId;
-  if (typeof raw === 'number' && Number.isFinite(raw)) {
-    return raw;
-  }
-  if (typeof raw === 'string') {
-    const n = Number.parseInt(raw, 10);
-    return Number.isFinite(n) ? n : null;
-  }
-  return null;
+const mapHomeDetailRows = (rows: Detail[] | undefined): Detail[] => {
+  return (rows ?? []).flatMap((row) => {
+    const id = row.id;
+    if (id == null || !Number.isFinite(id)) {
+      return [];
+    }
+    return [{ id, imageUrl: String(row.imageUrl ?? '').trim() } satisfies Detail];
+  });
 };
 
 type MainHomeListViewProps = {
@@ -130,20 +123,6 @@ function MainPageContent() {
     error: homeError,
     refetch: refetchHome,
   } = useGetHomeData();
-  const {
-    data: wishListResponse,
-    isLoading: isWishListLoading,
-    isError: isWishListError,
-    refetch: refetchWish,
-  } = useReadWishCosmeticsList({
-    sort: 'desc',
-    size: 100,
-  });
-  const { data: myCosmeticsResponse, isLoading: isMyCosmeticsLoading } =
-    useSearchMyCosmetics({
-      sort: 'desc',
-      size: 100,
-    });
   const { data: profileResponse } = useGetMyProfile();
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
@@ -157,8 +136,7 @@ function MainPageContent() {
     return fromHome || null;
   }, [homeData?.profileUrl, profileResponse?.result]);
 
-  const isMainQueriesPending =
-    isHomeLoading || isWishListLoading || isMyCosmeticsLoading;
+  const isMainQueriesPending = isHomeLoading;
   /** SSR·클라이언트 캐시 불일치로 스켈레톤/본문이 갈라지는 hydration 방지 */
   const hasMounted = React.useSyncExternalStore(
     () => () => {},
@@ -190,68 +168,28 @@ function MainPageContent() {
 
   const handleRetryMainQueries = React.useCallback(() => {
     void refetchHome();
-    void refetchWish();
-  }, [refetchHome, refetchWish]);
+  }, [refetchHome]);
 
   React.useEffect(() => {
     if (isPendingNicknameSetup()) {
       router.replace('/nickname');
       return;
     }
-    if (
-      isHomeLoading ||
-      isWishListLoading ||
-      isMyCosmeticsLoading ||
-      isHomeError ||
-      hasServerNickname
-    ) {
+    if (isHomeLoading || isHomeError || hasServerNickname) {
       return;
     }
     router.replace('/nickname');
-  }, [
-    hasServerNickname,
-    isHomeError,
-    isHomeLoading,
-    isMyCosmeticsLoading,
-    isWishListLoading,
-    router,
-  ]);
+  }, [hasServerNickname, isHomeError, isHomeLoading, router]);
 
-  const myCosmeticsById = React.useMemo(() => {
-    const map = new Map<number, MyCosmeticsResponseDTO>();
-    for (const item of myCosmeticsResponse?.result?.content ?? []) {
-      if (item.id != null) {
-        map.set(item.id, item as MyCosmeticsResponseDTO);
-      }
-    }
-    return map;
-  }, [myCosmeticsResponse?.result?.content]);
-
-  const wishItems: Detail[] = (wishListResponse?.result?.content ?? []).flatMap(
-    (item) => {
-      const id = parseWishCosmeticsId(item);
-      if (id == null) {
-        return [];
-      }
-      return [
-        { id, imageUrl: pickWishListThumbnailUrl(item) } satisfies Detail,
-      ];
-    },
+  const wishItems: Detail[] = React.useMemo(
+    () => mapHomeDetailRows(homeData?.wishList),
+    [homeData?.wishList],
   );
 
-  const myPouchItems: Detail[] = React.useMemo(() => {
-    return (homeData?.myList ?? []).flatMap((row) => {
-      const id = row.id;
-      if (id == null || !Number.isFinite(id)) {
-        return [];
-      }
-      const cosmetic = myCosmeticsById.get(id);
-      const imageUrl = cosmetic
-        ? pickMyCosmeticsHomeThumbnailUrl(cosmetic, row.imageUrl)
-        : String(row.imageUrl ?? '').trim();
-      return [{ id, imageUrl } satisfies Detail];
-    });
-  }, [homeData?.myList, myCosmeticsById]);
+  const myPouchItems: Detail[] = React.useMemo(
+    () => mapHomeDetailRows(homeData?.myList),
+    [homeData?.myList],
+  );
 
   const feedItems: Detail[] = React.useMemo(() => {
     return (homeData?.feed ?? []).flatMap((item) => {
@@ -268,14 +206,18 @@ function MainPageContent() {
     });
   }, [homeData?.feed]);
 
-  const sections: Array<{ title: string; items: Detail[] }> = [
-    { title: 'Wish List', items: wishItems },
-    { title: 'My Pouch', items: myPouchItems },
-    { title: 'Feed', items: feedItems },
-  ];
+  const sections: Array<{ title: string; items: Detail[] }> = React.useMemo(
+    () => [
+      { title: 'Wish List', items: wishItems },
+      { title: 'My Pouch', items: myPouchItems },
+      { title: 'Feed', items: feedItems },
+    ],
+    [wishItems, myPouchItems, feedItems],
+  );
 
-  const showHomeSkeleton =
-    !hasMounted || isHomeLoading || isWishListLoading || isMyCosmeticsLoading;
+  useWarmHomeSectionImages(sections);
+
+  const showHomeSkeleton = !hasMounted || isHomeLoading;
 
   const myListItems = myPouchItems;
   const feedListItems = feedItems;
@@ -316,13 +258,7 @@ function MainPageContent() {
     );
   }
 
-  if (
-    !isHomeLoading &&
-    !isWishListLoading &&
-    !isMyCosmeticsLoading &&
-    !hasServerNickname &&
-    !isHomeError
-  ) {
+  if (!isHomeLoading && !hasServerNickname && !isHomeError) {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden overscroll-none bg-white px-5">
         <p className="text-mono-dark-gray text-sm">확인 중...</p>
@@ -350,18 +286,6 @@ function MainPageContent() {
           nickname={homeData?.nickname}
           profileUrl={headerProfileUrl}
         />
-      )}
-      {isWishListError && (
-        <p className="text-mono-dark-gray absolute right-0 bottom-16 left-0 z-30 px-4 text-center text-xs">
-          위시 목록만 불러오지 못했습니다.{' '}
-          <button
-            type="button"
-            className="text-[#FF60CA] underline underline-offset-2"
-            onClick={() => void refetchWish()}
-          >
-            다시 시도
-          </button>
-        </p>
       )}
       {showHomeSkeleton && isSlowMainLoading && (
         <p className="absolute right-0 bottom-8 left-0 z-30 px-4 text-center text-[11px] leading-snug text-zinc-500">

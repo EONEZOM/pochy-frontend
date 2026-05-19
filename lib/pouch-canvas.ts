@@ -418,6 +418,25 @@ export type BuildCombinedAddDtoParams = {
   wappenItems: WappenItemDto[];
 };
 
+const POUCH_API_MEMO_MAX_LEN = 60;
+
+const sanitizeAddCosmeticItemsForApi = (
+  items: AddCosmeticDetailDto[],
+): AddCosmeticDetailDto[] => {
+  return items.map((item) => {
+    const memo = item.memo?.trim();
+    return {
+      myCosmeticId: item.myCosmeticId,
+      xpoint: Math.max(0, Math.round(item.xpoint ?? 0)),
+      ypoint: Math.max(0, Math.round(item.ypoint ?? 0)),
+      zindex: Math.max(1, Math.round(item.zindex ?? 1)),
+      size: Math.max(1, Math.round(item.size ?? DEFAULT_LAYER_SIZE)),
+      rotationAngle: Math.round(item.rotationAngle ?? 0),
+      ...(memo ? { memo: memo.slice(0, POUCH_API_MEMO_MAX_LEN) } : {}),
+    };
+  });
+};
+
 export const buildCombinedAddDto = ({
   pouchName,
   cosmeticItems,
@@ -427,7 +446,7 @@ export const buildCombinedAddDto = ({
   const payload: CombinedAddDto = {
     ...(trimmedName ? { pouchName: trimmedName } : {}),
     cosmeticList: {
-      items: cosmeticItems,
+      items: sanitizeAddCosmeticItemsForApi(cosmeticItems),
     },
   };
 

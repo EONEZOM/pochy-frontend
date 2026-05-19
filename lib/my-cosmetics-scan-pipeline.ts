@@ -1,32 +1,37 @@
-import type { NukkiResult } from '@/components/my-cosmetics/NukkiResultCard';
+import type { NukkiResult } from '@/types/nukki-result';
 import { removeProductBackground } from '@/lib/nukki';
+import { applyNukkiFromRemoteUrl } from '@/lib/nukki-product-image';
 import { resolveProductTypeLabel } from '@/lib/my-cosmetics-scan-form';
 import {
   cropDataUrlByNormalizedBBox,
+  extendBboxBottom,
+  isBboxHeightSuspiciouslySmall,
+  isBboxLikelyMissingBottomCap,
   isValidProductBbox,
   resizeDataUrlForNukki,
   resizeDataUrlForVision,
+  unionNormalizedBboxes,
   type NormalizedBBox,
 } from '@/utils/image-utils';
 import {
   cropBox,
   cropFullImage,
   detectCosmeticBoxesFromImage,
-  type YoloBox,
-  yoloBoxIou,
+  pickPrimaryProductBox,
+  yoloBoxToNormalizedBBox,
 } from '@/utils/yolo-detect';
 
 const VISION_MAX_SIDE_PX = 1280;
 const VISION_JPEG_QUALITY = 0.88;
-const NUKKI_MAX_SIDE_PX = 768;
+const NUKKI_MAX_SIDE_PX = 1024;
 const NAVER_SEARCH_DELAY_MS = 150;
 const NUKKI_STEP_DELAY_MS = 200;
 const MIN_COSMETIC_CONFIDENCE = 0.4;
 const MIN_PRODUCT_BBOX_CONFIDENCE = 0.5;
 const OFFICIAL_IMAGE_PREFERRED_BBOX_CONFIDENCE = 0.72;
-const SECONDARY_BOX_MIN_SCORE = 0.35;
-const SECONDARY_BOX_MAX_IOU = 0.3;
-const PRODUCT_BBOX_MARGIN_RATIO = 0.05;
+const PRODUCT_BBOX_MARGIN_RATIO = 0.10;
+const MIN_REFINE_BBOX_HEIGHT_RATIO = 0.7;
+const BBOX_CONFIDENCE_TIE_THRESHOLD = 0.08;
 
 export const MY_COSMETICS_CROP_VISION_HINT = `각 이미지는 화장품 제품 하나만 담긴 크롭 사진입니다.
 이미지 개수와 results 배열 길이를 반드시 일치시키고, 각 result의 image_index는 해당 이미지 순서(0부터)와 정확히 일치해야 합니다.
@@ -51,12 +56,15 @@ type ProductBboxRow = {
   has_hand?: boolean;
 };
 
+export type CropSource = 'fullImageBbox' | 'yolo' | 'fullImage';
+
 export type CosmeticCropCandidate = {
   dataUrl: string;
   sourceIndex: number;
   yoloScore: number;
   productBboxConfidence: number;
   hasHand: boolean;
+  cropSource: CropSource;
 };
 
 export type CosmeticVisionCropResult = {
@@ -106,39 +114,18 @@ const normalizeVisionRow = (
   hasHand: crop.hasHand,
 });
 
-const pickBoxesForSourceImage = (boxes: YoloBox[]): YoloBox[] => {
-  if (boxes.length === 0) {
-    return [];
-  }
-
-  const sorted = [...boxes].sort((a, b) => b.score - a.score);
-  const picked: YoloBox[] = [sorted[0]];
-
-  if (sorted.length > 1) {
-    const second = sorted[1];
-    if (
-      second.score >= SECONDARY_BOX_MIN_SCORE &&
-      yoloBoxIou(sorted[0], second) < SECONDARY_BOX_MAX_IOU
-    ) {
-      picked.push(second);
-    }
-  }
-
-  return picked;
-};
-
-const pickBestProductBboxPerCrop = (
+const pickBestProductBboxPerImage = (
   rawResults: ProductBboxRow[],
-  cropCount: number,
+  imageCount: number,
 ): Map<number, ProductBboxRow> => {
   const byIndex = new Map<number, ProductBboxRow>();
 
   for (const item of rawResults) {
     const idx = Number(item.image_index);
     const resolvedIndex =
-      Number.isFinite(idx) && idx >= 0 && idx < cropCount
+      Number.isFinite(idx) && idx >= 0 && idx < imageCount
         ? idx
-        : byIndex.size < cropCount
+        : byIndex.size < imageCount
           ? byIndex.size
           : -1;
 
@@ -149,12 +136,32 @@ const pickBestProductBboxPerCrop = (
     const prev = byIndex.get(resolvedIndex);
     const prevScore = prev?.confidence ?? 0;
     const nextScore = item.confidence ?? 0;
-    if (!prev || nextScore >= prevScore) {
+
+    if (!prev) {
+      byIndex.set(resolvedIndex, item);
+      continue;
+    }
+
+    if (nextScore > prevScore + BBOX_CONFIDENCE_TIE_THRESHOLD) {
+      byIndex.set(resolvedIndex, item);
+      continue;
+    }
+
+    if (Math.abs(nextScore - prevScore) <= BBOX_CONFIDENCE_TIE_THRESHOLD) {
+      const prevYMax = prev.bbox?.y_max ?? 0;
+      const nextYMax = item.bbox?.y_max ?? 0;
+      if (nextYMax > prevYMax) {
+        byIndex.set(resolvedIndex, item);
+      }
+      continue;
+    }
+
+    if (nextScore >= prevScore) {
       byIndex.set(resolvedIndex, item);
     }
   }
 
-  if (byIndex.size === 0 && rawResults.length === cropCount) {
+  if (byIndex.size === 0 && rawResults.length === imageCount) {
     rawResults.forEach((item, index) => {
       byIndex.set(index, item);
     });
@@ -209,37 +216,170 @@ const pickBestResultPerCrop = (
   return accepted;
 };
 
+const fetchProductBboxes = async (
+  images: string[],
+): Promise<ProductBboxRow[]> => {
+  if (images.length === 0) {
+    return [];
+  }
+
+  try {
+    const res = await fetch('/api/vision/product-bbox', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ images }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return [];
+    }
+    return (data.results ?? []) as ProductBboxRow[];
+  } catch {
+    return [];
+  }
+};
+
+const resolveProductBboxWithYoloMerge = async (
+  gptBbox: NormalizedBBox,
+  imgElement: HTMLImageElement,
+): Promise<NormalizedBBox> => {
+  if (!isBboxLikelyMissingBottomCap(gptBbox)) {
+    return gptBbox;
+  }
+
+  const imgW = imgElement.naturalWidth;
+  const imgH = imgElement.naturalHeight;
+  const yoloBoxes = await detectCosmeticBoxesFromImage(imgElement);
+  const primaryBox = pickPrimaryProductBox(yoloBoxes, imgElement);
+
+  if (primaryBox && imgW > 0 && imgH > 0) {
+    const yoloNorm = yoloBoxToNormalizedBBox(primaryBox, imgW, imgH);
+    const merged = unionNormalizedBboxes(gptBbox, yoloNorm);
+    if (isValidProductBbox(merged)) {
+      return merged;
+    }
+  }
+
+  return extendBboxBottom(gptBbox, 0.12);
+};
+
+const tryCropFromBboxOnFullImage = async (
+  fullDataUrl: string,
+  imgElement: HTMLImageElement,
+  bboxResult: ProductBboxRow | undefined,
+): Promise<{
+  dataUrl: string;
+  confidence: number;
+  hasHand: boolean;
+} | null> => {
+  const confidence =
+    typeof bboxResult?.confidence === 'number' && Number.isFinite(bboxResult.confidence)
+      ? bboxResult.confidence
+      : 0;
+  const bbox = bboxResult?.bbox;
+
+  if (
+    confidence < MIN_PRODUCT_BBOX_CONFIDENCE ||
+    !bbox ||
+    !isValidProductBbox(bbox)
+  ) {
+    return null;
+  }
+
+  try {
+    const finalBbox = await resolveProductBboxWithYoloMerge(bbox, imgElement);
+    const cropped = await cropDataUrlByNormalizedBBox(
+      fullDataUrl,
+      finalBbox,
+      PRODUCT_BBOX_MARGIN_RATIO,
+    );
+    return {
+      dataUrl: cropped,
+      confidence,
+      hasHand: bboxResult?.has_hand === true,
+    };
+  } catch {
+    return null;
+  }
+};
+
 export const collectCosmeticCropsFromImages = async (
   loadImage: (src: string) => Promise<HTMLImageElement>,
   imageSources: string[],
 ): Promise<CosmeticCropCandidate[]> => {
+  if (imageSources.length === 0) {
+    return [];
+  }
+
+  const loaded = await Promise.all(
+    imageSources.map(async (src, sourceIndex) => {
+      const imgElement = await loadImage(src);
+      const fullDataUrl = cropFullImage(imgElement);
+      return { sourceIndex, imgElement, fullDataUrl };
+    }),
+  );
+
+  const resizedForBbox = await Promise.all(
+    loaded.map((entry) =>
+      resizeDataUrlForVision(
+        entry.fullDataUrl,
+        VISION_MAX_SIDE_PX,
+        VISION_JPEG_QUALITY,
+      ),
+    ),
+  );
+
+  const bboxRows = await fetchProductBboxes(resizedForBbox);
+  const bboxBySourceIndex = pickBestProductBboxPerImage(
+    bboxRows,
+    loaded.length,
+  );
+
   const candidates: CosmeticCropCandidate[] = [];
 
-  for (let sourceIndex = 0; sourceIndex < imageSources.length; sourceIndex++) {
-    const src = imageSources[sourceIndex];
-    const imgElement = await loadImage(src);
-    const boxes = await detectCosmeticBoxesFromImage(imgElement);
-    const pickedBoxes = pickBoxesForSourceImage(boxes);
+  for (let i = 0; i < loaded.length; i++) {
+    const { sourceIndex, imgElement, fullDataUrl } = loaded[i];
+    const bboxFromFull = await tryCropFromBboxOnFullImage(
+      fullDataUrl,
+      imgElement,
+      bboxBySourceIndex.get(i),
+    );
 
-    if (pickedBoxes.length > 0) {
-      for (const box of pickedBoxes) {
-        candidates.push({
-          dataUrl: cropBox(imgElement, box),
-          sourceIndex,
-          yoloScore: box.score,
-          productBboxConfidence: 0,
-          hasHand: false,
-        });
-      }
-    } else {
+    if (bboxFromFull) {
       candidates.push({
-        dataUrl: cropFullImage(imgElement),
+        dataUrl: bboxFromFull.dataUrl,
         sourceIndex,
         yoloScore: 0,
+        productBboxConfidence: bboxFromFull.confidence,
+        hasHand: bboxFromFull.hasHand,
+        cropSource: 'fullImageBbox',
+      });
+      continue;
+    }
+
+    const yoloBoxes = await detectCosmeticBoxesFromImage(imgElement);
+    const primaryBox = pickPrimaryProductBox(yoloBoxes, imgElement);
+
+    if (primaryBox) {
+      candidates.push({
+        dataUrl: cropBox(imgElement, primaryBox),
+        sourceIndex,
+        yoloScore: primaryBox.score,
         productBboxConfidence: 0,
         hasHand: false,
+        cropSource: 'yolo',
       });
+      continue;
     }
+
+    candidates.push({
+      dataUrl: fullDataUrl,
+      sourceIndex,
+      yoloScore: 0,
+      productBboxConfidence: 0,
+      hasHand: false,
+      cropSource: 'fullImage',
+    });
   }
 
   return candidates;
@@ -248,38 +388,30 @@ export const collectCosmeticCropsFromImages = async (
 export const refineCropsToProductOnly = async (
   crops: CosmeticCropCandidate[],
 ): Promise<CosmeticCropCandidate[]> => {
-  if (crops.length === 0) {
-    return [];
+  const yoloCrops = crops.filter((crop) => crop.cropSource === 'yolo');
+  if (yoloCrops.length === 0) {
+    return crops;
   }
 
+  const yoloIndices = crops
+    .map((crop, index) => (crop.cropSource === 'yolo' ? index : -1))
+    .filter((index) => index >= 0);
+
   const resizedForBbox = await Promise.all(
-    crops.map((crop) =>
+    yoloCrops.map((crop) =>
       resizeDataUrlForVision(crop.dataUrl, VISION_MAX_SIDE_PX, VISION_JPEG_QUALITY),
     ),
   );
 
-  let bboxRows: ProductBboxRow[] = [];
+  const bboxRows = await fetchProductBboxes(resizedForBbox);
+  const bboxByYoloIndex = pickBestProductBboxPerImage(bboxRows, yoloCrops.length);
 
-  try {
-    const res = await fetch('/api/vision/product-bbox', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ images: resizedForBbox }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      bboxRows = (data.results ?? []) as ProductBboxRow[];
-    }
-  } catch {
-    return crops;
-  }
+  const refined = [...crops];
 
-  const bboxByIndex = pickBestProductBboxPerCrop(bboxRows, crops.length);
-  const refined: CosmeticCropCandidate[] = [];
-
-  for (let i = 0; i < crops.length; i++) {
-    const crop = crops[i];
-    const bboxResult = bboxByIndex.get(i);
+  for (let yoloIdx = 0; yoloIdx < yoloCrops.length; yoloIdx++) {
+    const cropIndex = yoloIndices[yoloIdx];
+    const crop = crops[cropIndex];
+    const bboxResult = bboxByYoloIndex.get(yoloIdx);
     const confidence =
       typeof bboxResult?.confidence === 'number' && Number.isFinite(bboxResult.confidence)
         ? bboxResult.confidence
@@ -289,7 +421,8 @@ export const refineCropsToProductOnly = async (
     if (
       confidence >= MIN_PRODUCT_BBOX_CONFIDENCE &&
       bbox &&
-      isValidProductBbox(bbox)
+      isValidProductBbox(bbox) &&
+      !isBboxHeightSuspiciouslySmall(bbox, MIN_REFINE_BBOX_HEIGHT_RATIO)
     ) {
       try {
         const tightCrop = await cropDataUrlByNormalizedBBox(
@@ -297,23 +430,23 @@ export const refineCropsToProductOnly = async (
           bbox,
           PRODUCT_BBOX_MARGIN_RATIO,
         );
-        refined.push({
+        refined[cropIndex] = {
           ...crop,
           dataUrl: tightCrop,
           productBboxConfidence: confidence,
           hasHand: bboxResult?.has_hand === true,
-        });
+        };
         continue;
       } catch {
         // YOLO 크롭 유지
       }
     }
 
-    refined.push({
+    refined[cropIndex] = {
       ...crop,
       productBboxConfidence: confidence,
       hasHand: bboxResult?.has_hand === true || crop.hasHand,
-    });
+    };
   }
 
   return refined;
@@ -433,16 +566,26 @@ export const applyNukkiToCosmeticVisionResults = async (
       NUKKI_MAX_SIDE_PX,
     );
     const { blob, previewUrl, didRemoveBackground: removed } =
-      await removeProductBackground(nukkiInput, {
-        model: 'isnet_quint8',
-      });
+      await removeProductBackground(nukkiInput);
 
     if (removed) {
       didRemoveBackground = true;
       nukkiBlob = blob;
       displaySrc = previewUrl;
-    } else if (preferOfficialDisplay && officialUrl) {
-      displaySrc = toMediaProxyUrl(officialUrl);
+    } else if (officialUrl) {
+      const {
+        blob: officialBlob,
+        previewUrl: officialPreviewUrl,
+        didRemoveBackground: officialRemoved,
+      } = await applyNukkiFromRemoteUrl(officialUrl);
+
+      if (officialRemoved) {
+        didRemoveBackground = true;
+        nukkiBlob = officialBlob;
+        displaySrc = officialPreviewUrl;
+      } else if (preferOfficialDisplay) {
+        displaySrc = toMediaProxyUrl(officialUrl);
+      }
     }
 
     nukkiResults.push({

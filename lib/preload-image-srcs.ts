@@ -1,10 +1,38 @@
 /**
  * 브라우저 이미지 캐시를 미리 채워 전환 직후 Next/Image 디코딩을 줄입니다.
- * (동일 URL은 한 번만 요청되는 경우가 많음)
  */
 import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 
-const MAX_PRELOAD = 22;
+const DEFAULT_CONCURRENCY = 4;
+
+export type PreloadImageOptions = {
+  /** 최대 preload 장수 (미지정 시 connection budget) */
+  limit?: number;
+};
+
+type NetworkInformation = {
+  saveData?: boolean;
+  effectiveType?: string;
+};
+
+const getConnectionBudget = (): number => {
+  if (typeof navigator === 'undefined') {
+    return 48;
+  }
+  const connection = (navigator as Navigator & { connection?: NetworkInformation })
+    .connection;
+  if (connection?.saveData) {
+    return 12;
+  }
+  const effectiveType = connection?.effectiveType ?? '';
+  if (effectiveType.includes('2g')) {
+    return 12;
+  }
+  if (effectiveType.includes('3g')) {
+    return 24;
+  }
+  return 48;
+};
 
 const isPreloadableSrc = (raw: string): boolean => {
   const u = raw.trim();
@@ -22,11 +50,52 @@ const toAbsoluteSrc = (src: string): string => {
   return u;
 };
 
-export const preloadImageSrcs = (urls: readonly string[]): void => {
+const preloadOne = (abs: string): Promise<void> => {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.decoding = 'async';
+    const finish = () => {
+      resolve();
+    };
+    img.onload = finish;
+    img.onerror = finish;
+    img.src = abs;
+  });
+};
+
+const runWithConcurrency = async (
+  tasks: Array<() => Promise<void>>,
+  concurrency: number,
+): Promise<void> => {
+  if (tasks.length === 0) {
+    return;
+  }
+  let index = 0;
+  const workers = Array.from(
+    { length: Math.min(concurrency, tasks.length) },
+    async () => {
+      while (index < tasks.length) {
+        const current = index;
+        index += 1;
+        await tasks[current]();
+      }
+    },
+  );
+  await Promise.all(workers);
+};
+
+export const preloadImageSrcs = (
+  urls: readonly string[],
+  options?: PreloadImageOptions,
+): void => {
   if (typeof window === 'undefined') {
     return;
   }
+
+  const limit = options?.limit ?? getConnectionBudget();
   const seen = new Set<string>();
+  const tasks: Array<() => Promise<void>> = [];
+
   for (const raw of urls) {
     if (!isPreloadableSrc(raw)) {
       continue;
@@ -37,11 +106,11 @@ export const preloadImageSrcs = (urls: readonly string[]): void => {
       continue;
     }
     seen.add(abs);
-    const img = new window.Image();
-    img.decoding = 'async';
-    img.src = abs;
-    if (seen.size >= MAX_PRELOAD) {
+    tasks.push(() => preloadOne(abs));
+    if (seen.size >= limit) {
       break;
     }
   }
+
+  void runWithConcurrency(tasks, DEFAULT_CONCURRENCY);
 };

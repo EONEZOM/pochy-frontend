@@ -20,6 +20,7 @@ import {
 } from '@/lib/pouch-setup';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { resolveDisplayImageSrc } from '@/lib/next-image-src';
+import { useWarmPouchListImages } from '@/hooks/useWarmRouteImages';
 import { cn } from '@/lib/utils';
 
 const POUCH_HOME_GRADIENT =
@@ -50,6 +51,8 @@ export function MyCosmeticsPouchHome({ pouches }: MyCosmeticsPouchHomeProps) {
   const currentPouch = pouches[currentIndex];
   const pouchId = currentPouch?.pouchId;
   const pouchName = currentPouch?.name?.trim() ?? '새 파우치';
+
+  useWarmPouchListImages(pouches);
 
   useEffect(() => {
     if (!api) {

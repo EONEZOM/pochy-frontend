@@ -376,9 +376,26 @@ export const savePouchDecoration = async (
     });
     const createRes = await createPouchMultipart({
       request: createRequest,
-      pouchImage: compositeBlob,
     });
     pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
+
+    const cosmeticList = cosmeticItems.map((item) => ({
+      cosmeticId: item.myCosmeticId,
+      memo: item.memo,
+      xpoint: item.xpoint,
+      ypoint: item.ypoint,
+      zindex: item.zindex,
+      size: item.size,
+      rotationAngle: item.rotationAngle,
+    }));
+    await updatePouchMultipart(pouchId, {
+      request: buildPouchUpdateDto({
+        pouchName: trimmedName,
+        cosmeticList,
+        wappenList: wappenItems,
+      }),
+      pouchImage: compositeBlob,
+    });
   } else {
     const { cosmeticList: layerCosmeticList, wappenList } = layersToUpdatePayload(
       layers,

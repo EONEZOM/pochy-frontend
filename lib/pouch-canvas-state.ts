@@ -137,10 +137,3 @@ export const savePouchCanvasState = (
 
   window.localStorage.setItem(getStorageKey(pouchId), JSON.stringify(payload));
 };
-
-export const clearPouchCanvasState = (pouchId: number) => {
-  if (typeof window === 'undefined' || !Number.isFinite(pouchId) || pouchId <= 0) {
-    return;
-  }
-  window.localStorage.removeItem(getStorageKey(pouchId));
-};

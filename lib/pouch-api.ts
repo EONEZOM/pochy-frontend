@@ -24,6 +24,10 @@ import type {
 import { buildPouchUpdateDto } from '@/lib/pouch-canvas';
 import { normalizeMultipartImageFile } from '@/lib/wish-cosmetics';
 
+const POUCH_MULTIPART_TIMEOUT_MS = 120_000;
+const POUCH_IMAGE_MAX_SIDE_PX = 1920;
+const POUCH_IMAGE_JPEG_QUALITY = 0.88;
+
 export type CreatePouchMultipartPayload = {
   request: CombinedAddDto;
   pouchImage?: File | Blob;
@@ -48,15 +52,78 @@ const appendJsonRequestPart = (
   );
 };
 
-const toPouchImageFile = (image: File | Blob): File => {
-  if (image instanceof File) {
-    return normalizeMultipartImageFile(image, 'pouch.png');
+const loadImageElement = (src: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      resolve(img);
+    };
+    img.onerror = () => {
+      reject(new Error('파우치 이미지를 불러오지 못했습니다.'));
+    };
+    img.src = src;
+  });
+};
+
+/**
+ * 합성 캔버스 PNG(투명·고해상도)를 서버 업로드용 JPEG로 변환합니다.
+ * 백엔드 이미지 처리·용량 제한으로 인한 500을 줄이기 위함입니다.
+ */
+export const normalizePouchImageForUpload = async (
+  image: File | Blob,
+): Promise<File> => {
+  const objectUrl = URL.createObjectURL(image);
+
+  try {
+    const img = await loadImageElement(objectUrl);
+    let width = img.naturalWidth;
+    let height = img.naturalHeight;
+    const maxSide = Math.max(width, height);
+
+    if (maxSide > POUCH_IMAGE_MAX_SIDE_PX) {
+      const scale = POUCH_IMAGE_MAX_SIDE_PX / maxSide;
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, width);
+    canvas.height = Math.max(1, height);
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      throw new Error('파우치 이미지 변환 캔버스를 초기화할 수 없습니다.');
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const jpegBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('파우치 이미지를 JPEG로 변환하지 못했습니다.'));
+            return;
+          }
+          resolve(blob);
+        },
+        'image/jpeg',
+        POUCH_IMAGE_JPEG_QUALITY,
+      );
+    });
+
+    return normalizeMultipartImageFile(
+      new File([jpegBlob], 'pouch.jpg', { type: 'image/jpeg' }),
+      'pouch.jpg',
+    );
+  } finally {
+    URL.revokeObjectURL(objectUrl);
   }
-  const type = image.type && image.type.length > 0 ? image.type : 'image/png';
-  return normalizeMultipartImageFile(
-    new File([image], 'pouch.png', { type }),
-    'pouch.png',
-  );
+};
+
+const toPouchImageFile = async (image: File | Blob): Promise<File> => {
+  return normalizePouchImageForUpload(image);
 };
 
 /**
@@ -111,7 +178,7 @@ export const createPouchMultipart = async ({
   appendJsonRequestPart(formData, request);
 
   if (pouchImage) {
-    const file = toPouchImageFile(pouchImage);
+    const file = await toPouchImageFile(pouchImage);
     formData.append('pouchImage', file, file.name);
   }
 
@@ -119,6 +186,7 @@ export const createPouchMultipart = async ({
     url: '/api/pouches',
     method: 'POST',
     data: formData,
+    timeout: POUCH_MULTIPART_TIMEOUT_MS,
   });
 };
 
@@ -131,7 +199,7 @@ export const updatePouchMultipart = async (
   appendJsonRequestPart(formData, request);
 
   if (pouchImage) {
-    const file = toPouchImageFile(pouchImage);
+    const file = await toPouchImageFile(pouchImage);
     formData.append('pouchImage', file, file.name);
   }
 
@@ -139,6 +207,7 @@ export const updatePouchMultipart = async (
     url: `/api/pouches/${pouchId}`,
     method: 'PATCH',
     data: formData,
+    timeout: POUCH_MULTIPART_TIMEOUT_MS,
   });
 };
 

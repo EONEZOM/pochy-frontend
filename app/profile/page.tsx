@@ -198,14 +198,16 @@ export default function MyPage() {
           <div className="flex shrink-0 flex-col items-center">
             <div className="border-mono-white relative size-20 shrink-0 overflow-hidden rounded-full border-[3px] shadow-[0_3px_3px_rgba(0,0,0,0.2)]">
               {resolvedProfileImageUrl && !isEnsuringProfileImage ? (
-                <Image
-                  src={resolvedProfileImageUrl}
-                  alt=""
-                  fill
-                  sizes="80px"
-                  className="object-cover object-center"
-                  onError={handleProfileImageError}
-                />
+                <span className="absolute inset-0 scale-[1.7]">
+                  <Image
+                    src={resolvedProfileImageUrl}
+                    alt=""
+                    fill
+                    sizes="80px"
+                    className="object-cover object-center"
+                    onError={handleProfileImageError}
+                  />
+                </span>
               ) : (
                 <div className="bg-mono-gray size-full" aria-hidden />
               )}
@@ -295,7 +297,7 @@ export default function MyPage() {
               size="lg"
               onClick={handleComplete}
               disabled={isSaving || !hasNicknameChange}
-              className="border-mono-bright-gray enabled:bg-brand-lavender enabled:text-mono-jet enabled:hover:bg-brand-lavender/90 mb-[10px] h-12 w-full shadow-none enabled:border-transparent sm:h-14 disabled:border-mono-bright-gray disabled:bg-transparent disabled:text-mono-dark-gray"
+              className="border-mono-bright-gray enabled:bg-brand-lavender enabled:text-mono-jet enabled:hover:bg-brand-lavender/90 disabled:border-mono-bright-gray disabled:text-mono-dark-gray mb-[10px] h-12 w-full shadow-none enabled:border-transparent disabled:bg-transparent sm:h-14"
             >
               {isSaving ? '저장 중...' : '완료'}
             </Button>

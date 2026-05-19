@@ -54,22 +54,26 @@ export function MainHomeListHeader({
         </p>
       </div>
       <Link href="/profile" className="shrink-0" aria-label="마이페이지로 이동">
-        <span className="border-mono-white bg-mono-bright-gray flex size-12 items-center justify-center overflow-hidden rounded-full border-2 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+        <span className="border-mono-white bg-mono-bright-gray relative block size-12 shrink-0 overflow-hidden rounded-full border-2 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           {showAvatar ? (
-            <Image
-              src={resolved}
-              alt=""
-              width={48}
-              height={48}
-              className="size-full object-cover"
-              priority
-            />
+            <span className="absolute inset-0 scale-[1.7]">
+              <Image
+                src={resolved}
+                alt=""
+                fill
+                sizes="48px"
+                className="object-cover object-center"
+                priority
+              />
+            </span>
           ) : (
-            <User
-              className="text-mono-dark-gray size-6"
-              strokeWidth={1.5}
-              aria-hidden
-            />
+            <span className="flex size-full items-center justify-center">
+              <User
+                className="text-mono-dark-gray size-6"
+                strokeWidth={1.5}
+                aria-hidden
+              />
+            </span>
           )}
         </span>
       </Link>

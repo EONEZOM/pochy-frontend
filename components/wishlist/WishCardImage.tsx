@@ -127,7 +127,7 @@ const WishCardImageView = ({
         onError={handleError}
         unoptimized={bypassOptimizer}
         priority={priority}
-        loading={loading}
+        loading={loading ?? (priority ? 'eager' : 'lazy')}
       />
     );
   }
@@ -144,7 +144,7 @@ const WishCardImageView = ({
       onError={handleError}
       unoptimized={bypassOptimizer}
       priority={priority}
-      loading={loading}
+      loading={loading ?? (priority ? 'eager' : 'lazy')}
     />
   );
 };

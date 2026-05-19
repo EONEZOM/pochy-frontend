@@ -54,6 +54,7 @@ import {
   pickWishCaptureImageUrl,
   pickWishOfficialImageUrl,
 } from '@/lib/wish-display-image';
+import { useWarmWishCarouselImages } from '@/hooks/useWarmRouteImages';
 import Input from '@/components/common/Input/Input';
 import { Modal } from '@/components/common/Modal/Modal';
 import type { ReadDetailDto, UpdateDto } from '@/api/model';
@@ -145,6 +146,8 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
     },
   );
   const wishItems = useMemo(() => listData?.result?.content ?? [], [listData]);
+
+  useWarmWishCarouselImages(wishItems);
 
   const initialIndex = wishItems.findIndex(
     (v) => String(v.wishCosmeticsId) === String(routeWishId),
@@ -410,6 +413,11 @@ function WishlistDetailContent({ routeWishId }: { routeWishId: number }) {
                       fill
                       className="object-contain"
                       priority={index === safeInitialIndex}
+                      loading={
+                        Math.abs(index - safeInitialIndex) <= 1
+                          ? 'eager'
+                          : 'lazy'
+                      }
                     />
                   </div>
                 </CarouselItem>

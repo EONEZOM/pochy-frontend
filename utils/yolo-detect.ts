@@ -19,6 +19,7 @@ const MAX_BOXES_PER_IMAGE = 8;
 const NMS_IOU_THRESHOLD = 0.45;
 const MIN_BOX_AREA_RATIO = 0.008;
 const CROP_PADDING_RATIO = 0.06;
+const CROP_PADDING_BOTTOM_RATIO = 0.12;
 const LETTERBOX_FILL = '#727272';
 
 ort.env.wasm.wasmPaths =
@@ -183,13 +184,30 @@ const expandBox = (
   const h = box.y2 - box.y1;
   const padX = w * ratio;
   const padY = h * ratio;
+  const padYBottom = h * CROP_PADDING_BOTTOM_RATIO;
 
   return {
     x1: Math.max(0, box.x1 - padX),
     y1: Math.max(0, box.y1 - padY),
     x2: Math.min(imgW, box.x2 + padX),
-    y2: Math.min(imgH, box.y2 + padY),
+    y2: Math.min(imgH, box.y2 + padYBottom),
     score: box.score,
+  };
+};
+
+export const yoloBoxToNormalizedBBox = (
+  box: YoloBox,
+  imgW: number,
+  imgH: number,
+): { x_min: number; y_min: number; x_max: number; y_max: number } => {
+  if (imgW <= 0 || imgH <= 0) {
+    return { x_min: 0, y_min: 0, x_max: 1, y_max: 1 };
+  }
+  return {
+    x_min: box.x1 / imgW,
+    y_min: box.y1 / imgH,
+    x_max: box.x2 / imgW,
+    y_max: box.y2 / imgH,
   };
 };
 
@@ -251,4 +269,154 @@ export const cropFullImage = (img: HTMLImageElement): string => {
   }
   ctx.drawImage(img, 0, 0);
   return canvas.toDataURL('image/jpeg', 0.92);
+};
+
+const PRIMARY_UNION_MAX_IOU = 0.35;
+const PRIMARY_SECONDARY_MIN_SCORE = 0.35;
+const VERTICAL_STACK_MAX_GAP_RATIO = 0.15;
+const VERTICAL_STACK_MIN_SCORE = 0.25;
+
+const horizontalOverlapRatio = (a: YoloBox, b: YoloBox): number => {
+  const interX1 = Math.max(a.x1, b.x1);
+  const interX2 = Math.min(a.x2, b.x2);
+  const interW = Math.max(0, interX2 - interX1);
+  const minW = Math.min(a.x2 - a.x1, b.x2 - b.x1);
+  if (minW <= 0) {
+    return 0;
+  }
+  return interW / minW;
+};
+
+const verticalGapRatio = (upper: YoloBox, lower: YoloBox, imgH: number): number => {
+  if (imgH <= 0) {
+    return 1;
+  }
+  const gap = lower.y1 - upper.y2;
+  return Math.max(0, gap) / imgH;
+};
+
+const areVerticallyStacked = (
+  a: YoloBox,
+  b: YoloBox,
+  imgH: number,
+): boolean => {
+  const [upper, lower] = a.y1 <= b.y1 ? [a, b] : [b, a];
+  if (upper.y2 > lower.y1 + 2) {
+    return false;
+  }
+  return (
+    horizontalOverlapRatio(upper, lower) >= 0.35 &&
+    verticalGapRatio(upper, lower, imgH) < VERTICAL_STACK_MAX_GAP_RATIO
+  );
+};
+
+const unionYoloBoxes = (
+  boxes: YoloBox[],
+  imgW: number,
+  imgH: number,
+): YoloBox => {
+  const x1 = Math.min(...boxes.map((b) => b.x1));
+  const y1 = Math.min(...boxes.map((b) => b.y1));
+  const x2 = Math.max(...boxes.map((b) => b.x2));
+  const y2 = Math.max(...boxes.map((b) => b.y2));
+  const score = Math.max(...boxes.map((b) => b.score));
+
+  return {
+    x1: Math.max(0, x1),
+    y1: Math.max(0, y1),
+    x2: Math.min(imgW, x2),
+    y2: Math.min(imgH, y2),
+    score,
+  };
+};
+
+const findVerticallyStackedUnion = (
+  sorted: YoloBox[],
+  img: HTMLImageElement,
+): YoloBox | null => {
+  const imgH = img.naturalHeight;
+  const candidates = sorted.filter((box) => box.score >= VERTICAL_STACK_MIN_SCORE);
+
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      const a = candidates[i];
+      const b = candidates[j];
+      if (areVerticallyStacked(a, b, imgH)) {
+        return unionYoloBoxes(
+          [a, b],
+          img.naturalWidth,
+          img.naturalHeight,
+        );
+      }
+    }
+  }
+
+  return null;
+};
+
+const rankProductBox = (box: YoloBox, img: HTMLImageElement): number => {
+  const imgW = img.naturalWidth;
+  const imgH = img.naturalHeight;
+  const imgArea = imgW * imgH;
+  if (imgArea <= 0) {
+    return box.score;
+  }
+
+  const area = boxArea(box);
+  const height = box.y2 - box.y1;
+  const areaRatio = area / imgArea;
+  const heightRatio = height / imgH;
+
+  return areaRatio * 0.45 + heightRatio * 0.35 + box.score * 0.2;
+};
+
+/**
+ * 단일 제품 사진에서 튜브·병 전체에 가까운 박스 1개 선택.
+ * 상·하단이 분리 검출되면 union, 아니면 면적·세로 길이 가중 순위.
+ */
+export const pickPrimaryProductBox = (
+  boxes: YoloBox[],
+  img: HTMLImageElement,
+): YoloBox | null => {
+  if (boxes.length === 0) {
+    return null;
+  }
+
+  const sorted = [...boxes].sort((a, b) => b.score - a.score);
+  if (sorted.length === 1) {
+    return sorted[0];
+  }
+
+  const verticalUnion = findVerticallyStackedUnion(sorted, img);
+  if (verticalUnion) {
+    return verticalUnion;
+  }
+
+  const primary = sorted[0];
+  const secondary = sorted[1];
+
+  if (
+    secondary.score >= PRIMARY_SECONDARY_MIN_SCORE &&
+    yoloBoxIou(primary, secondary) < PRIMARY_UNION_MAX_IOU &&
+    horizontalOverlapRatio(primary, secondary) >= 0.35
+  ) {
+    return unionYoloBoxes(
+      [primary, secondary],
+      img.naturalWidth,
+      img.naturalHeight,
+    );
+  }
+
+  let best = primary;
+  let bestRank = rankProductBox(primary, img);
+
+  for (const candidate of sorted.slice(0, 5)) {
+    const rank = rankProductBox(candidate, img);
+    if (rank > bestRank) {
+      bestRank = rank;
+      best = candidate;
+    }
+  }
+
+  return best;
 };

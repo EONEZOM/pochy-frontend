@@ -13,19 +13,22 @@
  * 단계 완료 후 RegisterReviewStep(위시 스캔 결과 UI)으로 전환.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 import { ImagePlus, X } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/common/Modal';
 import RegisterReviewStep from '@/components/wishlist/RegisterReviewStep';
 import { WishScanAnalyzeLoading } from '@/components/wishlist/WishScanAnalyzeLoading';
-import type { NukkiResult } from '@/components/my-cosmetics/NukkiResultCard';
+import type { NukkiResult } from '@/types/nukki-result';
 import { getSearchMyCosmeticsQueryKey } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import { registerMyCosmeticsFromScan } from '@/lib/my-cosmetics-register';
+import { preloadNukkiAssets } from '@/lib/nukki';
+import { applyProductImageNukki } from '@/lib/nukki-product-image';
 import { runMyCosmeticsScanPipeline } from '@/lib/my-cosmetics-scan-pipeline';
 import {
   nukkiResultToScanFormData,
@@ -46,6 +49,30 @@ const MAX_CAPTURE_IMAGES = 9;
 
 const MY_COSMETICS_SCAN_ENTRY_TIP_DISMISSED_KEY =
   'my-cosmetics-register-scan-entry-tip-dismissed';
+
+const getRegisterErrorMessage = (error: unknown): string => {
+  if (!isAxiosError(error)) {
+    return '저장 중 오류가 발생했습니다. 다시 시도해 주세요.';
+  }
+  const data = error.response?.data;
+  if (data && typeof data === 'object') {
+    const rec = data as Record<string, unknown>;
+    const message = rec.message ?? rec.error ?? rec.detail;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message.trim();
+    }
+  }
+  if (error.response?.status === 401 || error.response?.status === 403) {
+    return '로그인이 만료되었거나 권한이 없습니다. 다시 로그인한 뒤 시도해 주세요.';
+  }
+  if (error.response?.status === 400) {
+    return '요청 형식이 맞지 않아 등록되지 않았습니다. 필수 정보를 확인해 주세요.';
+  }
+  if (error.response?.status === 500) {
+    return '서버에서 처리하지 못했습니다. 다시 시도해 주세요.';
+  }
+  return '저장 중 오류가 발생했습니다. 다시 시도해 주세요.';
+};
 
 /** data URL → 업로드용 File */
 const dataUrlToFile = (dataUrl: string, index: number): File => {
@@ -74,10 +101,7 @@ const blobToCaptureFile = (blob: Blob, index: number): File => {
 const cropBase64ToCaptureFile = (cropBase64: string, index: number): File =>
   dataUrlToFile(cropBase64, index);
 
-const nukkiResultToDirectFile = (
-  r: NukkiResult,
-  index: number,
-): File => {
+const nukkiResultToUploadFile = (r: NukkiResult, index: number): File => {
   if (r.didRemoveBackground === true && r.nukkiBlob instanceof Blob) {
     return blobToCaptureFile(r.nukkiBlob, index);
   }
@@ -99,6 +123,10 @@ const loadImageElement = (src: string): Promise<HTMLImageElement> =>
 export default function MyCosmeticsRegisterPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const handleProductImageNukki = useCallback(
+    (source: string | File) => applyProductImageNukki(source),
+    [],
+  );
   const [images, setImages] = useState<ImageFileData[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [results, setResults] = useState<NukkiResult[]>([]);
@@ -110,6 +138,7 @@ export default function MyCosmeticsRegisterPage() {
   const isSaveInFlightRef = useRef(false);
 
   useEffect(() => {
+    void preloadNukkiAssets();
     return scheduleScanEntryTipOpen(
       MY_COSMETICS_SCAN_ENTRY_TIP_DISMISSED_KEY,
       () => {
@@ -196,10 +225,8 @@ export default function MyCosmeticsRegisterPage() {
     setIsSaving(true);
 
     try {
-      const captureImages = results.map((r, i) =>
-        cropBase64ToCaptureFile(r.cropBase64, i),
-      );
-      const directImages = results.map((r, i) => nukkiResultToDirectFile(r, i));
+      const captureImages = results.map((r, i) => nukkiResultToUploadFile(r, i));
+      const directImages = results.map((r, i) => nukkiResultToUploadFile(r, i));
       const items = results.map((r) => ({
         name: r.product_name,
         brand: r.brand,
@@ -221,10 +248,7 @@ export default function MyCosmeticsRegisterPage() {
       alert('내 화장품에 저장되었습니다.');
       router.push(returnPath ?? '/my-cosmetics');
     } catch (err) {
-      alert(
-        '저장 중 오류가 발생했습니다: ' +
-          (err instanceof Error ? err.message : '알 수 없는 오류'),
-      );
+      alert(getRegisterErrorMessage(err));
     } finally {
       isSaveInFlightRef.current = false;
       setIsSaving(false);
@@ -254,6 +278,8 @@ export default function MyCosmeticsRegisterPage() {
         hideYoutubeReview
         isSavePending={isSaving}
         cardImageObjectFit="contain"
+        onImageFileSelected={handleProductImageNukki}
+        onOfficialImageUrlSelected={handleProductImageNukki}
       />
     );
   }
