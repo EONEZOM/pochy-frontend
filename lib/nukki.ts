@@ -1,10 +1,12 @@
 /**
  * @imgly/background-removal 래퍼.
- * 실패 시 원본을 그대로 반환합니다(스캔 등록과 동일 정책).
+ * 실패 시 preview용 URL만 반환하고 didRemoveBackground=false로 표시합니다.
  */
 export type RemoveProductBackgroundResult = {
   blob: Blob;
   previewUrl: string;
+  /** true면 배경 제거 성공 — directImages 업로드에 사용 */
+  didRemoveBackground: boolean;
 };
 
 const toInputUrl = (source: string | Blob | File): { url: string; revoke: boolean } => {
@@ -40,12 +42,12 @@ export const removeProductBackground = async (
     const { removeBackground } = await import('@imgly/background-removal');
     const blob = await removeBackground(inputUrl, { model });
     const previewUrl = URL.createObjectURL(blob);
-    return { blob, previewUrl };
+    return { blob, previewUrl, didRemoveBackground: true };
   } catch {
     const blob = await toFallbackBlob(source);
     const previewUrl =
       typeof source === 'string' ? source : URL.createObjectURL(blob);
-    return { blob, previewUrl };
+    return { blob, previewUrl, didRemoveBackground: false };
   } finally {
     if (revoke) {
       URL.revokeObjectURL(inputUrl);

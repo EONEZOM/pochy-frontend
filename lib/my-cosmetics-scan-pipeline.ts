@@ -390,25 +390,6 @@ export const enrichCosmeticVisionResultsWithNaver = async (
 const toMediaProxyUrl = (imageUrl: string): string =>
   `/api/media-proxy?url=${encodeURIComponent(imageUrl.trim())}`;
 
-const fetchOfficialImageBlob = async (
-  imageUrl: string,
-): Promise<Blob | null> => {
-  const trimmed = imageUrl.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    const res = await fetch(toMediaProxyUrl(trimmed));
-    if (!res.ok) {
-      return null;
-    }
-    return await res.blob();
-  } catch {
-    return null;
-  }
-};
-
 const shouldPreferOfficialImage = (item: CosmeticVisionCropResult): boolean => {
   const official = item.official_image?.trim();
   if (!official) {
@@ -439,40 +420,42 @@ export const applyNukkiToCosmeticVisionResults = async (
       '',
     );
 
-    let nukkiSrc = item.cropBase64;
+    let displaySrc = item.cropBase64;
     let nukkiBlob: Blob | undefined;
+    let didRemoveBackground = false;
 
     const officialUrl = item.official_image?.trim();
-    if (officialUrl && shouldPreferOfficialImage(item)) {
-      const officialBlob = await fetchOfficialImageBlob(officialUrl);
-      nukkiSrc = toMediaProxyUrl(officialUrl);
-      if (officialBlob) {
-        nukkiBlob = officialBlob;
-      }
-    } else {
-      try {
-        const nukkiInput = await resizeDataUrlForNukki(
-          item.cropBase64,
-          NUKKI_MAX_SIDE_PX,
-        );
-        const { blob, previewUrl } = await removeProductBackground(nukkiInput, {
-          model: 'isnet_quint8',
-        });
-        nukkiBlob = blob;
-        nukkiSrc = previewUrl;
-      } catch {
-        // 누끼 실패 시 원본 크롭 사용
-      }
+    const preferOfficialDisplay =
+      Boolean(officialUrl) && shouldPreferOfficialImage(item);
+
+    const nukkiInput = await resizeDataUrlForNukki(
+      item.cropBase64,
+      NUKKI_MAX_SIDE_PX,
+    );
+    const { blob, previewUrl, didRemoveBackground: removed } =
+      await removeProductBackground(nukkiInput, {
+        model: 'isnet_quint8',
+      });
+
+    if (removed) {
+      didRemoveBackground = true;
+      nukkiBlob = blob;
+      displaySrc = previewUrl;
+    } else if (preferOfficialDisplay && officialUrl) {
+      displaySrc = toMediaProxyUrl(officialUrl);
     }
 
     nukkiResults.push({
       id: item.image_index >= 0 ? item.image_index : i,
-      src: nukkiSrc,
+      src: displaySrc,
       nukkiBlob,
+      didRemoveBackground,
       cropBase64: item.cropBase64,
       brand: item.brand_name,
       product_name: item.product_name,
       product_type: productType,
+      main_category: item.main_category,
+      sub_category: item.sub_category,
       key_features: item.features,
       confidence_score: item.confidence_score,
     });

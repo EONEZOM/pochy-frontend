@@ -74,52 +74,14 @@ const blobToCaptureFile = (blob: Blob, index: number): File => {
 const cropBase64ToCaptureFile = (cropBase64: string, index: number): File =>
   dataUrlToFile(cropBase64, index);
 
-const nukkiResultToDirectFile = async (
+const nukkiResultToDirectFile = (
   r: NukkiResult,
   index: number,
-): Promise<File> => {
-  if (r.nukkiBlob instanceof Blob) {
+): File => {
+  if (r.didRemoveBackground === true && r.nukkiBlob instanceof Blob) {
     return blobToCaptureFile(r.nukkiBlob, index);
   }
-  return srcToCaptureFile(r.src, r.cropBase64, index);
-};
-
-const srcToCaptureFile = async (
-  src: string,
-  cropBase64Fallback: string,
-  index: number,
-): Promise<File> => {
-  const trimmed = String(src ?? '').trim();
-
-  if (trimmed.startsWith('data:')) {
-    return dataUrlToFile(trimmed, index);
-  }
-
-  const fallback = () => dataUrlToFile(cropBase64Fallback, index);
-
-  if (trimmed.startsWith('blob:')) {
-    try {
-      const res = await fetch(trimmed);
-      if (!res.ok) {
-        return fallback();
-      }
-      const blob = await res.blob();
-      return blobToCaptureFile(blob, index);
-    } catch {
-      return fallback();
-    }
-  }
-
-  try {
-    const res = await fetch(trimmed);
-    if (!res.ok) {
-      return fallback();
-    }
-    const blob = await res.blob();
-    return blobToCaptureFile(blob, index);
-  } catch {
-    return fallback();
-  }
+  return cropBase64ToCaptureFile(r.cropBase64, index);
 };
 
 const loadImageElement = (src: string): Promise<HTMLImageElement> =>
@@ -217,6 +179,19 @@ export default function MyCosmeticsRegisterPage() {
     if (results.length === 0 || isSaveInFlightRef.current) {
       return;
     }
+
+    const failedNukkiCount = results.filter(
+      (r) => r.didRemoveBackground !== true,
+    ).length;
+    if (failedNukkiCount > 0) {
+      const proceed = window.confirm(
+        `배경 제거에 실패한 상품이 ${failedNukkiCount}개 있습니다. 원본 이미지로 저장할까요?`,
+      );
+      if (!proceed) {
+        return;
+      }
+    }
+
     isSaveInFlightRef.current = true;
     setIsSaving(true);
 
@@ -224,13 +199,12 @@ export default function MyCosmeticsRegisterPage() {
       const captureImages = results.map((r, i) =>
         cropBase64ToCaptureFile(r.cropBase64, i),
       );
-      const directImages = await Promise.all(
-        results.map((r, i) => nukkiResultToDirectFile(r, i)),
-      );
+      const directImages = results.map((r, i) => nukkiResultToDirectFile(r, i));
       const items = results.map((r) => ({
         name: r.product_name,
         brand: r.brand,
-        category: r.product_type,
+        category: r.main_category,
+        subCategory: r.sub_category,
         feature: r.key_features.join(', '),
       }));
 

@@ -55,10 +55,11 @@ export default function MyCosmeticsDirectRegisterPage() {
 
   const applyProductImageNukki = useCallback(
     async (source: string | File): Promise<ProductDetailFormImageSelectResult> => {
-      const { blob, previewUrl } = await removeProductBackground(source);
+      const { blob, previewUrl, didRemoveBackground } =
+        await removeProductBackground(source);
       return {
         official_image: previewUrl,
-        nukkiBlob: blob,
+        nukkiBlob: didRemoveBackground ? blob : undefined,
       };
     },
     [],
