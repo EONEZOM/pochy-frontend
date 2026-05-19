@@ -752,7 +752,7 @@ export const exportPouchCanvas = async (
 
   const blob = await toBlob(element, {
     cacheBust: false,
-    pixelRatio: 2,
+    pixelRatio: 1,
     skipFonts: true,
     backgroundColor: null as unknown as string,
     fetchRequestInit: {

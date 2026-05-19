@@ -25,7 +25,10 @@ import { buildPouchUpdateDto } from '@/lib/pouch-canvas';
 import { normalizeMultipartImageFile } from '@/lib/wish-cosmetics';
 
 const POUCH_MULTIPART_TIMEOUT_MS = 120_000;
-const POUCH_IMAGE_MAX_SIDE_PX = 1920;
+/** 합성 PNG 업로드 최대 변(긴쪽) — 백엔드·프록시 500 방지 */
+const POUCH_IMAGE_MAX_SIDE_PX = 768;
+const POUCH_IMAGE_TARGET_MAX_BYTES = 200_000;
+const POUCH_IMAGE_MIN_SIDE_PX = 320;
 
 export type CreatePouchMultipartPayload = {
   request: CombinedAddDto;
@@ -47,7 +50,40 @@ const appendJsonRequestPart = (
 ) => {
   formData.append(
     'request',
-    new Blob([JSON.stringify(request)], { type: 'application/json' }),
+    new File([JSON.stringify(request)], 'request.json', {
+      type: 'application/json',
+    }),
+  );
+};
+
+export const isPouchMultipartServerError = (err: unknown): boolean => {
+  if (typeof err !== 'object' || err === null) {
+    return false;
+  }
+  const status = (err as { response?: { status?: number } }).response?.status;
+  return status === 500 || status === 413 || status === 502 || status === 503;
+};
+
+/** POST 필수 `pouchImage` 충족용 1×1 PNG (실제 합성은 PATCH /image로 업로드) */
+export const createMinimalPouchPlaceholderImage = async (): Promise<File> => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1;
+  canvas.height = 1;
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (value) => {
+        if (!value) {
+          reject(new Error('플레이스홀더 이미지를 만들지 못했습니다.'));
+          return;
+        }
+        resolve(value);
+      },
+      'image/png',
+    );
+  });
+  return normalizeMultipartImageFile(
+    new File([blob], 'pouch.png', { type: 'image/png' }),
+    'pouch.png',
   );
 };
 
@@ -68,6 +104,48 @@ const loadImageElement = (src: string): Promise<HTMLImageElement> => {
  * 합성 캔버스(투명 PNG)를 업로드용 PNG로 리사이즈합니다.
  * JPEG 변환 시 흰 배경이 깔리므로 알파 채널을 유지합니다.
  */
+const renderPouchImageToPngBlob = async (
+  img: HTMLImageElement,
+  maxSide: number,
+): Promise<Blob> => {
+  let width = img.naturalWidth;
+  let height = img.naturalHeight;
+  const longest = Math.max(width, height);
+
+  if (longest > maxSide) {
+    const scale = maxSide / longest;
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, width);
+  canvas.height = Math.max(1, height);
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('파우치 이미지 변환 캔버스를 초기화할 수 없습니다.');
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const pngBlob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('파우치 이미지를 PNG로 변환하지 못했습니다.'));
+          return;
+        }
+        resolve(blob);
+      },
+      'image/png',
+    );
+  });
+
+  return pngBlob;
+};
+
 export const normalizePouchImageForUpload = async (
   image: File | Blob,
 ): Promise<File> => {
@@ -75,40 +153,16 @@ export const normalizePouchImageForUpload = async (
 
   try {
     const img = await loadImageElement(objectUrl);
-    let width = img.naturalWidth;
-    let height = img.naturalHeight;
-    const maxSide = Math.max(width, height);
+    let maxSide = POUCH_IMAGE_MAX_SIDE_PX;
+    let pngBlob = await renderPouchImageToPngBlob(img, maxSide);
 
-    if (maxSide > POUCH_IMAGE_MAX_SIDE_PX) {
-      const scale = POUCH_IMAGE_MAX_SIDE_PX / maxSide;
-      width = Math.round(width * scale);
-      height = Math.round(height * scale);
+    while (
+      pngBlob.size > POUCH_IMAGE_TARGET_MAX_BYTES &&
+      maxSide > POUCH_IMAGE_MIN_SIDE_PX
+    ) {
+      maxSide = Math.round(maxSide * 0.75);
+      pngBlob = await renderPouchImageToPngBlob(img, maxSide);
     }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, width);
-    canvas.height = Math.max(1, height);
-    const ctx = canvas.getContext('2d');
-
-    if (!ctx) {
-      throw new Error('파우치 이미지 변환 캔버스를 초기화할 수 없습니다.');
-    }
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    const pngBlob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error('파우치 이미지를 PNG로 변환하지 못했습니다.'));
-            return;
-          }
-          resolve(blob);
-        },
-        'image/png',
-      );
-    });
 
     return normalizeMultipartImageFile(
       new File([pngBlob], 'pouch.png', { type: 'image/png' }),
