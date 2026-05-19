@@ -98,7 +98,21 @@ const AUTH_PATHS_WITHOUT_BEARER = [
   '/api/auth/magic-link',
 ] as const;
 
+/** 로그인 없이 조회 가능한 공개 API — Bearer 미첨부, 401 reissue/redirect 스킵 */
+const isPublicApiRequest = (requestUrl: string): boolean => {
+  if (/\/api\/pouches\/[^/?]+\/share(?:\?|$)/.test(requestUrl)) {
+    return true;
+  }
+  if (requestUrl.includes('/api/feed/pouches/')) {
+    return true;
+  }
+  return false;
+};
+
 const shouldAttachAccessToken = (requestUrl: string): boolean => {
+  if (isPublicApiRequest(requestUrl)) {
+    return false;
+  }
   return !AUTH_PATHS_WITHOUT_BEARER.some((path) => requestUrl.includes(path));
 };
 
@@ -166,6 +180,7 @@ axiosInstance.interceptors.response.use(
       !originalRequest ||
       originalRequest._retry ||
       !shouldRetryByStatus ||
+      isPublicApiRequest(requestUrl) ||
       requestUrl.includes('/api/auth/reissue') ||
       requestUrl.includes('/api/auth/session-check') ||
       requestUrl.includes('/api/auth/logout');

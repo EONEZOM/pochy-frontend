@@ -64,6 +64,7 @@ export const BOTTOM_NAV_HIDDEN_PATHS = [
   '/auth',
   '/my-cosmetics/create',
   '/my-cosmetics/pouch',
+  '/share/pouch',
 ] as const;
 const PREPARING_PATHS = ['/my', '/feed'];
 

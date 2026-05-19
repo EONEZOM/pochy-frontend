@@ -16,7 +16,7 @@ export const buildPouchDetailShareUrl = (
   const query = name.trim()
     ? `?name=${encodeURIComponent(name.trim())}`
     : '';
-  return `${origin}/my-cosmetics/pouch/${pouchId}${query}`;
+  return `${origin}/share/pouch/${pouchId}${query}`;
 };
 
 /** 카카오 피드 미리보기용 — 공개 HTTPS URL만 사용 (프록시·blob 불가) */
@@ -114,6 +114,7 @@ export const captureShareElement = async (
     cacheBust: true,
     pixelRatio: 2,
     skipFonts: true,
+    backgroundColor: null as unknown as string,
   });
   if (!blob) {
     throw new Error('공유 이미지를 생성하지 못했습니다.');

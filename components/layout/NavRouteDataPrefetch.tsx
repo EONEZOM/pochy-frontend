@@ -14,6 +14,7 @@ const AUTH_PATH_PREFIXES = [
   '/success',
   '/nickname',
   '/auth',
+  '/share/pouch',
 ] as const;
 const PRE_HOME_PATH_PREFIXES = ['/success', '/nickname'] as const;
 
