@@ -140,11 +140,18 @@ export const updateMyProfile = (
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
+      const formData = new FormData();
+if(updateMyProfileBody?.profileImage !== undefined) {
+ formData.append(`profileImage`, updateMyProfileBody.profileImage);
+ }
+if(updateMyProfileBody?.request !== undefined) {
+ formData.append(`request`, JSON.stringify(updateMyProfileBody.request));
+ }
 
       return customInstance<ApiResponseDTOString>(
       {url: `/api/member`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: updateMyProfileBody, signal
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
     },
       options);
     }

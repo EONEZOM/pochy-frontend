@@ -277,11 +277,21 @@ export const createWishCosmeticsV2 = (
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
+      const formData = new FormData();
+if(createWishCosmeticsV2Body?.captureImages !== undefined) {
+ createWishCosmeticsV2Body?.captureImages.forEach(value => formData.append(`captureImages`, value));
+ }
+if(createWishCosmeticsV2Body?.directImages !== undefined) {
+ createWishCosmeticsV2Body?.directImages.forEach(value => formData.append(`directImages`, value));
+ }
+if(createWishCosmeticsV2Body?.request !== undefined) {
+ createWishCosmeticsV2Body?.request.forEach(value => formData.append(`request`, JSON.stringify(value)));
+ }
 
       return customInstance<ApiResponseDTOListCreateDetailDto>(
       {url: `/api/wish-cosmetics/v2`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: createWishCosmeticsV2Body, signal
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
     },
       options);
     }
@@ -341,11 +351,18 @@ export const createWishCosmeticsDirect = (
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
+      const formData = new FormData();
+if(createWishCosmeticsDirectBody?.productDirectImage !== undefined) {
+ formData.append(`productDirectImage`, createWishCosmeticsDirectBody.productDirectImage);
+ }
+if(createWishCosmeticsDirectBody?.request !== undefined) {
+ formData.append(`request`, JSON.stringify(createWishCosmeticsDirectBody.request));
+ }
 
       return customInstance<ApiResponseDTOCreateDetailDto>(
       {url: `/api/wish-cosmetics/direct`, method: 'POST',
-      headers: {'Content-Type': 'application/json', },
-      data: createWishCosmeticsDirectBody, signal
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
     },
       options);
     }
@@ -499,11 +516,21 @@ export const updateWishCosmetics = (
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
+      const formData = new FormData();
+if(updateWishCosmeticsBody?.productDirectImage !== undefined) {
+ formData.append(`productDirectImage`, updateWishCosmeticsBody.productDirectImage);
+ }
+if(updateWishCosmeticsBody?.captureImage !== undefined) {
+ formData.append(`captureImage`, updateWishCosmeticsBody.captureImage);
+ }
+if(updateWishCosmeticsBody?.request !== undefined) {
+ formData.append(`request`, JSON.stringify(updateWishCosmeticsBody.request));
+ }
 
       return customInstance<ApiResponseDTOUpdateDto>(
       {url: `/api/wish-cosmetics/${wishCosmeticsId}`, method: 'PATCH',
-      headers: {'Content-Type': 'application/json', },
-      data: updateWishCosmeticsBody, signal
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
     },
       options);
     }

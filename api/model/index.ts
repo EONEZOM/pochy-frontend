@@ -93,6 +93,7 @@ export * from './sliceReadListDto';
 export * from './sortObject';
 export * from './tokenDto';
 export * from './updateDto';
+export * from './updateMyCosmeticBody';
 export * from './updateMyProfileBody';
 export * from './updatePouchBody';
 export * from './updateProfileDto';
