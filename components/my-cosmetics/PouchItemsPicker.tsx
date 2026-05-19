@@ -61,6 +61,7 @@ import {
   getCosmeticImageSrc,
   getWappenImageSrc,
   scaleLayersToCanvasRect,
+  seedCosmeticLayersFromSelection,
   type CanvasLayer,
   type CanvasRect,
 } from '@/lib/pouch-canvas';
@@ -926,6 +927,28 @@ export function PouchItemsPicker({
       alert('파우치에 넣을 화장품을 선택해 주세요.');
       return;
     }
+
+    const validIds = sanitizeSelectedOrder(selectedOrder, validCosmeticIds);
+    const itemsById = new Map<number, MyCosmeticsResponseDTO>();
+    for (const item of items) {
+      if (item.id != null && item.id > 0) {
+        itemsById.set(item.id, item);
+      }
+    }
+
+    const canvasEl = getCanvasExportElement();
+    const canvasRect = getCanvasRectFromElement(canvasEl);
+    const { layers: seededLayers, nextZIndex: seededNextZ } =
+      seedCosmeticLayersFromSelection(
+        layers,
+        validIds,
+        itemsById,
+        canvasRect,
+        (item) => getCosmeticImageSrc(item),
+      );
+
+    setLayers(seededLayers);
+    setNextZIndex(seededNextZ);
     setStep('decorate');
     setIsSheetExpanded(false);
   };

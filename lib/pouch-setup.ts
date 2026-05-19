@@ -11,12 +11,11 @@ import {
 } from '@/lib/pouch-api';
 import {
   buildCombinedAddDto,
+  buildCosmeticItemsForSave,
+  buildCosmeticListForSave,
   buildPouchUpdateDto,
-  DEFAULT_LAYER_SIZE,
+  DEFAULT_CANVAS_RECT,
   layersToSavePayload,
-  layersToUpdatePayload,
-  mergeSelectionsIntoCosmeticItems,
-  mergeSelectionsIntoCosmeticList,
   type CanvasLayer,
   type CanvasRect,
 } from '@/lib/pouch-canvas';
@@ -38,11 +37,6 @@ export const getPouchListQueryKey = () =>
 export const fetchPouchList = async () => {
   return getPouchList(POUCH_LIST_PAGE_PARAMS);
 };
-
-const POUCH_ITEM_LAYOUT_BASE_X = 80;
-const POUCH_ITEM_LAYOUT_BASE_Y = 120;
-const POUCH_ITEM_LAYOUT_STEP_X = 72;
-const POUCH_ITEM_LAYOUT_STEP_Y = 72;
 
 export const savePendingPouchName = (name: string) => {
   if (typeof window === 'undefined') {
@@ -244,21 +238,7 @@ const savePouchDecorationWithImage = async (
 const buildPouchCosmeticItems = (
   selections: PouchCosmeticSelection[],
 ): AddCosmeticDetailDto[] => {
-  return selections.map(({ myCosmeticId, memo }, index) => {
-    const x = POUCH_ITEM_LAYOUT_BASE_X + (index % 4) * POUCH_ITEM_LAYOUT_STEP_X;
-    const y =
-      POUCH_ITEM_LAYOUT_BASE_Y + Math.floor(index / 4) * POUCH_ITEM_LAYOUT_STEP_Y;
-    const z = index + 1;
-    return {
-      myCosmeticId,
-      xpoint: x,
-      ypoint: y,
-      zindex: z,
-      size: DEFAULT_LAYER_SIZE,
-      rotationAngle: 0,
-      ...(memo ? { memo } : {}),
-    };
-  });
+  return buildCosmeticItemsForSave([], selections, DEFAULT_CANVAS_RECT);
 };
 
 const validatePouchSelections = (selections: PouchCosmeticSelection[]) => {
@@ -383,14 +363,11 @@ export const savePouchDecoration = async (
   let pouchId = await resolvePouchIdForSave(pouchIdParam);
 
   if (pouchId == null) {
-    const { cosmeticItems: layerCosmeticItems, wappenItems } = layersToSavePayload(
+    const { wappenItems } = layersToSavePayload(layers, selections, canvasRect);
+    const cosmeticItems = buildCosmeticItemsForSave(
       layers,
       selections,
       canvasRect,
-    );
-    const cosmeticItems = mergeSelectionsIntoCosmeticItems(
-      layerCosmeticItems,
-      selections,
     );
 
     if (cosmeticItems.length === 0) {
@@ -408,20 +385,15 @@ export const savePouchDecoration = async (
     });
     pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
   } else {
-    const { cosmeticList: layerCosmeticList, wappenList } = layersToUpdatePayload(
+    const { wappenItems: wappenList } = layersToSavePayload(
       layers,
       selections,
       canvasRect,
     );
-    const myCosmeticIdsOnCanvas = new Set(
-      layers
-        .filter((layer) => layer.kind === 'cosmetic' && layer.myCosmeticId != null)
-        .map((layer) => layer.myCosmeticId as number),
-    );
-    const cosmeticList = mergeSelectionsIntoCosmeticList(
-      layerCosmeticList,
+    const cosmeticList = buildCosmeticListForSave(
+      layers,
       selections,
-      myCosmeticIdsOnCanvas,
+      canvasRect,
     );
 
     if (cosmeticList.length === 0) {
@@ -466,15 +438,7 @@ export const savePouchWithCosmetics = async (
   const pouchId = await resolvePouchIdForSave(pouchIdParam);
 
   if (pouchId != null) {
-    const cosmeticList = items.map((item) => ({
-      cosmeticId: item.myCosmeticId,
-      memo: item.memo,
-      xpoint: item.xpoint,
-      ypoint: item.ypoint,
-      zindex: item.zindex,
-      size: item.size,
-      rotationAngle: item.rotationAngle,
-    }));
+    const cosmeticList = buildCosmeticListForSave([], selections, DEFAULT_CANVAS_RECT);
     await updatePouchMultipart(pouchId, {
       request: buildPouchUpdateDto({
         pouchName: trimmedName,

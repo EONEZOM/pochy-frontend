@@ -18,6 +18,17 @@ export const DEFAULT_LAYER_SIZE = 96;
 export const POUCH_CANVAS_WIDTH = 320;
 export const POUCH_CANVAS_HEIGHT = 460;
 
+/** 선택 화장품 기본 배치(API 좌표) — 저장·캔버스 시딩 공통 */
+export const POUCH_ITEM_LAYOUT_BASE_X = 80;
+export const POUCH_ITEM_LAYOUT_BASE_Y = 120;
+export const POUCH_ITEM_LAYOUT_STEP_X = 72;
+export const POUCH_ITEM_LAYOUT_STEP_Y = 72;
+
+export const DEFAULT_CANVAS_RECT: CanvasRect = {
+  width: POUCH_CANVAS_WIDTH,
+  height: POUCH_CANVAS_HEIGHT,
+};
+
 /** 화장품 스티커 PNG 알파 외곽선 — Rnd 박스가 아닌 이미지 실루엣에 적용 (html-to-image 캡처 포함) */
 export const buildCosmeticStickerOutlineFilter = (
   color = '#ffffff',
@@ -303,6 +314,139 @@ export const layersToSavePayload = (
   };
 };
 
+export const buildDefaultCosmeticApiPoint = (selectionIndex: number) => {
+  const xpoint =
+    POUCH_ITEM_LAYOUT_BASE_X + (selectionIndex % 4) * POUCH_ITEM_LAYOUT_STEP_X;
+  const ypoint =
+    POUCH_ITEM_LAYOUT_BASE_Y +
+    Math.floor(selectionIndex / 4) * POUCH_ITEM_LAYOUT_STEP_Y;
+  return {
+    xpoint,
+    ypoint,
+    zindex: selectionIndex + 1,
+    size: DEFAULT_LAYER_SIZE,
+    rotationAngle: 0,
+  };
+};
+
+const POUCH_API_MEMO_MAX_LEN = 60;
+
+/**
+ * 선택 목록 순서를 기준으로 저장용 화장품 항목을 만듭니다.
+ * 캔버스 레이어에 해당 ID가 있으면 위치·크기를 사용하고, 없으면 기본 그리드에 배치합니다.
+ */
+export const buildCosmeticItemsForSave = (
+  layers: CanvasLayer[],
+  selections: PouchCosmeticSelection[],
+  canvasRect: CanvasRect,
+): AddCosmeticDetailDto[] => {
+  const { cosmeticItems: fromLayers } = layersToSavePayload(
+    layers,
+    selections,
+    canvasRect,
+  );
+  const byMyCosmeticId = new Map<number, AddCosmeticDetailDto>();
+  for (const item of fromLayers) {
+    const id = item.myCosmeticId;
+    if (id != null && id > 0) {
+      byMyCosmeticId.set(id, item);
+    }
+  }
+
+  return selections.map((selection, index) => {
+    const myCosmeticId = selection.myCosmeticId;
+    const memo = selection.memo?.trim();
+    const fromLayer = byMyCosmeticId.get(myCosmeticId);
+    if (fromLayer) {
+      return {
+        ...fromLayer,
+        myCosmeticId,
+        ...(memo ? { memo: memo.slice(0, POUCH_API_MEMO_MAX_LEN) } : {}),
+      };
+    }
+    return {
+      myCosmeticId,
+      ...buildDefaultCosmeticApiPoint(index),
+      ...(memo ? { memo: memo.slice(0, POUCH_API_MEMO_MAX_LEN) } : {}),
+    };
+  });
+};
+
+/** PATCH `PouchUpdateDto.cosmeticList` — 선택 목록 1:1 매핑 */
+export const buildCosmeticListForSave = (
+  layers: CanvasLayer[],
+  selections: PouchCosmeticSelection[],
+  canvasRect: CanvasRect,
+): CosmeticsDto[] => {
+  return buildCosmeticItemsForSave(layers, selections, canvasRect).map((item) => ({
+    cosmeticId: item.myCosmeticId,
+    memo: item.memo,
+    xpoint: item.xpoint,
+    ypoint: item.ypoint,
+    zindex: item.zindex,
+    size: item.size,
+    rotationAngle: item.rotationAngle,
+  }));
+};
+
+/** 꾸미기 진입 시 선택 화장품을 캔버스 레이어로 시딩합니다. */
+export const seedCosmeticLayersFromSelection = <T>(
+  prevLayers: CanvasLayer[],
+  selectedOrder: number[],
+  itemsById: Map<number, T>,
+  canvasRect: CanvasRect,
+  resolveItemImageSrc: (item: T) => string,
+): { layers: CanvasLayer[]; nextZIndex: number } => {
+  const existingCosmeticIds = new Set(
+    prevLayers
+      .filter((layer) => layer.kind === 'cosmetic' && layer.myCosmeticId != null)
+      .map((layer) => layer.myCosmeticId as number),
+  );
+  let z = prevLayers.reduce((max, layer) => Math.max(max, layer.zIndex), 0) + 1;
+  const next = [...prevLayers];
+
+  selectedOrder.forEach((myCosmeticId, index) => {
+    if (
+      !Number.isFinite(myCosmeticId) ||
+      myCosmeticId <= 0 ||
+      existingCosmeticIds.has(myCosmeticId)
+    ) {
+      return;
+    }
+    const item = itemsById.get(myCosmeticId);
+    if (!item) {
+      return;
+    }
+    const src = resolveItemImageSrc(item).trim();
+    if (!src) {
+      return;
+    }
+    const { xpoint, ypoint } = buildDefaultCosmeticApiPoint(index);
+    const pos = apiPointToLayerPosition(
+      xpoint,
+      ypoint,
+      canvasRect,
+      DEFAULT_LAYER_SIZE,
+    );
+    next.push({
+      id: createCanvasLayerId(),
+      kind: 'cosmetic',
+      src,
+      myCosmeticId,
+      zIndex: z,
+      rotation: 0,
+      ...pos,
+    });
+    existingCosmeticIds.add(myCosmeticId);
+    z += 1;
+  });
+
+  return {
+    layers: ensureUniqueCanvasLayerIds(next),
+    nextZIndex: z,
+  };
+};
+
 const dedupeCosmeticsByCosmeticId = (
   items: CosmeticsDto[],
 ): CosmeticsDto[] => {
@@ -417,8 +561,6 @@ export type BuildCombinedAddDtoParams = {
   cosmeticItems: AddCosmeticDetailDto[];
   wappenItems: WappenItemDto[];
 };
-
-const POUCH_API_MEMO_MAX_LEN = 60;
 
 const sanitizeAddCosmeticItemsForApi = (
   items: AddCosmeticDetailDto[],

@@ -242,28 +242,16 @@ export const resolvePouchRowCosmeticMatch = (
   cosmeticsById: Map<number, MyCosmeticsResponseDTO>,
   cosmeticsByNameBrand: Map<string, MyCosmeticsResponseDTO>,
 ): MyCosmeticsResponseDTO | undefined => {
-  const candidate = getPouchRowMyCosmeticIdCandidate(item);
-  if (candidate != null) {
-    if (!isPouchRowId(item, candidate) || cosmeticsById.has(candidate)) {
-      const byId = cosmeticsById.get(candidate);
-      if (byId) {
-        return byId;
-      }
-    }
+  const verifiedMyCosmeticId = getPouchRowMyCosmeticId(item, cosmeticsById);
+  if (verifiedMyCosmeticId != null) {
+    return cosmeticsById.get(verifiedMyCosmeticId);
   }
+
   const nameBrandKey = cosmeticNameBrandKey(item.brand, item.name);
   if (nameBrandKey != null) {
     const byNameBrand = cosmeticsByNameBrand.get(nameBrandKey);
     if (byNameBrand) {
       return byNameBrand;
-    }
-  }
-
-  const rowId = item.id;
-  if (rowId != null && rowId > 0) {
-    const byRowId = cosmeticsById.get(rowId);
-    if (byRowId) {
-      return byRowId;
     }
   }
 
@@ -350,6 +338,10 @@ export const buildPouchDetailDisplayRows = (
 };
 
 const resolvePouchProductDedupeKey = (item: PouchDetailEnrichedRow): string | null => {
+  const pouchRowId = item.id;
+  if (pouchRowId != null && pouchRowId > 0) {
+    return `pouch-row:${pouchRowId}`;
+  }
   if (item.linkCosmeticId != null && item.linkCosmeticId > 0) {
     return `cosmetic:${item.linkCosmeticId}`;
   }
