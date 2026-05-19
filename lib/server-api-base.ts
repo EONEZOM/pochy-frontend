@@ -8,7 +8,7 @@ const normalizeApiBase = (value?: string) => {
     .replace(/\/api$/, '');
 };
 
-const FALLBACK_API_BASE = 'http://pochy.shop:8080';
+const FALLBACK_API_BASE = 'https://api.pochy.shop';
 
 /** 서버(Route Handler·middleware)에서 백엔드 origin */
 export const getServerApiBase = (): string => {

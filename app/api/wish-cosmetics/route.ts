@@ -1,18 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
-const normalizeApiBase = (value?: string) => {
-  if (!value) return '';
-  return value
-    .replace(/\/$/, '')
-    .replace(/\/v3\/api-docs$/, '')
-    .replace(/\/api$/, '');
-};
+import { getServerApiBase } from '@/lib/server-api-base';
 
-const FALLBACK_API_BASE = 'http://pochy.shop:8080';
-const API_BASE =
-  normalizeApiBase(process.env.NEXT_PUBLIC_API_URL) ||
-  normalizeApiBase(process.env.OPENAPI_BASE_URL) ||
-  FALLBACK_API_BASE;
+const API_BASE = getServerApiBase();
 
 const BACKEND_URL = `${API_BASE}/api/wish-cosmetics`;
 
