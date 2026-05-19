@@ -1,10 +1,11 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useParams } from 'next/navigation';
 
 import { MyCosmeticsDetailView } from '@/components/my-cosmetics/MyCosmeticsDetailView';
 
-export default function MyCosmeticsDetailPage() {
+function MyCosmeticsDetailPageContent() {
   const params = useParams();
   const rawId = params?.id;
   const routeCosmeticId = Number(rawId);
@@ -28,5 +29,19 @@ export default function MyCosmeticsDetailPage() {
       key={routeCosmeticId}
       routeCosmeticId={routeCosmeticId}
     />
+  );
+}
+
+export default function MyCosmeticsDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-400">
+          화장품 정보를 불러오는 중...
+        </div>
+      }
+    >
+      <MyCosmeticsDetailPageContent />
+    </Suspense>
   );
 }

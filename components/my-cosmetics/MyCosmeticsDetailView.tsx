@@ -1,16 +1,26 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import Image from 'next/image';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Download, Share2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { keepPreviousData } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
+  getGetCosmeticDetailQueryKey,
+  getSearchMyCosmeticsQueryKey,
   useGetCosmeticDetail,
   useSearchMyCosmetics,
 } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import type { MyCosmeticsResponseDTO } from '@/api/model';
+import { Button } from '@/components/common/Button';
 import Input from '@/components/common/Input/Input';
 import { Header } from '@/components/layout/Header';
 import { WishCardImage } from '@/components/wishlist/WishCardImage';
@@ -22,8 +32,20 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from '@/components/ui/carousel';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { COSMETIC_CATEGORIES } from '@/constants/category';
 import { useYoutubeReview } from '@/hooks/queries/useYoutubeReview';
+import { updateMyCosmeticItem } from '@/lib/my-cosmetics-mutations';
+import {
+  getMyCosmeticsWishCardImageProps,
+  pickMyCosmeticsStickerImageUrl,
+} from '@/lib/my-cosmetics-display-image';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +54,48 @@ const MEMO_MAX_LEN = 60;
 const readonlyFieldClass =
   'pointer-events-none cursor-default border-[var(--mono-gray)] bg-white text-[var(--mono-jet)] focus-visible:ring-0';
 
+type DraftForm = {
+  brand: string;
+  name: string;
+  feature: string;
+  memo: string;
+  category: string;
+  subCategory: string;
+};
+
+const emptyDraft: DraftForm = {
+  brand: '',
+  name: '',
+  feature: '',
+  memo: '',
+  category: COSMETIC_CATEGORIES[0]?.value ?? 'Base',
+  subCategory: COSMETIC_CATEGORIES[0]?.subCategories[0]?.value ?? 'Highlighter',
+};
+
+const draftFromItem = (item: MyCosmeticsResponseDTO): DraftForm => {
+  let category = item.category ?? emptyDraft.category;
+  let subCategory = item.subCategory ?? emptyDraft.subCategory;
+  const main = COSMETIC_CATEGORIES.find((c) => c.value === category);
+  if (!main) {
+    category = emptyDraft.category;
+    subCategory = emptyDraft.subCategory;
+  } else if (
+    subCategory &&
+    !main.subCategories.some((s) => s.value === subCategory)
+  ) {
+    subCategory = main.subCategories[0]?.value ?? subCategory;
+  }
+
+  return {
+    brand: item.brand ?? '',
+    name: item.name ?? '',
+    feature: item.feature ?? '',
+    memo: item.memo ?? '',
+    category,
+    subCategory,
+  };
+};
+
 type MyCosmeticsDetailViewProps = {
   routeCosmeticId: number;
 };
@@ -39,9 +103,20 @@ type MyCosmeticsDetailViewProps = {
 export function MyCosmeticsDetailView({
   routeCosmeticId,
 }: MyCosmeticsDetailViewProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const returnTo = searchParams.get('returnTo')?.trim() ?? '';
+  const wantsEditOnMount = searchParams.get('edit') === '1';
+
   const [showCapture, setShowCapture] = useState(false);
   const [api, setApi] = useState<CarouselApi>();
   const [selectedId, setSelectedId] = useState(routeCosmeticId);
+  const [isEditing, setIsEditing] = useState(wantsEditOnMount);
+  const [draft, setDraft] = useState<DraftForm>(emptyDraft);
+  const [editDraftSyncedItemId, setEditDraftSyncedItemId] = useState<
+    number | null
+  >(null);
 
   const { data: listData, isLoading: isListLoading } = useSearchMyCosmetics({
     size: 100,
@@ -82,6 +157,15 @@ export function MyCosmeticsDetailView({
   const detailItem = detailData?.result as MyCosmeticsResponseDTO | undefined;
   const currentItem = detailItem ?? listItemById;
 
+  if (
+    wantsEditOnMount &&
+    currentItem?.id != null &&
+    editDraftSyncedItemId !== currentItem.id
+  ) {
+    setEditDraftSyncedItemId(currentItem.id);
+    setDraft(draftFromItem(currentItem));
+  }
+
   const searchQuery = currentItem
     ? `${currentItem.brand ?? ''} ${currentItem.name ?? ''}`.trim()
     : '';
@@ -91,8 +175,9 @@ export function MyCosmeticsDetailView({
     { enabled: searchQuery.length > 0 },
   );
 
-  const captureImageSrcRaw =
-    currentItem?.captureUrl?.trim() || currentItem?.imgUrl?.trim() || '';
+  const captureImageSrcRaw = currentItem
+    ? pickMyCosmeticsStickerImageUrl(currentItem)
+    : '';
   const captureImageSrc = captureImageSrcRaw
     ? resolveMediaUrl(captureImageSrcRaw)
     : '/icons/imgplus.svg';
@@ -107,6 +192,65 @@ export function MyCosmeticsDetailView({
     viewSubOptions.find((s) => s.value === (currentItem?.subCategory ?? ''))
       ?.label ?? '소분류';
 
+  const editSubOptions =
+    COSMETIC_CATEGORIES.find((c) => c.value === draft.category)
+      ?.subCategories ?? [];
+
+  const { mutateAsync: saveMyCosmetic, isPending: isSavePending } = useMutation({
+    mutationFn: async (input: { cosmeticId: number; request: DraftForm }) => {
+      return updateMyCosmeticItem(input.cosmeticId, {
+        request: {
+          brand: input.request.brand || undefined,
+          name: input.request.name || undefined,
+          category: input.request.category || undefined,
+          subCategory: input.request.subCategory || undefined,
+          feature: input.request.feature || undefined,
+          memo: input.request.memo || undefined,
+        },
+      });
+    },
+    onSuccess: async (_, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: getGetCosmeticDetailQueryKey(variables.cosmeticId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: getSearchMyCosmeticsQueryKey({ size: 100, sort: 'desc' }),
+        }),
+      ]);
+    },
+  });
+
+  const handleCancelEdit = useCallback(() => {
+    if (returnTo) {
+      router.replace(returnTo);
+      return;
+    }
+    if (currentItem) {
+      setDraft(draftFromItem(currentItem));
+    }
+    setIsEditing(false);
+  }, [currentItem, returnTo, router]);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!currentItem?.id || isSavePending) {
+      return;
+    }
+
+    try {
+      await saveMyCosmetic({
+        cosmeticId: currentItem.id,
+        request: draft,
+      });
+      setIsEditing(false);
+      if (returnTo) {
+        router.replace(returnTo);
+      }
+    } catch {
+      alert('저장하지 못했습니다. 다시 시도해 주세요.');
+    }
+  }, [currentItem, draft, isSavePending, returnTo, router, saveMyCosmetic]);
+
   useEffect(() => {
     if (!api) {
       return;
@@ -118,15 +262,20 @@ export function MyCosmeticsDetailView({
       if (item?.id == null) {
         return;
       }
+      setIsEditing(false);
       setSelectedId(item.id);
-      window.history.replaceState(null, '', `/my-cosmetics/${item.id}`);
+      const query = searchParams.toString();
+      const nextPath = query
+        ? `/my-cosmetics/${item.id}?${query}`
+        : `/my-cosmetics/${item.id}`;
+      window.history.replaceState(null, '', nextPath);
     };
 
     api.on('select', handleSelect);
     return () => {
       api.off('select', handleSelect);
     };
-  }, [api, listItems]);
+  }, [api, listItems, searchParams]);
 
   const handleCaptureShare = async () => {
     if (!captureImageSrc || captureImageSrc === '/icons/imgplus.svg') {
@@ -209,7 +358,8 @@ export function MyCosmeticsDetailView({
 
       <div
         className={cn(
-          'overflow-anchor-none flex-1 overflow-y-auto px-[20px] pb-36 transition-opacity duration-200',
+          'overflow-anchor-none flex-1 overflow-y-auto px-[20px] transition-opacity duration-200',
+          isEditing ? 'pb-32' : 'pb-36',
           isDetailFetching && 'opacity-40',
         )}
       >
@@ -232,8 +382,7 @@ export function MyCosmeticsDetailView({
                 >
                   <div className="relative mx-auto aspect-square w-full max-w-[280px] overflow-hidden rounded-2xl bg-zinc-100">
                     <WishCardImage
-                      officialImage={item.imgUrl ?? ''}
-                      captureImage={item.captureUrl ?? ''}
+                      {...getMyCosmeticsWishCardImageProps(item)}
                       productName={item.name ?? ''}
                       fill
                       className="object-contain"
@@ -264,58 +413,178 @@ export function MyCosmeticsDetailView({
         <div className="mt-8 space-y-6">
           <DetailFieldRow label="브랜드명">
             <Input
-              readOnly
-              value={currentItem.brand?.trim() ? currentItem.brand : '-'}
+              readOnly={!isEditing}
+              value={
+                isEditing
+                  ? draft.brand
+                  : currentItem.brand?.trim()
+                    ? currentItem.brand
+                    : '-'
+              }
+              onChange={
+                isEditing
+                  ? (e) => {
+                      setDraft((d) => ({ ...d, brand: e.target.value }));
+                    }
+                  : undefined
+              }
               aria-label="브랜드명"
-              className={readonlyFieldClass}
+              className={cn(!isEditing && readonlyFieldClass)}
             />
           </DetailFieldRow>
 
           <DetailFieldRow label="제품명">
             <Input
-              readOnly
-              value={currentItem.name?.trim() ? currentItem.name : '-'}
+              readOnly={!isEditing}
+              value={
+                isEditing
+                  ? draft.name
+                  : currentItem.name?.trim()
+                    ? currentItem.name
+                    : '-'
+              }
+              onChange={
+                isEditing
+                  ? (e) => {
+                      setDraft((d) => ({ ...d, name: e.target.value }));
+                    }
+                  : undefined
+              }
               aria-label="제품명"
-              className={readonlyFieldClass}
+              className={cn(!isEditing && readonlyFieldClass)}
             />
           </DetailFieldRow>
 
           <div>
             <DetailFieldLabel>분류</DetailFieldLabel>
-            <div className="flex items-center gap-3">
-              <span className="flex h-8 min-w-0 items-center justify-center rounded-full border border-[var(--brand-pink)] bg-white px-6 text-sm font-bold text-[var(--brand-pink)]">
-                {viewMainCategoryLabel}
-              </span>
-              <span className="flex h-8 min-w-0 items-center justify-center rounded-full bg-[var(--brand-classic)] px-6 text-sm font-bold text-white">
-                {viewSubCategoryLabel}
-              </span>
-            </div>
+            {isEditing ? (
+              <div className="grid grid-cols-2 gap-2">
+                <Select
+                  value={draft.category}
+                  onValueChange={(value) => {
+                    const main = COSMETIC_CATEGORIES.find(
+                      (c) => c.value === value,
+                    );
+                    const firstSub = main?.subCategories[0]?.value ?? '';
+                    setDraft((d) => ({
+                      ...d,
+                      category: value,
+                      subCategory: firstSub || d.subCategory,
+                    }));
+                  }}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="h-7 w-full min-w-0 rounded-lg border-zinc-200 bg-white py-1 text-xs"
+                    aria-label="대분류"
+                  >
+                    <SelectValue placeholder="대분류" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    side="bottom"
+                    align="start"
+                    sideOffset={4}
+                    className="max-h-60"
+                  >
+                    {COSMETIC_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={draft.subCategory}
+                  onValueChange={(value) => {
+                    setDraft((d) => ({
+                      ...d,
+                      subCategory: value,
+                    }));
+                  }}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="h-7 w-full min-w-0 rounded-lg border-zinc-200 bg-white py-1 text-xs"
+                    aria-label="소분류"
+                  >
+                    <SelectValue placeholder="소분류" />
+                  </SelectTrigger>
+                  <SelectContent
+                    position="popper"
+                    side="bottom"
+                    align="start"
+                    sideOffset={4}
+                    className="max-h-60"
+                  >
+                    {editSubOptions.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 min-w-0 items-center justify-center rounded-full border border-[var(--brand-pink)] bg-white px-6 text-sm font-bold text-[var(--brand-pink)]">
+                  {viewMainCategoryLabel}
+                </span>
+                <span className="flex h-8 min-w-0 items-center justify-center rounded-full bg-[var(--brand-classic)] px-6 text-sm font-bold text-white">
+                  {viewSubCategoryLabel}
+                </span>
+              </div>
+            )}
           </div>
 
           <DetailFieldRow label="특징">
             <Input
-              readOnly
-              value={currentItem.feature?.trim() ? currentItem.feature : '-'}
+              readOnly={!isEditing}
+              value={
+                isEditing
+                  ? draft.feature
+                  : currentItem.feature?.trim()
+                    ? currentItem.feature
+                    : '-'
+              }
+              onChange={
+                isEditing
+                  ? (e) => {
+                      setDraft((d) => ({ ...d, feature: e.target.value }));
+                    }
+                  : undefined
+              }
               aria-label="특징"
-              className={readonlyFieldClass}
+              className={cn(!isEditing && readonlyFieldClass)}
             />
           </DetailFieldRow>
 
           <div>
             <DetailFieldLabel>메모</DetailFieldLabel>
             <textarea
-              readOnly
+              readOnly={!isEditing}
               value={
-                currentItem.memo?.trim()
-                  ? currentItem.memo
-                  : '메모는 최대 60자까지 입력할 수 있습니다.'
+                isEditing
+                  ? draft.memo
+                  : currentItem.memo?.trim()
+                    ? currentItem.memo
+                    : '메모는 최대 60자까지 입력할 수 있습니다.'
+              }
+              onChange={
+                isEditing
+                  ? (e) => {
+                      setDraft((d) => ({ ...d, memo: e.target.value }));
+                    }
+                  : undefined
               }
               maxLength={MEMO_MAX_LEN}
               rows={4}
               className={cn(
                 'border-mono-gray focus-visible:border-brand-pink w-full resize-none rounded-sm border px-4 py-3 text-sm outline-none focus-visible:ring-0',
-                !currentItem.memo?.trim() ? 'text-[var(--mono-dark-gray)]' : '',
-                readonlyFieldClass,
+                !isEditing && !currentItem.memo?.trim()
+                  ? 'text-[var(--mono-dark-gray)]'
+                  : '',
+                !isEditing && readonlyFieldClass,
               )}
               aria-label="메모"
             />
@@ -408,6 +677,35 @@ export function MyCosmeticsDetailView({
           )}
         </section>
       </div>
+
+      {isEditing ? (
+        <div className="border-mono-bright-gray fixed bottom-14 left-1/2 z-50 box-border w-full max-w-120 min-w-0 -translate-x-1/2 rounded-t-3xl border-t bg-white px-5 pt-4 pb-4 shadow-[0_-4px_4px_rgba(0,0,0,0.1)]">
+          <div className="flex w-full min-w-0 gap-2">
+            <Button
+              type="button"
+              variant="default"
+              size="lg"
+              className="min-w-0 flex-1"
+              onClick={handleCancelEdit}
+              disabled={isSavePending}
+            >
+              취소
+            </Button>
+            <Button
+              type="button"
+              variant="solid"
+              size="lg"
+              className="min-w-0 flex-1"
+              onClick={() => {
+                void handleSaveEdit();
+              }}
+              disabled={isSavePending}
+            >
+              {isSavePending ? '저장 중...' : '저장'}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <AnimatePresence>
         {showCapture ? (
