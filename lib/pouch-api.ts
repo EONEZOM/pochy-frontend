@@ -21,7 +21,11 @@ import type {
   PouchUpdateDto,
   WappenDto,
 } from '@/api/model';
-import { buildPouchUpdateDto } from '@/lib/pouch-canvas';
+import {
+  buildPouchUpdateDto,
+  POUCH_CANVAS_HEIGHT,
+  POUCH_CANVAS_WIDTH,
+} from '@/lib/pouch-canvas';
 import { normalizeMultipartImageFile } from '@/lib/wish-cosmetics';
 
 const POUCH_MULTIPART_TIMEOUT_MS = 120_000;
@@ -50,9 +54,7 @@ const appendJsonRequestPart = (
 ) => {
   formData.append(
     'request',
-    new File([JSON.stringify(request)], 'request.json', {
-      type: 'application/json',
-    }),
+    new Blob([JSON.stringify(request)], { type: 'application/json' }),
   );
 };
 
@@ -64,16 +66,15 @@ export const isPouchMultipartServerError = (err: unknown): boolean => {
   return status === 500 || status === 413 || status === 502 || status === 503;
 };
 
-const POUCH_PLACEHOLDER_SIDE_PX = 32;
-
-/** POST 필수 `pouchImage` 충족용 소형 투명 PNG (실제 합성은 PATCH /image로 업로드) */
+/** POST 필수 `pouchImage` — 파우치 비율 JPEG (실제 합성은 PATCH /image) */
 export const createMinimalPouchPlaceholderImage = async (): Promise<File> => {
   const canvas = document.createElement('canvas');
-  canvas.width = POUCH_PLACEHOLDER_SIDE_PX;
-  canvas.height = POUCH_PLACEHOLDER_SIDE_PX;
+  canvas.width = POUCH_CANVAS_WIDTH;
+  canvas.height = POUCH_CANVAS_HEIGHT;
   const ctx = canvas.getContext('2d');
   if (ctx) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -84,17 +85,22 @@ export const createMinimalPouchPlaceholderImage = async (): Promise<File> => {
         }
         resolve(value);
       },
-      'image/png',
+      'image/jpeg',
+      0.85,
     );
   });
   return normalizeMultipartImageFile(
-    new File([blob], 'pouch.png', { type: 'image/png' }),
-    'pouch.png',
+    new File([blob], 'pouch.jpg', { type: 'image/jpeg' }),
+    'pouch.jpg',
   );
 };
 
 const isPouchPlaceholderImage = (image: File | Blob): boolean => {
-  return image instanceof File && image.name === 'pouch.png' && image.size < 8192;
+  return (
+    image instanceof File &&
+    image.name === 'pouch.jpg' &&
+    image.size < 64_000
+  );
 };
 
 const loadImageElement = (src: string): Promise<HTMLImageElement> => {
@@ -241,17 +247,17 @@ export const createPouchMultipart = async ({
 
   const formData = new FormData();
 
+  appendJsonRequestPart(formData, request);
+
   const file = isPouchPlaceholderImage(pouchImage)
     ? normalizeMultipartImageFile(
         pouchImage instanceof File
           ? pouchImage
-          : new File([pouchImage], 'pouch.png', { type: 'image/png' }),
-        'pouch.png',
+          : new File([pouchImage], 'pouch.jpg', { type: 'image/jpeg' }),
+        'pouch.jpg',
       )
     : await toPouchImageFile(pouchImage);
   formData.append('pouchImage', file, file.name);
-
-  appendJsonRequestPart(formData, request);
 
   return customInstance({
     url: '/api/pouches',
@@ -285,12 +291,12 @@ export const updatePouchMultipart = async (
 ): Promise<ApiResponseDTOPouchUpdateDto> => {
   const formData = new FormData();
 
+  appendJsonRequestPart(formData, request);
+
   if (pouchImage) {
     const file = await toPouchImageFile(pouchImage);
     formData.append('pouchImage', file, file.name);
   }
-
-  appendJsonRequestPart(formData, request);
 
   return customInstance({
     url: `/api/pouches/${pouchId}`,

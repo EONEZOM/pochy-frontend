@@ -26,35 +26,96 @@ const appendJsonPart = (
 };
 
 /**
- * Next Route Handler에서 파싱한 FormData를 백엔드로 재전송할 때
- * JSON 파트에 application/json Content-Type과 파일명을 보장합니다.
+ * wish-cosmetics 프록시와 동일 — 파싱된 파트를 그대로 복사합니다.
+ * rebuild 시 File/Blob 메타가 깨져 Spring @RequestPart가 500을 내는 경우를 방지합니다.
  */
-export const rebuildMultipartFormData = async (
+export const copyMultipartFormData = (incoming: FormData): FormData => {
+  const outgoing = new FormData();
+  incoming.forEach((value, key) => {
+    outgoing.append(key, value);
+  });
+  return outgoing;
+};
+
+/**
+ * JSON 파트가 plain string으로만 온 경우에만 File로 보정합니다.
+ */
+export const prepareMultipartFormDataForBackend = async (
   incoming: FormData,
 ): Promise<FormData> => {
   const outgoing = new FormData();
+  let needsFix = false;
 
   for (const [key, value] of incoming.entries()) {
-    if (JSON_REQUEST_PART_KEYS.has(key)) {
-      if (typeof value === 'string') {
-        appendJsonPart(outgoing, key, value, DEFAULT_JSON_PART_FILE_NAME);
-        continue;
-      }
-      if (value instanceof Blob) {
-        const buffer = await value.arrayBuffer();
-        appendJsonPart(
-          outgoing,
-          key,
-          buffer,
-          resolveJsonPartFileName(value),
-        );
-        continue;
-      }
+    if (JSON_REQUEST_PART_KEYS.has(key) && typeof value === 'string') {
+      needsFix = true;
+      break;
+    }
+  }
+
+  if (!needsFix) {
+    return copyMultipartFormData(incoming);
+  }
+
+  for (const [key, value] of incoming.entries()) {
+    if (JSON_REQUEST_PART_KEYS.has(key) && typeof value === 'string') {
+      appendJsonPart(outgoing, key, value, DEFAULT_JSON_PART_FILE_NAME);
+      continue;
+    }
+    if (JSON_REQUEST_PART_KEYS.has(key) && value instanceof File) {
+      const buffer = await value.arrayBuffer();
+      appendJsonPart(
+        outgoing,
+        key,
+        buffer,
+        resolveJsonPartFileName(value),
+      );
+      continue;
     }
     outgoing.append(key, value);
   }
 
   return outgoing;
+};
+
+/** @deprecated prepareMultipartFormDataForBackend 또는 copyMultipartFormData 사용 */
+export const rebuildMultipartFormData = prepareMultipartFormDataForBackend;
+
+const readJsonRequestPartText = async (
+  formData: FormData,
+): Promise<string | null> => {
+  for (const key of JSON_REQUEST_PART_KEYS) {
+    const value = formData.get(key);
+    if (value == null) {
+      continue;
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (value instanceof Blob) {
+      return value.text();
+    }
+  }
+  return null;
+};
+
+export const logJsonRequestPartPreview = async (
+  formData: FormData,
+  logLabel: string,
+  method: string,
+): Promise<void> => {
+  try {
+    const raw = await readJsonRequestPartText(formData);
+    if (!raw) {
+      return;
+    }
+    console.log(
+      `[${logLabel}][${method}] request part preview:`,
+      raw.slice(0, 1200),
+    );
+  } catch (error) {
+    console.error(`[${logLabel}][${method}] request part preview failed:`, error);
+  }
 };
 
 export const logIncomingMultipartFormData = (
@@ -120,7 +181,9 @@ export const proxyMultipartPost = async (
   try {
     const incomingFormData = await request.formData();
     logIncomingMultipartFormData(incomingFormData, logLabel, 'POST');
-    const outgoingFormData = await rebuildMultipartFormData(incomingFormData);
+    await logJsonRequestPartPreview(incomingFormData, logLabel, 'POST');
+    const outgoingFormData =
+      await prepareMultipartFormDataForBackend(incomingFormData);
     const authorization = request.headers.get('Authorization');
 
     console.log(`[${logLabel}][POST] forwarding to backend:`, backendUrl);
@@ -162,7 +225,10 @@ export const proxyMultipartPatch = async (
 
     if (contentType.includes('multipart/form-data')) {
       const incomingFormData = await request.formData();
-      const outgoingFormData = await rebuildMultipartFormData(incomingFormData);
+      logIncomingMultipartFormData(incomingFormData, logLabel, 'PATCH');
+      await logJsonRequestPartPreview(incomingFormData, logLabel, 'PATCH');
+      const outgoingFormData =
+        await prepareMultipartFormDataForBackend(incomingFormData);
       const response = await fetch(backendUrl, {
         method: 'PATCH',
         headers: forwardingHeaders,

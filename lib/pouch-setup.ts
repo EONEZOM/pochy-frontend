@@ -381,14 +381,8 @@ export const savePouchDecoration = async (
     const createRequest = buildCombinedAddDto({
       pouchName: trimmedName,
       cosmeticItems,
-      wappenItems,
+      wappenItems: [],
     });
-
-    const createRes = await createPouchMultipart({
-      request: createRequest,
-      pouchImage: await createMinimalPouchPlaceholderImage(),
-    });
-    pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
 
     const cosmeticList = buildCosmeticListForSave(
       layers,
@@ -400,6 +394,14 @@ export const savePouchDecoration = async (
       cosmeticList,
       wappenList: wappenItems,
     });
+
+    const createRes = await createPouchMultipart({
+      request: createRequest,
+      pouchImage: await createMinimalPouchPlaceholderImage(),
+    });
+    pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
+
+    await updatePouchMultipart(pouchId, { request: updateRequest });
 
     try {
       await uploadPouchCompositeImageMultipart(pouchId, compositeBlob);
