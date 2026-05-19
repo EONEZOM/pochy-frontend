@@ -58,9 +58,6 @@ const nextConfig = {
   // 전역 `/(.*)`에 두면 프로덕션에서 네이버 프로필·pstatic CDN 이미지가 CORP 미제공으로 차단됨.
   // 배포에서 원인 확인: 문서 응답 `cross-origin-embedder-policy`, Network에서 이미지 blocked reason.
   async headers() {
-    if (process.env.NODE_ENV !== 'production') {
-      return [];
-    }
     const crossOriginIsolationHeaders = [
       {
         key: 'Cross-Origin-Opener-Policy',
@@ -105,12 +102,13 @@ const nextConfig = {
     };
   },
 
-  // 3) Remote image allowlist for Naver hosts.
+  // 3) Local·remote image allowlist (Next 16: Vercel Image Optimization은 localPatterns 미일치 시 400)
   images: {
     localPatterns: [
-      {
-        pathname: '/api/media-proxy',
-      },
+      { pathname: '/figma/**', search: '' },
+      { pathname: '/icons/**', search: '' },
+      { pathname: '/logo/**', search: '' },
+      { pathname: '/images/**', search: '' },
     ],
     remotePatterns: [
       // 네이버 검색 API 쇼핑 이미지 도메인
@@ -130,7 +128,13 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'i.ytimg.com', // 유튜브 썸네일 도메인
       },
-      // 백엔드 상품 이미지 URL 도메인
+      // 백엔드 API·상품 이미지 (HTTPS)
+      {
+        protocol: 'https',
+        hostname: 'api.pochy.shop',
+        pathname: '/**',
+      },
+      // 레거시 URL 호환
       {
         protocol: 'http',
         hostname: 'pochy.shop',

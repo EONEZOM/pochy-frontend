@@ -221,6 +221,7 @@ function LoginContent() {
           alt=""
           width={525}
           height={69}
+          unoptimized
           className="absolute top-[-60px] left-0 h-auto w-full object-cover"
         />
       </div>
@@ -341,6 +342,7 @@ function LoginContent() {
                 alt=""
                 width={24}
                 height={24}
+                unoptimized
                 className="mr-2 h-[22px] w-[24px]"
               />
               {isKakaoLoginPending ? '카카오 연결 중...' : '카카오로 시작하기'}
