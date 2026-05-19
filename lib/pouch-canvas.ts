@@ -1,5 +1,6 @@
 import { toBlob } from 'html-to-image';
 
+import { pickMyCosmeticsStickerImageUrl } from '@/lib/my-cosmetics-display-image';
 import { toSameOriginImageProxyUrl } from '@/lib/next-image-src';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import type {
@@ -50,6 +51,8 @@ export type CanvasLayer = {
   height: number;
   zIndex: number;
   rotation?: number;
+  /** cosmetic 스티커 — 누끼 bbox 기반 object-position (예: `52.3% 48.1%`) */
+  objectPosition?: string;
   /** 파우치 내 배치 행 id (`PouchItemDetailDto.id`, API 전송용 아님) */
   pouchItemId?: number;
   myCosmeticId?: number;
@@ -507,6 +510,7 @@ export const exportPouchCanvas = async (
     cacheBust: false,
     pixelRatio: 2,
     skipFonts: true,
+    backgroundColor: null as unknown as string,
     fetchRequestInit: {
       credentials: 'same-origin',
     },
@@ -549,11 +553,8 @@ export const getCosmeticImageSrc = (item: {
   captureUrl?: string | null;
   imgUrl?: string | null;
 }) => {
-  const capture = item.captureUrl?.trim();
-  if (capture) {
-    return toPouchLayerImageSrc(capture);
-  }
-  return toPouchLayerImageSrc(item.imgUrl);
+  const raw = pickMyCosmeticsStickerImageUrl(item);
+  return toPouchLayerImageSrc(raw);
 };
 
 /** OpenAPI imageUrl 추가 전·후 모두 대응 */

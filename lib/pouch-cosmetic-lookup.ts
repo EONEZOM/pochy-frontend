@@ -6,7 +6,11 @@ import {
   getGetCosmeticDetailQueryKey,
   useSearchMyCosmetics,
 } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
-import type { MyCosmeticsResponseDTO, PouchItemDetailDto } from '@/api/model';
+import type {
+  MyCosmeticsResponseDTO,
+  PouchDetailDto,
+  PouchItemDetailDto,
+} from '@/api/model';
 
 export const POUCH_COSMETIC_SEARCH_SIZE = 500;
 
@@ -25,10 +29,14 @@ const isPouchRowId = (item: PouchItemDetailDto, candidateId: number): boolean =>
  */
 export const getPouchRowMyCosmeticId = (
   item: PouchItemDetailDto,
+  listMap?: Map<number, MyCosmeticsResponseDTO>,
 ): number | undefined => {
   const myCosmeticId = item.myCosmeticId;
   if (myCosmeticId != null && myCosmeticId > 0) {
     if (isPouchRowId(item, myCosmeticId)) {
+      if (listMap?.has(myCosmeticId)) {
+        return myCosmeticId;
+      }
       return undefined;
     }
     return myCosmeticId;
@@ -36,6 +44,9 @@ export const getPouchRowMyCosmeticId = (
   const cosmeticId = (item as PouchItemWithCosmeticId).cosmeticId;
   if (cosmeticId != null && cosmeticId > 0) {
     if (isPouchRowId(item, cosmeticId)) {
+      if (listMap?.has(cosmeticId)) {
+        return cosmeticId;
+      }
       return undefined;
     }
     return cosmeticId;
@@ -105,10 +116,11 @@ const mergeCosmeticIntoLookupMaps = (
 /** 파우치 행 id가 아닌 myCosmeticId만 수집 (행 id로 상세 API 호출 시 404) */
 export const collectPouchCosmeticLookupIds = (
   pouchCosmetics: PouchItemDetailDto[] | undefined,
+  listMap?: Map<number, MyCosmeticsResponseDTO>,
 ): number[] => {
   const ids = new Set<number>();
   for (const item of pouchCosmetics ?? []) {
-    const myCosmeticId = getPouchRowMyCosmeticId(item);
+    const myCosmeticId = getPouchRowMyCosmeticId(item, listMap);
     if (myCosmeticId != null) {
       ids.add(myCosmeticId);
     }
@@ -116,12 +128,103 @@ export const collectPouchCosmeticLookupIds = (
   return [...ids];
 };
 
+export const sortPouchCosmeticRowsByZindex = (
+  rows: PouchItemDetailDto[],
+): PouchItemDetailDto[] => {
+  return [...rows].sort((a, b) => (a.zindex ?? 0) - (b.zindex ?? 0));
+};
+
+/** 목록에 없는 ID·중복 제거 (순서 유지) */
+export const sanitizeSelectedOrder = (
+  selectedOrder: number[],
+  validIds: ReadonlySet<number>,
+): number[] => {
+  const seen = new Set<number>();
+  const result: number[] = [];
+  for (const id of selectedOrder) {
+    if (!Number.isFinite(id) || id <= 0 || !validIds.has(id) || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    result.push(id);
+  }
+  return result;
+};
+
+export type PouchSelectionRestore = {
+  selectedOrder: number[];
+  itemMemos: Record<number, string>;
+};
+
+/** 파우치 상세 + 내 화장품 lookup으로 선택·메모 복원 (zindex 순) */
+export const buildSelectionRestoreFromPouchDetailWithLookup = (
+  detail: PouchDetailDto,
+  cosmeticsById: Map<number, MyCosmeticsResponseDTO>,
+  cosmeticsByNameBrand: Map<string, MyCosmeticsResponseDTO>,
+): PouchSelectionRestore => {
+  const selectedOrder: number[] = [];
+  const seenSelectedIds = new Set<number>();
+  const itemMemos: Record<number, string> = {};
+
+  const rows = sortPouchCosmeticRowsByZindex(detail.cosmetics ?? []);
+
+  for (const row of rows) {
+    const matched = resolvePouchRowCosmeticMatch(
+      row,
+      cosmeticsById,
+      cosmeticsByNameBrand,
+    );
+    const linkId = matched?.id;
+    if (linkId == null || linkId <= 0 || seenSelectedIds.has(linkId)) {
+      continue;
+    }
+    seenSelectedIds.add(linkId);
+    selectedOrder.push(linkId);
+    const memo = row.memo?.trim();
+    if (memo) {
+      itemMemos[linkId] = memo;
+    }
+  }
+
+  return { selectedOrder, itemMemos };
+};
+
+/** 파우치 상세만으로 선택·메모 복원 (lookup 없이 myCosmeticId만, zindex 순) */
+export const buildSelectionRestoreFromPouchDetail = (
+  detail: PouchDetailDto,
+): PouchSelectionRestore => {
+  const selectedOrder: number[] = [];
+  const seenSelectedIds = new Set<number>();
+  const itemMemos: Record<number, string> = {};
+
+  const rows = sortPouchCosmeticRowsByZindex(detail.cosmetics ?? []);
+
+  for (const row of rows) {
+    const linkId = getPouchRowMyCosmeticId(row);
+    if (linkId == null || linkId <= 0 || seenSelectedIds.has(linkId)) {
+      continue;
+    }
+    seenSelectedIds.add(linkId);
+    selectedOrder.push(linkId);
+    const memo = row.memo?.trim();
+    if (memo) {
+      itemMemos[linkId] = memo;
+    }
+  }
+
+  return { selectedOrder, itemMemos };
+};
+
+type UsePouchCosmeticsByIdOptions = {
+  listItems?: MyCosmeticsResponseDTO[];
+};
+
 export const resolvePouchRowCosmeticMatch = (
   item: PouchItemDetailDto,
   cosmeticsById: Map<number, MyCosmeticsResponseDTO>,
   cosmeticsByNameBrand: Map<string, MyCosmeticsResponseDTO>,
 ): MyCosmeticsResponseDTO | undefined => {
-  const myCosmeticId = getPouchRowMyCosmeticId(item);
+  const myCosmeticId = getPouchRowMyCosmeticId(item, cosmeticsById);
   if (myCosmeticId != null) {
     const byId = cosmeticsById.get(myCosmeticId);
     if (byId) {
@@ -130,9 +233,46 @@ export const resolvePouchRowCosmeticMatch = (
   }
   const nameBrandKey = cosmeticNameBrandKey(item.brand, item.name);
   if (nameBrandKey != null) {
-    return cosmeticsByNameBrand.get(nameBrandKey);
+    const byNameBrand = cosmeticsByNameBrand.get(nameBrandKey);
+    if (byNameBrand) {
+      return byNameBrand;
+    }
+  }
+  const rowId = item.id;
+  if (rowId != null && rowId > 0) {
+    const byRowId = cosmeticsById.get(rowId);
+    if (byRowId) {
+      return byRowId;
+    }
   }
   return undefined;
+};
+
+/** 파우치 상세 행 — 내 화장품 lookup으로 브랜드·제품명·이미지 URL 보강 */
+export const enrichPouchDetailRowWithCosmeticLookup = (
+  item: PouchItemDetailDto,
+  cosmeticsById: Map<number, MyCosmeticsResponseDTO>,
+  cosmeticsByNameBrand: Map<string, MyCosmeticsResponseDTO>,
+): PouchDetailEnrichedRow => {
+  const matched = resolvePouchRowCosmeticMatch(
+    item,
+    cosmeticsById,
+    cosmeticsByNameBrand,
+  );
+  const linkCosmeticId =
+    matched?.id ?? getPouchRowMyCosmeticId(item, cosmeticsById);
+
+  return {
+    ...item,
+    brand: (item.brand ?? '').trim() || matched?.brand,
+    name: (item.name ?? '').trim() || matched?.name,
+    category: item.category?.trim() || matched?.category,
+    subCategory: item.subCategory?.trim() || matched?.subCategory,
+    imgUrl: matched?.imgUrl,
+    captureUrl: matched?.captureUrl,
+    linkCosmeticId:
+      linkCosmeticId != null && linkCosmeticId > 0 ? linkCosmeticId : undefined,
+  };
 };
 
 const resolvePouchProductDedupeKey = (item: PouchDetailEnrichedRow): string | null => {
@@ -179,13 +319,20 @@ export const dedupePouchDetailRowsByProduct = (
 /** 파우치 상세 행 — 내 화장품 목록 + 누락 ID 상세 조회로 이미지 URL 보강 */
 export const usePouchCosmeticsById = (
   pouchCosmetics: PouchItemDetailDto[] | undefined,
+  options?: UsePouchCosmeticsByIdOptions,
 ) => {
-  const { data: listData, isLoading: isListLoading } = useSearchMyCosmetics({
-    size: POUCH_COSMETIC_SEARCH_SIZE,
-    sort: 'desc',
-  });
+  const shouldFetchList =
+    pouchCosmetics != null && options?.listItems === undefined;
 
-  const listItems = listData?.result?.content ?? [];
+  const { data: listData, isLoading: isListLoading } = useSearchMyCosmetics(
+    {
+      size: POUCH_COSMETIC_SEARCH_SIZE,
+      sort: 'desc',
+    },
+    { query: { enabled: shouldFetchList } },
+  );
+
+  const listItems = options?.listItems ?? listData?.result?.content ?? [];
 
   const listMap = useMemo(
     () => buildMyCosmeticsByIdMap(listItems),
@@ -198,7 +345,7 @@ export const usePouchCosmeticsById = (
   );
 
   const missingIds = useMemo(() => {
-    const needed = collectPouchCosmeticLookupIds(pouchCosmetics);
+    const needed = collectPouchCosmeticLookupIds(pouchCosmetics, listMap);
     return needed.filter((id) => !listMap.has(id));
   }, [listMap, pouchCosmetics]);
 
@@ -235,9 +382,14 @@ export const usePouchCosmeticsById = (
     (query) => query.isLoading || (query.isFetching && !query.isError),
   );
 
+  const isListPending =
+    pouchCosmetics != null &&
+    options?.listItems === undefined &&
+    isListLoading;
+
   return {
     cosmeticsById,
     cosmeticsByNameBrand,
-    isLoading: isListLoading || isDetailsLoading,
+    isLoading: isListPending || isDetailsLoading,
   };
 };

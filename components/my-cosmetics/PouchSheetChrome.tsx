@@ -15,6 +15,8 @@ type PouchSheetChromeProps = {
   ariaLabel: string;
   isExpanded: boolean;
   onExpandedChange: (isExpanded: boolean) => void;
+  /** 하단 내비 여백. 공개 공유 페이지는 `0px`. */
+  bottomOffset?: string;
   children: ReactNode;
 };
 
@@ -30,6 +32,7 @@ export function PouchSheetChrome({
   ariaLabel,
   isExpanded,
   onExpandedChange,
+  bottomOffset = POUCH_ITEMS_SHEET_BOTTOM_OFFSET,
   children,
 }: PouchSheetChromeProps) {
   const sheetHeight = getPouchSheetHeightCSSValue(isExpanded);
@@ -37,7 +40,7 @@ export function PouchSheetChrome({
   return (
     <div
       className="absolute inset-x-0 z-30 mx-auto flex w-full max-w-120 min-w-90 flex-col items-center"
-      style={{ bottom: POUCH_ITEMS_SHEET_BOTTOM_OFFSET }}
+      style={{ bottom: bottomOffset }}
     >
       <button
         type="button"

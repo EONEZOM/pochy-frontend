@@ -1,6 +1,13 @@
 'use client';
 
-import { forwardRef, useCallback, useEffect, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type SyntheticEvent,
+} from 'react';
 import Image from 'next/image';
 import { Rnd } from 'react-rnd';
 import { RotateCw, X } from 'lucide-react';
@@ -13,6 +20,7 @@ import {
 } from '@/lib/pouch-canvas';
 import { resolveLayerImageSrc, toSameOriginImageProxyUrl } from '@/lib/next-image-src';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
+import { measureStickerObjectPosition } from '@/lib/sticker-image-bounds';
 import { cn } from '@/lib/utils';
 
 const POUCHY_SRC = '/figma/my/pouchy.svg';
@@ -140,12 +148,42 @@ const LayerRotationHandle = ({
 
 type LayerImageProps = {
   layer: CanvasLayer;
+  onObjectPositionResolved?: (layerId: string, objectPosition: string) => void;
 };
 
-const LayerImage = ({ layer }: LayerImageProps) => {
+const DEFAULT_OBJECT_POSITION = '50% 50%';
+
+const LayerImage = ({ layer, onObjectPositionResolved }: LayerImageProps) => {
+  const imgRef = useRef<HTMLImageElement>(null);
   const rotation = layer.rotation ?? 0;
   const imageSrc = resolveLayerImageSrc(resolveMediaUrl(layer.src));
   const isCosmeticSticker = layer.kind === 'cosmetic';
+  const objectPosition = layer.objectPosition ?? DEFAULT_OBJECT_POSITION;
+
+  const tryResolveObjectPosition = useCallback(
+    (img: HTMLImageElement) => {
+      if (!isCosmeticSticker || layer.objectPosition) {
+        return;
+      }
+      const measured = measureStickerObjectPosition(img);
+      if (measured) {
+        onObjectPositionResolved?.(layer.id, measured);
+      }
+    },
+    [isCosmeticSticker, layer.id, layer.objectPosition, onObjectPositionResolved],
+  );
+
+  const handleImageLoad = (event: SyntheticEvent<HTMLImageElement>) => {
+    tryResolveObjectPosition(event.currentTarget);
+  };
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img?.complete || img.naturalWidth <= 0) {
+      return;
+    }
+    tryResolveObjectPosition(img);
+  }, [imageSrc, tryResolveObjectPosition]);
 
   return (
     <div
@@ -157,6 +195,7 @@ const LayerImage = ({ layer }: LayerImageProps) => {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
+        ref={imgRef}
         src={imageSrc}
         alt=""
         crossOrigin="anonymous"
@@ -164,11 +203,13 @@ const LayerImage = ({ layer }: LayerImageProps) => {
           'h-full w-full object-contain',
           !isCosmeticSticker && 'drop-shadow-md',
         )}
-        style={
-          isCosmeticSticker
+        style={{
+          objectPosition,
+          ...(isCosmeticSticker
             ? { filter: COSMETIC_STICKER_IMAGE_FILTER }
-            : undefined
-        }
+            : {}),
+        }}
+        onLoad={handleImageLoad}
         draggable={false}
       />
     </div>
@@ -238,6 +279,20 @@ export const PouchDecorateCanvas = forwardRef<
     );
   };
 
+  const handleObjectPositionResolved = useCallback(
+    (layerId: string, objectPosition: string) => {
+      onLayersChange(
+        layers.map((layer) => {
+          if (layer.id !== layerId || layer.objectPosition === objectPosition) {
+            return layer;
+          }
+          return { ...layer, objectPosition };
+        }),
+      );
+    },
+    [layers, onLayersChange],
+  );
+
   const handleRemoveLayer = (id: string) => {
     onLayersChange(layers.filter((layer) => layer.id !== id));
     if (selectedLayerId === id) {
@@ -296,7 +351,10 @@ export const PouchDecorateCanvas = forwardRef<
                 zIndex: layer.zIndex,
               }}
             >
-              <LayerImage layer={layer} />
+              <LayerImage
+                layer={layer}
+                onObjectPositionResolved={handleObjectPositionResolved}
+              />
             </div>
           );
         }
@@ -329,7 +387,10 @@ export const PouchDecorateCanvas = forwardRef<
               isSelected && 'ring-2 ring-[#FF60CA] ring-offset-1',
             )}
           >
-            <LayerImage layer={layer} />
+            <LayerImage
+              layer={layer}
+              onObjectPositionResolved={handleObjectPositionResolved}
+            />
             {isSelected ? (
               <>
                 <button

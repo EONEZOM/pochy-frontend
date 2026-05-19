@@ -8,8 +8,8 @@ import type { PouchItemDetailDto } from '@/api/model';
 import { PouchSheetChrome } from '@/components/my-cosmetics/PouchSheetChrome';
 import {
   dedupePouchDetailRowsByProduct,
+  enrichPouchDetailRowWithCosmeticLookup,
   type PouchDetailEnrichedRow,
-  resolvePouchRowCosmeticMatch,
   usePouchCosmeticsById,
 } from '@/lib/pouch-cosmetic-lookup';
 import { getCosmeticImageSrc } from '@/lib/pouch-canvas';
@@ -47,35 +47,17 @@ export function PouchDetailBottomSheet({
 
   const pouchItems = useMemo((): PouchDetailRow[] => {
     const cosmetics = pouchCosmetics ?? [];
-    const enriched: PouchDetailEnrichedRow[] = cosmetics.map((item) => {
-      const matched = resolvePouchRowCosmeticMatch(
+    const enriched = cosmetics.map((item) =>
+      enrichPouchDetailRowWithCosmeticLookup(
         item,
         cosmeticsById,
         cosmeticsByNameBrand,
-      );
-      const linkCosmeticId = matched?.id ?? undefined;
-      return {
-        ...item,
-        category: item.category?.trim() || matched?.category,
-        subCategory: item.subCategory?.trim() || matched?.subCategory,
-        imgUrl: matched?.imgUrl,
-        captureUrl: matched?.captureUrl,
-        linkCosmeticId,
-      };
-    });
-    return dedupePouchDetailRowsByProduct(enriched).map((item) => {
-      const matched = resolvePouchRowCosmeticMatch(
-        item,
-        cosmeticsById,
-        cosmeticsByNameBrand,
-      );
-      const imageSrc = matched ? getCosmeticImageSrc(matched) : '';
-      return {
-        ...item,
-        linkCosmeticId: matched?.id ?? item.linkCosmeticId,
-        imageSrc,
-      };
-    });
+      ),
+    );
+    return dedupePouchDetailRowsByProduct(enriched).map((item) => ({
+      ...item,
+      imageSrc: getCosmeticImageSrc(item),
+    }));
   }, [cosmeticsById, cosmeticsByNameBrand, pouchCosmetics]);
 
   const activeSubCategories = useMemo(
@@ -193,11 +175,11 @@ export function PouchDetailBottomSheet({
   );
 }
 
-function PouchDetailItemText({
+export function PouchDetailItemText({
   item,
   memo,
 }: {
-  item: PouchDetailRow;
+  item: Pick<PouchDetailRow, 'brand' | 'name'>;
   memo: string;
 }) {
   return (

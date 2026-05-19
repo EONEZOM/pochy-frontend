@@ -18,6 +18,7 @@ import type { ApiResponseDTOSliceReadListDto } from '@/api/model';
 import type { ApiResponseDTOProfileDto } from '@/api/model';
 import type { Detail } from '@/api/model';
 import type { ReadListDto } from '@/api/model';
+import { pickMyCosmeticsStickerImageUrl } from '@/lib/my-cosmetics-display-image';
 import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
@@ -71,8 +72,7 @@ const collectWarmUrlsFromCaches = (qc: QueryClient): string[] => {
     getSearchMyCosmeticsQueryKey(MY_COSMETICS_DEFAULT_PARAMS),
   );
   for (const row of my?.result?.content ?? []) {
-    const primary =
-      String(row.imgUrl ?? '').trim() || String(row.captureUrl ?? '').trim();
+    const primary = pickMyCosmeticsStickerImageUrl(row);
     if (primary && out.length < 24) {
       const resolved = resolvePrefetchImageSrc(primary);
       if (resolved) {
