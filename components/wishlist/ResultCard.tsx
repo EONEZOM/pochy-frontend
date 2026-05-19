@@ -2,6 +2,7 @@ import { X } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
+import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 
 const CHECKERBOARD_STYLE = {
   backgroundImage:
@@ -22,8 +23,10 @@ export default function ResultCard({
   /** cover: 위시 캡처 사진용 / contain: 누끼·투명 배경 제품용 */
   imageObjectFit?: 'cover' | 'contain';
 }) {
-  const imageSrc = resolveMediaUrl(
-    String(item.official_image ?? item.image_url ?? '').trim(),
+  const imageSrc = resolveDisplayImageSrc(
+    resolveMediaUrl(
+      String(item.official_image ?? item.image_url ?? '').trim(),
+    ),
   );
   const isContain = imageObjectFit === 'contain';
 
@@ -55,6 +58,7 @@ export default function ResultCard({
             src={imageSrc}
             alt={String(item.product_name ?? '제품')}
             fill
+            unoptimized
             className={cn(isContain ? 'object-contain p-2' : 'object-cover')}
           />
         ) : (

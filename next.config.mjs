@@ -107,6 +107,11 @@ const nextConfig = {
 
   // 3) Remote image allowlist for Naver hosts.
   images: {
+    localPatterns: [
+      {
+        pathname: '/api/media-proxy',
+      },
+    ],
     remotePatterns: [
       // 네이버 검색 API 쇼핑 이미지 도메인
       {

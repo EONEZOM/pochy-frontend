@@ -120,8 +120,26 @@ export const resolveDisplayImageSrc = (src: string, width = 256): string => {
   return trimmed;
 };
 
-export const isMediaProxyPath = (src: string): boolean =>
-  src.trim().startsWith('/api/media-proxy?');
+export const isMediaProxyPath = (src: string): boolean => {
+  const trimmed = src.trim();
+  if (!trimmed) {
+    return false;
+  }
+  if (trimmed.startsWith('/api/media-proxy?')) {
+    return true;
+  }
+  if (trimmed.startsWith('/_next/image?')) {
+    return true;
+  }
+  try {
+    const url = new URL(trimmed);
+    return (
+      url.pathname === '/api/media-proxy' && url.searchParams.has('url')
+    );
+  } catch {
+    return false;
+  }
+};
 
 /** 캔버스 레이어 src — 이미 프록시된 URL은 중복 래핑하지 않음 */
 export const resolveLayerImageSrc = (src: string): string => {

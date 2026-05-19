@@ -27,6 +27,10 @@ import {
 } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
+import {
+  resolveDisplayImageSrc,
+  shouldBypassNextImageOptimizer,
+} from '@/lib/next-image-src';
 import Input from '@/components/common/Input/Input';
 import { Header } from '@/components/layout/Header';
 import { WishCardImage } from '@/components/wishlist/WishCardImage';
@@ -74,11 +78,30 @@ function WishCapturePreviewImage({
     );
   }
 
+  const displaySrc = resolveDisplayImageSrc(resolveMediaUrl(previewSrc));
+  const bypassOptimizer = shouldBypassNextImageOptimizer(displaySrc);
+
   if (variant === 'modal') {
-    return <Image src={previewSrc} alt={alt} fill className="object-contain" />;
+    return (
+      <Image
+        src={displaySrc}
+        alt={alt}
+        fill
+        unoptimized={bypassOptimizer}
+        className="object-contain"
+      />
+    );
   }
 
-  return <Image src={previewSrc} alt={alt} fill className="object-cover" />;
+  return (
+    <Image
+      src={displaySrc}
+      alt={alt}
+      fill
+      unoptimized={bypassOptimizer}
+      className="object-cover"
+    />
+  );
 }
 
 function WishFieldLabel({ children }: { children: ReactNode }) {
