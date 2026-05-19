@@ -20,6 +20,10 @@ import type {
 } from '@/api/model';
 import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
 import {
+  buildWishListByIdMap,
+  resolveHomeWishThumbnailUrl,
+} from '@/lib/home-display';
+import {
   getMyCosmeticsWishCardImageProps,
   pickMyCosmeticsHomeThumbnailUrl,
   pickMyCosmeticsStickerImageUrl,
@@ -82,8 +86,13 @@ export const collectHomeRouteImageUrls = (qc: QueryClient): string[] => {
     }
   }
 
+  const wishById = buildWishListByIdMap(
+    qc.getQueryData<ApiResponseDTOSliceReadListDto>(
+      getReadWishCosmeticsListQueryKey(WISH_LIST_DEFAULT_PARAMS),
+    )?.result?.content,
+  );
   for (const row of home?.result?.wishList ?? []) {
-    pushUnique(out, seen, row.imageUrl);
+    pushUnique(out, seen, resolveHomeWishThumbnailUrl(row, wishById));
   }
 
   for (const row of home?.result?.myList ?? []) {

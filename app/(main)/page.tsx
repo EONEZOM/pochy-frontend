@@ -12,15 +12,19 @@ import { MainHomeTopZipperWithLogo } from '@/components/main/MainHomeTopZipperWi
 import { useGetHomeData } from '@/api/generated/home/home';
 import { useGetMyProfile } from '@/api/generated/member-controller/member-controller';
 import { useSearchMyCosmetics } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
+import { useReadWishCosmeticsList } from '@/api/generated/wish-cosmetics/wish-cosmetics';
 import { extractProfileImageUrl } from '@/lib/member-profile';
 import type { Detail } from '@/api/model';
 import { isPendingNicknameSetup } from '@/lib/pending-nickname-setup';
 import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
 import {
-  mapHomeDetailRows,
   mapHomeMyPouchItems,
+  mapHomeWishItems,
 } from '@/lib/home-display';
-import { MY_COSMETICS_DEFAULT_PARAMS } from '@/lib/collect-route-image-urls';
+import {
+  MY_COSMETICS_DEFAULT_PARAMS,
+  WISH_LIST_DEFAULT_PARAMS,
+} from '@/lib/collect-route-image-urls';
 import { useWarmHomeSectionImages } from '@/hooks/useWarmRouteImages';
 import { useBottomNavVisibility } from '@/providers/bottom-nav-visibility';
 import { cn } from '@/lib/utils';
@@ -124,6 +128,11 @@ function MainPageContent() {
     isLoading: isMyCosmeticsLoading,
     isFetching: isMyCosmeticsFetching,
   } = useSearchMyCosmetics(MY_COSMETICS_DEFAULT_PARAMS);
+  const {
+    data: wishListResponse,
+    isLoading: isWishListLoading,
+    isFetching: isWishListFetching,
+  } = useReadWishCosmeticsList(WISH_LIST_DEFAULT_PARAMS);
   const { data: profileResponse } = useGetMyProfile();
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
@@ -137,12 +146,15 @@ function MainPageContent() {
     return fromHome || null;
   }, [homeData?.profileUrl, profileResponse?.result]);
 
-  const needsMyCosmeticsForHome =
-    (homeData?.myList?.length ?? 0) > 0;
+  const needsMyCosmeticsForHome = (homeData?.myList?.length ?? 0) > 0;
+  const needsWishListForHome = (homeData?.wishList?.length ?? 0) > 0;
   const isMyCosmeticsPending =
     needsMyCosmeticsForHome &&
     (isMyCosmeticsLoading || isMyCosmeticsFetching);
-  const isMainQueriesPending = isHomeLoading || isMyCosmeticsPending;
+  const isWishListPending =
+    needsWishListForHome && (isWishListLoading || isWishListFetching);
+  const isMainQueriesPending =
+    isHomeLoading || isMyCosmeticsPending || isWishListPending;
   /** SSR·클라이언트 캐시 불일치로 스켈레톤/본문이 갈라지는 hydration 방지 */
   const hasMounted = React.useSyncExternalStore(
     () => () => {},
@@ -188,8 +200,12 @@ function MainPageContent() {
   }, [hasServerNickname, isHomeError, isHomeLoading, router]);
 
   const wishItems: Detail[] = React.useMemo(
-    () => mapHomeDetailRows(homeData?.wishList),
-    [homeData?.wishList],
+    () =>
+      mapHomeWishItems(
+        homeData?.wishList,
+        wishListResponse?.result?.content,
+      ),
+    [homeData?.wishList, wishListResponse?.result?.content],
   );
 
   const myPouchItems: Detail[] = React.useMemo(
