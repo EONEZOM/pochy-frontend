@@ -3,10 +3,20 @@ import { toBlob } from 'html-to-image';
 import {
   uploadPouchShareImageMultipart,
 } from '@/lib/pouch-api';
+import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import { embedPngTextChunks } from '@/lib/png-text-metadata';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
+import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
 
 export const POUCH_SHARE_CAPTURE_ID = 'pouch-share-capture';
+
+/** `PouchShareView` 캡처 영역 — Figma 그라데이션과 동일 */
+export const POUCH_SHARE_GRADIENT_TOP = '#FFFFFF';
+export const POUCH_SHARE_GRADIENT_BOTTOM = '#FFC6EC';
+export const POUCH_SHARE_CAPTURE_WIDTH = 400;
+export const POUCH_SHARE_CAPTURE_HEIGHT = 474;
+
+const POUCH_SHARE_GRADIENT_STOP = 0.31;
 
 export const buildPouchDetailShareUrl = (
   origin: string,
@@ -122,6 +132,96 @@ const waitForPaintFrames = (frameCount = 2): Promise<void> => {
   });
 };
 
+const paintPouchShareGradient = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+): void => {
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, POUCH_SHARE_GRADIENT_TOP);
+  gradient.addColorStop(POUCH_SHARE_GRADIENT_STOP, POUCH_SHARE_GRADIENT_TOP);
+  gradient.addColorStop(1, POUCH_SHARE_GRADIENT_BOTTOM);
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+};
+
+const loadImageForPouchShare = (src: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.decoding = 'async';
+    const handleLoad = () => {
+      img.removeEventListener('load', handleLoad);
+      img.removeEventListener('error', handleError);
+      resolve(img);
+    };
+    const handleError = () => {
+      img.removeEventListener('load', handleLoad);
+      img.removeEventListener('error', handleError);
+      reject(new Error('파우치 이미지를 불러오지 못했습니다.'));
+    };
+    img.addEventListener('load', handleLoad);
+    img.addEventListener('error', handleError);
+    img.src = src;
+  });
+};
+
+/** 다운로드·캡처 실패 시 — 그라데이션 배경 + 파우치 합성 이미지 */
+export const composePouchShareImageWithBackground = async (
+  imageUrl: string,
+  options?: {
+    width?: number;
+    height?: number;
+    pixelRatio?: number;
+  },
+): Promise<Blob> => {
+  const width = options?.width ?? POUCH_SHARE_CAPTURE_WIDTH;
+  const height = options?.height ?? POUCH_SHARE_CAPTURE_HEIGHT;
+  const pixelRatio = options?.pixelRatio ?? 2;
+  const displaySrc = resolveDisplayImageSrc(
+    resolveMediaUrl(resolveFeedPouchImageUrl(imageUrl)),
+  );
+  if (!displaySrc) {
+    throw new Error('공유 이미지를 생성하지 못했습니다.');
+  }
+
+  const img = await loadImageForPouchShare(displaySrc);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(width * pixelRatio);
+  canvas.height = Math.round(height * pixelRatio);
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('공유 이미지를 생성하지 못했습니다.');
+  }
+
+  ctx.scale(pixelRatio, pixelRatio);
+  paintPouchShareGradient(ctx, width, height);
+
+  const maxWidth = width * 0.85;
+  const maxHeight = height * 0.72;
+  const naturalWidth = img.naturalWidth || img.width;
+  const naturalHeight = img.naturalHeight || img.height;
+  if (naturalWidth <= 0 || naturalHeight <= 0) {
+    throw new Error('공유 이미지를 생성하지 못했습니다.');
+  }
+  const scale = Math.min(maxWidth / naturalWidth, maxHeight / naturalHeight, 1);
+  const drawWidth = naturalWidth * scale;
+  const drawHeight = naturalHeight * scale;
+  const offsetX = (width - drawWidth) / 2;
+  const offsetY = (height - drawHeight) / 2;
+  ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((value) => {
+      resolve(value);
+    }, 'image/png');
+  });
+  if (!blob) {
+    throw new Error('공유 이미지를 생성하지 못했습니다.');
+  }
+  return blob;
+};
+
 export const captureShareElement = async (
   element: HTMLElement,
 ): Promise<Blob> => {
@@ -131,7 +231,6 @@ export const captureShareElement = async (
     cacheBust: true,
     pixelRatio: 2,
     skipFonts: true,
-    backgroundColor: null as unknown as string,
     fetchRequestInit: {
       credentials: 'same-origin',
     },

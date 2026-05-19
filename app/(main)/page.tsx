@@ -20,6 +20,7 @@ import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
 import {
   mapHomeMyPouchItems,
   mapHomeWishItems,
+  type HomeWishCarouselItem,
 } from '@/lib/home-display';
 import {
   MY_COSMETICS_DEFAULT_PARAMS,
@@ -199,7 +200,7 @@ function MainPageContent() {
     router.replace('/nickname');
   }, [hasServerNickname, isHomeError, isHomeLoading, router]);
 
-  const wishItems: Detail[] = React.useMemo(
+  const wishItems: HomeWishCarouselItem[] = React.useMemo(
     () =>
       mapHomeWishItems(
         homeData?.wishList,

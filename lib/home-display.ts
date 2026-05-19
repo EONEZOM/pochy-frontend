@@ -1,14 +1,30 @@
 import type { Detail, MyCosmeticsResponseDTO, ReadListDto } from '@/api/model';
 import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
 import { pickMyCosmeticsHomeThumbnailUrl } from '@/lib/my-cosmetics-display-image';
+import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import { buildMyCosmeticsByIdMap } from '@/lib/pouch-cosmetic-lookup';
-import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
+import {
+  pickWishCaptureImageUrl,
+  pickWishListThumbnailUrl,
+  pickWishOfficialImageUrl,
+} from '@/lib/wish-display-image';
 
 /** 홈 wishList — OpenAPI `Detail` 외 런타임 필드 */
 export type HomeWishListRow = Detail & {
   wishCosmeticsId?: number | string;
   productImageUrl?: string | null;
   captureImageUrl?: string | null;
+};
+
+/** 홈 위시 캐러셀 — 위시 목록 페이지와 동일한 official/capture fallback */
+export type HomeWishCarouselItem = Detail & {
+  officialImage: string;
+  captureImage: string;
+};
+
+const resolveHomeWishDisplayUrl = (raw?: string | null): string => {
+  return resolveDisplayImageSrc(resolveMediaUrl(raw)).trim();
 };
 
 export const parseHomeWishRowId = (row: HomeWishListRow): number | null => {
@@ -94,7 +110,7 @@ export const resolveHomeWishThumbnailUrl = (
 export const mapHomeWishItems = (
   rows: Detail[] | undefined,
   wishCosmetics: ReadListDto[] | undefined,
-): Detail[] => {
+): HomeWishCarouselItem[] => {
   const wishById = buildWishListByIdMap(wishCosmetics);
   const wishList = wishCosmetics ?? [];
 
@@ -105,13 +121,29 @@ export const mapHomeWishItems = (
       return [];
     }
 
-    const imageUrl = resolveHomeWishThumbnailUrl(
+    const lookup =
+      wishById.get(id) ??
+      (index >= 0 && index < wishList.length ? wishList[index] : undefined);
+    const officialImage = lookup ? pickWishOfficialImageUrl(lookup) : '';
+    const captureImage = lookup ? pickWishCaptureImageUrl(lookup) : '';
+    const thumbnail = resolveHomeWishThumbnailUrl(
       homeRow,
       wishById,
       index,
       wishList,
     );
-    return [{ id, imageUrl } satisfies Detail];
+    const imageUrl = resolveHomeWishDisplayUrl(
+      thumbnail || officialImage || captureImage,
+    );
+
+    return [
+      {
+        id,
+        imageUrl,
+        officialImage,
+        captureImage,
+      } satisfies HomeWishCarouselItem,
+    ];
   });
 };
 

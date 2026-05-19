@@ -14,11 +14,14 @@ import Link from 'next/link';
 import { ImageIcon } from 'lucide-react';
 
 import type { Detail } from '@/api/model';
+import { WishCardImage } from '@/components/wishlist/WishCardImage';
+import type { HomeWishCarouselItem } from '@/lib/home-display';
 import {
   resolveDisplayImageSrc,
   shouldBypassNextImageOptimizer,
 } from '@/lib/next-image-src';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
+import { urlReferencesNaverShoppingCdn } from '@/lib/wish-display-image';
 import { cn } from '@/lib/utils';
 import { useDragScroll } from '@/hooks/useDragScroll';
 import { usePrefetchDetailOnInteraction } from '@/hooks/usePrefetchDetailOnInteraction';
@@ -36,12 +39,20 @@ const TILE_FRAME_CLASS =
 const TILE_IMAGE_SHADOW_CLASS =
   'drop-shadow-[2px_2px_1px_rgba(0,0,0,0.25)]';
 
+type HomeSectionCarouselItem = Detail | HomeWishCarouselItem;
+
+const isHomeWishCarouselItem = (
+  item: HomeSectionCarouselItem,
+): item is HomeWishCarouselItem => {
+  return 'officialImage' in item && 'captureImage' in item;
+};
+
 type HomeSectionCarouselProps = {
   /** 섹션 순서(0=위시) — 상단 섹션·앞쪽 타일 이미지 우선 로드에 사용 */
   sectionIndex?: number;
   sectionTitle: string;
   showSkeleton: boolean;
-  items: Detail[];
+  items: HomeSectionCarouselItem[];
 };
 
 /** 홈 API `Detail.imageUrl`은 상대 경로일 수 있어 media-proxy 경유 표시 URL로 통일합니다. */
@@ -143,7 +154,10 @@ const shouldPreferUnoptimizedTile = (
   if (shouldBypassNextImageOptimizer(imageSrc)) {
     return true;
   }
-  return sectionIndex === 0;
+  if (sectionIndex === 0 && urlReferencesNaverShoppingCdn(imageSrc)) {
+    return true;
+  }
+  return sectionIndex !== 0;
 };
 
 const getItemDetailHref = (
@@ -222,19 +236,30 @@ export function HomeSectionCarousel({
           imageSrc,
         );
 
-        const tileContent = imageSrc ? (
-          <HomeSectionTileImage
-            src={imageSrc}
-            alt={`${sectionTitle} item`}
-            priority={priority}
-            fetchHigh={fetchHigh}
-            imageClassName={tileImageClassName}
-            preferUnoptimized={preferUnoptimized}
-            loading={priority ? 'eager' : 'lazy'}
-          />
-        ) : (
-          <TilePlaceholder />
-        );
+        const tileContent =
+          sectionIndex === 0 && isHomeWishCarouselItem(item) ? (
+            <WishCardImage
+              officialImage={item.officialImage}
+              captureImage={item.captureImage}
+              productName={sectionTitle}
+              fill
+              className={tileImageClassName}
+              priority={priority}
+              loading={priority ? 'eager' : 'lazy'}
+            />
+          ) : imageSrc ? (
+            <HomeSectionTileImage
+              src={imageSrc}
+              alt={`${sectionTitle} item`}
+              priority={priority}
+              fetchHigh={fetchHigh}
+              imageClassName={tileImageClassName}
+              preferUnoptimized={preferUnoptimized}
+              loading={priority ? 'eager' : 'lazy'}
+            />
+          ) : (
+            <TilePlaceholder />
+          );
 
         if (!detailHref) {
           return <HomeSectionTile key={itemKey}>{tileContent}</HomeSectionTile>;

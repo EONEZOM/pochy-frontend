@@ -10,6 +10,7 @@ import {
   POUCH_SHARE_CAPTURE_ID,
   buildPouchDetailShareUrl,
   captureShareElement,
+  composePouchShareImageWithBackground,
   ensureKakaoShareImageUrl,
   preparePouchSharePng,
   resolveKakaoFeedImageUrl,
@@ -55,18 +56,6 @@ export function PouchShareView({
     }
     await waitForCanvasImages(el);
     return captureShareElement(el);
-  };
-
-  const fetchCompositeImageBlob = async (imageSrc: string): Promise<Blob> => {
-    const response = await fetch(imageSrc, { credentials: 'same-origin' });
-    if (!response.ok) {
-      throw new Error('합성 이미지를 불러오지 못했습니다.');
-    }
-    const blob = await response.blob();
-    if (blob.size === 0) {
-      throw new Error('합성 이미지가 비어 있습니다.');
-    }
-    return blob;
   };
 
   const handleKakao = async () => {
@@ -124,10 +113,10 @@ export function PouchShareView({
       try {
         blob = await getCaptureBlob();
       } catch {
-        if (!displayImageUrl) {
+        if (!imageUrl?.trim()) {
           throw new Error('공유 이미지를 생성하지 못했습니다.');
         }
-        blob = await fetchCompositeImageBlob(displayImageUrl);
+        blob = await composePouchShareImageWithBackground(imageUrl);
       }
       const prepared = await preparePouchSharePng(blob, {
         pouchId,
