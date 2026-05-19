@@ -11,6 +11,7 @@ import type { PouchWappenDetailDto } from './pouchWappenDetailDto';
 export interface PouchDetailDto {
   pouchId?: number;
   name?: string;
+  pouchImageUrl?: string;
   cosmetics?: PouchItemDetailDto[];
   wappens?: PouchWappenDetailDto[];
 }

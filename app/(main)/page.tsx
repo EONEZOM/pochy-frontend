@@ -11,10 +11,16 @@ import { MainHomeBottomZipperWithLip } from '@/components/main/MainHomeBottomZip
 import { MainHomeTopZipperWithLogo } from '@/components/main/MainHomeTopZipperWithLogo';
 import { useGetHomeData } from '@/api/generated/home/home';
 import { useGetMyProfile } from '@/api/generated/member-controller/member-controller';
+import { useSearchMyCosmetics } from '@/api/generated/my-cosmetics-controller/my-cosmetics-controller';
 import { extractProfileImageUrl } from '@/lib/member-profile';
 import type { Detail } from '@/api/model';
 import { isPendingNicknameSetup } from '@/lib/pending-nickname-setup';
 import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
+import {
+  mapHomeDetailRows,
+  mapHomeMyPouchItems,
+} from '@/lib/home-display';
+import { MY_COSMETICS_DEFAULT_PARAMS } from '@/lib/collect-route-image-urls';
 import { useWarmHomeSectionImages } from '@/hooks/useWarmRouteImages';
 import { useBottomNavVisibility } from '@/providers/bottom-nav-visibility';
 import { cn } from '@/lib/utils';
@@ -40,16 +46,6 @@ const MAIN_HOME_GRADIENT_BG =
 
 const MAIN_HOME_LIST_LAYOUT =
   'flex min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-hidden overscroll-none';
-
-const mapHomeDetailRows = (rows: Detail[] | undefined): Detail[] => {
-  return (rows ?? []).flatMap((row) => {
-    const id = row.id;
-    if (id == null || !Number.isFinite(id)) {
-      return [];
-    }
-    return [{ id, imageUrl: String(row.imageUrl ?? '').trim() } satisfies Detail];
-  });
-};
 
 type MainHomeListViewProps = {
   showSkeleton: boolean;
@@ -123,6 +119,11 @@ function MainPageContent() {
     error: homeError,
     refetch: refetchHome,
   } = useGetHomeData();
+  const {
+    data: myCosmeticsResponse,
+    isLoading: isMyCosmeticsLoading,
+    isFetching: isMyCosmeticsFetching,
+  } = useSearchMyCosmetics(MY_COSMETICS_DEFAULT_PARAMS);
   const { data: profileResponse } = useGetMyProfile();
   const homeData = homeResponse?.result;
   const hasServerNickname = Boolean(homeData?.nickname?.trim());
@@ -136,7 +137,12 @@ function MainPageContent() {
     return fromHome || null;
   }, [homeData?.profileUrl, profileResponse?.result]);
 
-  const isMainQueriesPending = isHomeLoading;
+  const needsMyCosmeticsForHome =
+    (homeData?.myList?.length ?? 0) > 0;
+  const isMyCosmeticsPending =
+    needsMyCosmeticsForHome &&
+    (isMyCosmeticsLoading || isMyCosmeticsFetching);
+  const isMainQueriesPending = isHomeLoading || isMyCosmeticsPending;
   /** SSR·클라이언트 캐시 불일치로 스켈레톤/본문이 갈라지는 hydration 방지 */
   const hasMounted = React.useSyncExternalStore(
     () => () => {},
@@ -187,8 +193,12 @@ function MainPageContent() {
   );
 
   const myPouchItems: Detail[] = React.useMemo(
-    () => mapHomeDetailRows(homeData?.myList),
-    [homeData?.myList],
+    () =>
+      mapHomeMyPouchItems(
+        homeData?.myList,
+        myCosmeticsResponse?.result?.content,
+      ),
+    [homeData?.myList, myCosmeticsResponse?.result?.content],
   );
 
   const feedItems: Detail[] = React.useMemo(() => {
@@ -217,7 +227,7 @@ function MainPageContent() {
 
   useWarmHomeSectionImages(sections);
 
-  const showHomeSkeleton = !hasMounted || isHomeLoading;
+  const showHomeSkeleton = !hasMounted || isMainQueriesPending;
 
   const myListItems = myPouchItems;
   const feedListItems = feedItems;

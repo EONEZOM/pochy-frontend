@@ -6,11 +6,14 @@ import type {
 import {
   cosmeticNameBrandKey,
   dedupePouchDetailRowsByProduct,
-  getPouchRowMyCosmeticId,
   type PouchDetailEnrichedRow,
 } from '@/lib/pouch-cosmetic-lookup';
+
+type PouchItemWithCosmeticId = SharePouchItemDetailDto & {
+  cosmeticId?: number;
+};
 import { resolveStoredCosmeticCategories } from '@/lib/cosmetic-category-normalize';
-import { getCosmeticImageSrc } from '@/lib/pouch-canvas';
+import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
 import { pickMyCosmeticsStickerImageUrl } from '@/lib/my-cosmetics-display-image';
 import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
@@ -38,42 +41,122 @@ type FeedCategoryEntry = {
 };
 
 const resolveShareRowImageRaw = (item: SharePouchItemDetailDto): string => {
-  const productImageUrl = String(item.productImageUrl ?? '').trim();
+  const productImageUrl = resolveFeedPouchImageUrl(
+    String(item.productImageUrl ?? '').trim(),
+  );
   if (productImageUrl) {
     return productImageUrl;
   }
-  const imageUrl = String(item.imageUrl ?? '').trim();
+  const imageUrl = resolveFeedPouchImageUrl(String(item.imageUrl ?? '').trim());
   if (imageUrl) {
     return imageUrl;
   }
-  return pickMyCosmeticsStickerImageUrl({
-    imgUrl: item.imgUrl,
-    captureUrl: item.captureUrl,
-  });
+  return resolveFeedPouchImageUrl(
+    pickMyCosmeticsStickerImageUrl({
+      imgUrl: item.imgUrl,
+      captureUrl: item.captureUrl,
+    }),
+  );
 };
 
-export const buildFeedCosmeticsImageMaps = (
+const isSharePouchRowId = (
+  item: SharePouchItemDetailDto,
+  candidateId: number,
+): boolean => {
+  const rowId = item.id;
+  return rowId != null && rowId > 0 && rowId === candidateId;
+};
+
+export const buildFeedCosmeticsMaps = (
   feedItems: FindFeedCosmeticsDto[] | undefined,
 ) => {
-  const byCosmeticId = new Map<number, string>();
-  const byNameBrand = new Map<string, string>();
+  const byCosmeticId = new Map<number, FindFeedCosmeticsDto>();
+  const byNameBrand = new Map<string, FindFeedCosmeticsDto>();
 
   for (const item of feedItems ?? []) {
-    const imageUrl = String(item.productImageUrl ?? '').trim();
-    if (!imageUrl) {
-      continue;
-    }
     const cosmeticId = item.cosmeticId;
     if (cosmeticId != null && cosmeticId > 0 && !byCosmeticId.has(cosmeticId)) {
-      byCosmeticId.set(cosmeticId, imageUrl);
+      byCosmeticId.set(cosmeticId, item);
     }
     const nameBrandKey = cosmeticNameBrandKey(item.brand, item.name);
     if (nameBrandKey != null && !byNameBrand.has(nameBrandKey)) {
-      byNameBrand.set(nameBrandKey, imageUrl);
+      byNameBrand.set(nameBrandKey, item);
     }
   }
 
   return { byCosmeticId, byNameBrand };
+};
+
+/**
+ * Feed cosmetics 조회용 내 화장품 ID.
+ * 파우치 행 `id`를 화장품 ID로 오인하지 않도록 Feed 맵으로 검증합니다.
+ */
+export const getShareRowFeedCosmeticId = (
+  item: SharePouchItemDetailDto,
+  feedByCosmeticId: Map<number, FindFeedCosmeticsDto>,
+): number | undefined => {
+  const resolveCandidate = (candidateId: number | undefined): number | undefined => {
+    if (candidateId == null || candidateId <= 0) {
+      return undefined;
+    }
+    if (isSharePouchRowId(item, candidateId)) {
+      return feedByCosmeticId.has(candidateId) ? candidateId : undefined;
+    }
+    return feedByCosmeticId.has(candidateId) ? candidateId : undefined;
+  };
+
+  const fromMyCosmeticId = resolveCandidate(item.myCosmeticId);
+  if (fromMyCosmeticId != null) {
+    return fromMyCosmeticId;
+  }
+
+  const fromCosmeticId = resolveCandidate(
+    (item as PouchItemWithCosmeticId).cosmeticId,
+  );
+  if (fromCosmeticId != null) {
+    return fromCosmeticId;
+  }
+
+  const rowId = item.id;
+  if (rowId != null && rowId > 0 && feedByCosmeticId.has(rowId)) {
+    return rowId;
+  }
+
+  return undefined;
+};
+
+const resolveShareFeedItem = (
+  item: SharePouchItemDetailDto,
+  feedMaps: ReturnType<typeof buildFeedCosmeticsMaps>,
+  feedItems: FindFeedCosmeticsDto[] | undefined,
+  cosmeticsCount: number,
+  index: number,
+): FindFeedCosmeticsDto | undefined => {
+  const lookupId = getShareRowFeedCosmeticId(item, feedMaps.byCosmeticId);
+  if (lookupId != null) {
+    const fromId = feedMaps.byCosmeticId.get(lookupId);
+    if (fromId) {
+      return fromId;
+    }
+  }
+
+  const nameBrandKey = cosmeticNameBrandKey(item.brand, item.name);
+  if (nameBrandKey != null) {
+    const fromNameBrand = feedMaps.byNameBrand.get(nameBrandKey);
+    if (fromNameBrand) {
+      return fromNameBrand;
+    }
+  }
+
+  if (
+    feedItems &&
+    feedItems.length === cosmeticsCount &&
+    feedItems[index] != null
+  ) {
+    return feedItems[index];
+  }
+
+  return undefined;
 };
 
 export const buildFeedCosmeticsCategoryMaps = (
@@ -111,6 +194,7 @@ export const buildFeedCosmeticsCategoryMaps = (
 const resolveShareRowCategories = (
   item: SharePouchItemDetailDto,
   feedCategories: ReturnType<typeof buildFeedCosmeticsCategoryMaps>,
+  feedByCosmeticId: Map<number, FindFeedCosmeticsDto>,
 ): { category?: string; subCategory?: string } => {
   const fromShareCategory = item.category?.trim();
   const fromShareSubCategory = item.subCategory?.trim();
@@ -121,9 +205,9 @@ const resolveShareRowCategories = (
     };
   }
 
-  const myCosmeticId = getPouchRowMyCosmeticId(item);
-  if (myCosmeticId != null) {
-    const fromFeed = feedCategories.byCosmeticId.get(myCosmeticId);
+  const feedCosmeticId = getShareRowFeedCosmeticId(item, feedByCosmeticId);
+  if (feedCosmeticId != null) {
+    const fromFeed = feedCategories.byCosmeticId.get(feedCosmeticId);
     if (fromFeed) {
       return fromFeed;
     }
@@ -140,51 +224,58 @@ const resolveShareRowCategories = (
   return {};
 };
 
-const resolveShareRowImageSrc = (
-  item: SharePouchItemDetailDto,
-  feedImages: ReturnType<typeof buildFeedCosmeticsImageMaps>,
-): string => {
+const resolveShareRowImageSrc = (item: SharePouchItemDetailDto): string => {
   const fromShare = resolveShareRowImageRaw(item);
-  if (fromShare) {
-    return getCosmeticImageSrc({ imgUrl: fromShare, captureUrl: fromShare });
+  if (!fromShare) {
+    return '';
   }
-
-  const myCosmeticId = getPouchRowMyCosmeticId(item);
-  if (myCosmeticId != null) {
-    const fromFeed = feedImages.byCosmeticId.get(myCosmeticId);
-    if (fromFeed) {
-      return getCosmeticImageSrc({ imgUrl: fromFeed, captureUrl: fromFeed });
-    }
-  }
-
-  const nameBrandKey = cosmeticNameBrandKey(item.brand, item.name);
-  if (nameBrandKey != null) {
-    const fromFeed = feedImages.byNameBrand.get(nameBrandKey);
-    if (fromFeed) {
-      return getCosmeticImageSrc({ imgUrl: fromFeed, captureUrl: fromFeed });
-    }
-  }
-
-  return '';
+  return resolveDisplayImageSrc(resolveMediaUrl(fromShare));
 };
 
 export const buildPouchPublicShareDisplayRows = (
   cosmetics: SharePouchItemDetailDto[] | undefined,
   feedItems: FindFeedCosmeticsDto[] | undefined,
 ): PouchPublicShareDisplayRow[] => {
-  const feedImages = buildFeedCosmeticsImageMaps(feedItems);
+  const feedMaps = buildFeedCosmeticsMaps(feedItems);
   const feedCategories = buildFeedCosmeticsCategoryMaps(feedItems);
-  const enriched: PouchDetailEnrichedRow[] = (cosmetics ?? []).map((item) => {
-    const mergedCategories = resolveShareRowCategories(item, feedCategories);
+  const cosmeticsList = cosmetics ?? [];
+  const enriched: PouchDetailEnrichedRow[] = cosmeticsList.map((item, index) => {
+    const feedItem = resolveShareFeedItem(
+      item,
+      feedMaps,
+      feedItems,
+      cosmeticsList.length,
+      index,
+    );
+    const mergedCategories = resolveShareRowCategories(
+      item,
+      feedCategories,
+      feedMaps.byCosmeticId,
+    );
     const { main, sub } = resolveStoredCosmeticCategories(
       mergedCategories.category,
       mergedCategories.subCategory,
     );
 
+    const feedImageUrl = resolveFeedPouchImageUrl(
+      String(feedItem?.productImageUrl ?? '').trim(),
+    );
+
     return {
       ...item,
-      imgUrl: item.imgUrl ?? undefined,
-      captureUrl: item.captureUrl ?? undefined,
+      brand: (item.brand ?? '').trim() || feedItem?.brand,
+      name: (item.name ?? '').trim() || feedItem?.name,
+      productImageUrl:
+        resolveFeedPouchImageUrl(String(item.productImageUrl ?? '').trim()) ||
+        feedImageUrl ||
+        undefined,
+      imgUrl:
+        resolveFeedPouchImageUrl(String(item.imgUrl ?? '').trim()) ||
+        feedImageUrl ||
+        undefined,
+      captureUrl:
+        resolveFeedPouchImageUrl(String(item.captureUrl ?? '').trim()) ||
+        undefined,
       category: main,
       subCategory: sub,
     };
@@ -192,7 +283,7 @@ export const buildPouchPublicShareDisplayRows = (
 
   return dedupePouchDetailRowsByProduct(enriched).map((item) => ({
     ...item,
-    imageSrc: resolveShareRowImageSrc(item, feedImages),
+    imageSrc: resolveShareRowImageSrc(item),
   }));
 };
 
@@ -202,7 +293,7 @@ export const resolvePouchPublicCompositeImageUrl = (
   const candidates = [shareDetail?.imageUrl, shareDetail?.pouchImageUrl];
 
   for (const raw of candidates) {
-    const trimmed = String(raw ?? '').trim();
+    const trimmed = resolveFeedPouchImageUrl(String(raw ?? '').trim());
     if (!trimmed) {
       continue;
     }

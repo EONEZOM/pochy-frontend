@@ -423,17 +423,63 @@ const POUCH_API_MEMO_MAX_LEN = 60;
 const sanitizeAddCosmeticItemsForApi = (
   items: AddCosmeticDetailDto[],
 ): AddCosmeticDetailDto[] => {
-  return items.map((item) => {
+  return items.flatMap((item) => {
+    const myCosmeticId = item.myCosmeticId;
+    if (myCosmeticId == null || !Number.isFinite(myCosmeticId) || myCosmeticId <= 0) {
+      return [];
+    }
     const memo = item.memo?.trim();
-    return {
-      myCosmeticId: item.myCosmeticId,
-      xpoint: Math.max(0, Math.round(item.xpoint ?? 0)),
-      ypoint: Math.max(0, Math.round(item.ypoint ?? 0)),
-      zindex: Math.max(1, Math.round(item.zindex ?? 1)),
-      size: Math.max(1, Math.round(item.size ?? DEFAULT_LAYER_SIZE)),
-      rotationAngle: Math.round(item.rotationAngle ?? 0),
-      ...(memo ? { memo: memo.slice(0, POUCH_API_MEMO_MAX_LEN) } : {}),
-    };
+    return [
+      {
+        myCosmeticId,
+        xpoint: Math.max(0, Math.round(item.xpoint ?? 0)),
+        ypoint: Math.max(0, Math.round(item.ypoint ?? 0)),
+        zindex: Math.max(1, Math.round(item.zindex ?? 1)),
+        size: Math.max(1, Math.round(item.size ?? DEFAULT_LAYER_SIZE)),
+        rotationAngle: Math.round(item.rotationAngle ?? 0),
+        ...(memo ? { memo: memo.slice(0, POUCH_API_MEMO_MAX_LEN) } : {}),
+      },
+    ];
+  });
+};
+
+const sanitizeWappenItemsForApi = (
+  items: WappenItemDto[],
+): WappenItemDto[] => {
+  return items.flatMap((item) => {
+    const wappenId = item.wappenId;
+    if (wappenId == null || !Number.isFinite(wappenId) || wappenId <= 0) {
+      return [];
+    }
+    return [
+      {
+        wappenId,
+        xpoint: Math.max(0, Math.round(item.xpoint ?? 0)),
+        ypoint: Math.max(0, Math.round(item.ypoint ?? 0)),
+        zindex: Math.max(1, Math.round(item.zindex ?? 1)),
+        size: Math.max(1, Math.round(item.size ?? DEFAULT_LAYER_SIZE)),
+        rotationAngle: Math.round(item.rotationAngle ?? 0),
+      },
+    ];
+  });
+};
+
+const sanitizeWappenListForApi = (items: WappenDto[]): WappenDto[] => {
+  return items.flatMap((item) => {
+    const wappenId = item.wappenId;
+    if (wappenId == null || !Number.isFinite(wappenId) || wappenId <= 0) {
+      return [];
+    }
+    return [
+      {
+        wappenId,
+        xpoint: Math.max(0, Math.round(item.xpoint ?? 0)),
+        ypoint: Math.max(0, Math.round(item.ypoint ?? 0)),
+        zindex: Math.max(1, Math.round(item.zindex ?? 1)),
+        size: Math.max(1, Math.round(item.size ?? DEFAULT_LAYER_SIZE)),
+        rotationAngle: Math.round(item.rotationAngle ?? 0),
+      },
+    ];
   });
 };
 
@@ -450,9 +496,10 @@ export const buildCombinedAddDto = ({
     },
   };
 
-  if (wappenItems.length > 0) {
+  const sanitizedWappens = sanitizeWappenItemsForApi(wappenItems);
+  if (sanitizedWappens.length > 0) {
     payload.wappenList = {
-      items: wappenItems,
+      items: sanitizedWappens,
     };
   }
 
@@ -480,8 +527,9 @@ export const buildPouchUpdateDto = ({
     payload.theme = trimmedName;
   }
 
-  if (wappenList.length > 0) {
-    payload.wappenList = wappenList;
+  const sanitizedWappens = sanitizeWappenListForApi(wappenList);
+  if (sanitizedWappens.length > 0) {
+    payload.wappenList = sanitizedWappens;
   }
 
   return payload;
@@ -618,7 +666,7 @@ export const getWappenImageSrc = (wappen: {
   if (url) {
     return toPouchLayerImageSrc(url);
   }
-  if (wappen.wappenId != null) {
+  if (wappen.wappenId != null && wappen.wappenId > 0) {
     return `/api/wappens/${wappen.wappenId}/image`;
   }
   return '';

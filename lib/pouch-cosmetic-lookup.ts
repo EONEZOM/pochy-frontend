@@ -11,6 +11,11 @@ import type {
   PouchDetailDto,
   PouchItemDetailDto,
 } from '@/api/model';
+import { resolveStoredCosmeticCategories } from '@/lib/cosmetic-category-normalize';
+import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
+import { getCosmeticImageSrc } from '@/lib/pouch-canvas';
+import { resolveDisplayImageSrc } from '@/lib/next-image-src';
+import { resolveMediaUrl } from '@/lib/resolve-media-url';
 
 export const POUCH_COSMETIC_SEARCH_SIZE = 100;
 
@@ -18,40 +23,72 @@ type PouchItemWithCosmeticId = PouchItemDetailDto & {
   cosmeticId?: number;
 };
 
+/** GET /api/pouches/{id} 응답에 OpenAPI 미반영 이미지·식별 필드가 올 수 있음 */
+export type PouchItemWithMedia = PouchItemDetailDto & {
+  cosmeticId?: number;
+  imgUrl?: string | null;
+  captureUrl?: string | null;
+  productImageUrl?: string | null;
+  imageUrl?: string | null;
+};
+
+const resolvePouchRowApiImageFields = (
+  item: PouchItemWithMedia,
+): { imgUrl?: string; captureUrl?: string } => {
+  const productImageUrl = resolveFeedPouchImageUrl(
+    String(item.productImageUrl ?? '').trim(),
+  );
+  const imageUrl = resolveFeedPouchImageUrl(String(item.imageUrl ?? '').trim());
+  const imgUrl =
+    resolveFeedPouchImageUrl(String(item.imgUrl ?? '').trim()) ||
+    productImageUrl ||
+    imageUrl ||
+    undefined;
+  const captureUrl =
+    resolveFeedPouchImageUrl(String(item.captureUrl ?? '').trim()) || undefined;
+
+  return { imgUrl, captureUrl };
+};
+
 const isPouchRowId = (item: PouchItemDetailDto, candidateId: number): boolean => {
   const rowId = item.id;
   return rowId != null && rowId > 0 && rowId === candidateId;
 };
 
+/** API 필드에서 읽은 내 화장품 ID 후보 (검증 전) */
+export const getPouchRowMyCosmeticIdCandidate = (
+  item: PouchItemDetailDto,
+): number | undefined => {
+  const myCosmeticId = item.myCosmeticId;
+  if (myCosmeticId != null && myCosmeticId > 0) {
+    return myCosmeticId;
+  }
+  const cosmeticId = (item as PouchItemWithCosmeticId).cosmeticId;
+  if (cosmeticId != null && cosmeticId > 0) {
+    return cosmeticId;
+  }
+  return undefined;
+};
+
 /**
- * 파우치 행의 내 화장품 ID (myCosmeticId 우선, 런타임 cosmeticId 폴백).
- * 행 id와 동일한 값은 파우치 아이템 PK일 수 있어 상세 API(/api/my-cosmetics/{id}) 호출에서 제외합니다.
+ * 검증된 내 화장품 ID — lookup 맵에 있을 때만 반환.
+ * 행 id와 같은 후보는 파우치 아이템 PK일 수 있어 맵에 없으면 제외합니다.
  */
 export const getPouchRowMyCosmeticId = (
   item: PouchItemDetailDto,
   listMap?: Map<number, MyCosmeticsResponseDTO>,
 ): number | undefined => {
-  const myCosmeticId = item.myCosmeticId;
-  if (myCosmeticId != null && myCosmeticId > 0) {
-    if (isPouchRowId(item, myCosmeticId)) {
-      if (listMap?.has(myCosmeticId)) {
-        return myCosmeticId;
-      }
-      return undefined;
-    }
-    return myCosmeticId;
+  const candidate = getPouchRowMyCosmeticIdCandidate(item);
+  if (candidate == null) {
+    return undefined;
   }
-  const cosmeticId = (item as PouchItemWithCosmeticId).cosmeticId;
-  if (cosmeticId != null && cosmeticId > 0) {
-    if (isPouchRowId(item, cosmeticId)) {
-      if (listMap?.has(cosmeticId)) {
-        return cosmeticId;
-      }
-      return undefined;
-    }
-    return cosmeticId;
+  if (isPouchRowId(item, candidate) && !listMap?.has(candidate)) {
+    return undefined;
   }
-  return undefined;
+  if (listMap != null && !listMap.has(candidate)) {
+    return undefined;
+  }
+  return candidate;
 };
 
 export type PouchDetailEnrichedRow = PouchItemDetailDto & {
@@ -120,10 +157,17 @@ export const collectPouchCosmeticLookupIds = (
 ): number[] => {
   const ids = new Set<number>();
   for (const item of pouchCosmetics ?? []) {
-    const myCosmeticId = getPouchRowMyCosmeticId(item, listMap);
-    if (myCosmeticId != null) {
-      ids.add(myCosmeticId);
+    const candidate = getPouchRowMyCosmeticIdCandidate(item);
+    if (candidate == null) {
+      continue;
     }
+    if (isPouchRowId(item, candidate) && !listMap?.has(candidate)) {
+      continue;
+    }
+    if (listMap?.has(candidate)) {
+      continue;
+    }
+    ids.add(candidate);
   }
   return [...ids];
 };
@@ -198,11 +242,13 @@ export const resolvePouchRowCosmeticMatch = (
   cosmeticsById: Map<number, MyCosmeticsResponseDTO>,
   cosmeticsByNameBrand: Map<string, MyCosmeticsResponseDTO>,
 ): MyCosmeticsResponseDTO | undefined => {
-  const myCosmeticId = getPouchRowMyCosmeticId(item, cosmeticsById);
-  if (myCosmeticId != null) {
-    const byId = cosmeticsById.get(myCosmeticId);
-    if (byId) {
-      return byId;
+  const candidate = getPouchRowMyCosmeticIdCandidate(item);
+  if (candidate != null) {
+    if (!isPouchRowId(item, candidate) || cosmeticsById.has(candidate)) {
+      const byId = cosmeticsById.get(candidate);
+      if (byId) {
+        return byId;
+      }
     }
   }
   const nameBrandKey = cosmeticNameBrandKey(item.brand, item.name);
@@ -212,6 +258,7 @@ export const resolvePouchRowCosmeticMatch = (
       return byNameBrand;
     }
   }
+
   const rowId = item.id;
   if (rowId != null && rowId > 0) {
     const byRowId = cosmeticsById.get(rowId);
@@ -219,6 +266,7 @@ export const resolvePouchRowCosmeticMatch = (
       return byRowId;
     }
   }
+
   return undefined;
 };
 
@@ -228,34 +276,86 @@ export const enrichPouchDetailRowWithCosmeticLookup = (
   cosmeticsById: Map<number, MyCosmeticsResponseDTO>,
   cosmeticsByNameBrand: Map<string, MyCosmeticsResponseDTO>,
 ): PouchDetailEnrichedRow => {
+  const mediaItem = item as PouchItemWithMedia;
+  const fromApi = resolvePouchRowApiImageFields(mediaItem);
   const matched = resolvePouchRowCosmeticMatch(
     item,
     cosmeticsById,
     cosmeticsByNameBrand,
   );
-  const linkCosmeticId =
-    matched?.id ?? getPouchRowMyCosmeticId(item, cosmeticsById);
+  const linkCosmeticId = matched?.id;
+
+  const rawCategory =
+    (item.category ?? '').trim() || matched?.category || undefined;
+  const rawSubCategory =
+    (item.subCategory ?? '').trim() || matched?.subCategory || undefined;
+  const { main, sub } = resolveStoredCosmeticCategories(
+    rawCategory,
+    rawSubCategory,
+  );
 
   return {
     ...item,
     brand: (item.brand ?? '').trim() || matched?.brand,
     name: (item.name ?? '').trim() || matched?.name,
-    category: item.category?.trim() || matched?.category,
-    subCategory: item.subCategory?.trim() || matched?.subCategory,
-    imgUrl: matched?.imgUrl,
-    captureUrl: matched?.captureUrl,
+    category: main,
+    subCategory: sub,
+    imgUrl: fromApi.imgUrl || matched?.imgUrl,
+    captureUrl: fromApi.captureUrl || matched?.captureUrl,
     linkCosmeticId:
       linkCosmeticId != null && linkCosmeticId > 0 ? linkCosmeticId : undefined,
   };
+};
+
+export type PouchDetailDisplayRow = PouchDetailEnrichedRow & {
+  imageSrc: string;
+};
+
+export const resolvePouchDetailRowImageSrc = (
+  item: PouchDetailEnrichedRow,
+): string => {
+  const fromLookup = getCosmeticImageSrc(item);
+  if (fromLookup) {
+    return fromLookup;
+  }
+
+  const fromApi = resolvePouchRowApiImageFields(item as PouchItemWithMedia);
+  const raw = fromApi.imgUrl || fromApi.captureUrl || '';
+  if (!raw) {
+    return '';
+  }
+
+  return resolveDisplayImageSrc(resolveMediaUrl(raw));
+};
+
+/** 파우치 상세 바텀시트용 — zindex 정렬·lookup·중복 제거·이미지 URL */
+export const buildPouchDetailDisplayRows = (
+  pouchCosmetics: PouchItemDetailDto[] | undefined,
+  cosmeticsById: Map<number, MyCosmeticsResponseDTO>,
+  cosmeticsByNameBrand: Map<string, MyCosmeticsResponseDTO>,
+): PouchDetailDisplayRow[] => {
+  const enriched = sortPouchCosmeticRowsByZindex(pouchCosmetics ?? []).map(
+    (item) =>
+      enrichPouchDetailRowWithCosmeticLookup(
+        item,
+        cosmeticsById,
+        cosmeticsByNameBrand,
+      ),
+  );
+
+  return dedupePouchDetailRowsByProduct(enriched).map((item) => ({
+    ...item,
+    imageSrc: resolvePouchDetailRowImageSrc(item),
+  }));
 };
 
 const resolvePouchProductDedupeKey = (item: PouchDetailEnrichedRow): string | null => {
   if (item.linkCosmeticId != null && item.linkCosmeticId > 0) {
     return `cosmetic:${item.linkCosmeticId}`;
   }
-  const myCosmeticId = getPouchRowMyCosmeticId(item);
-  if (myCosmeticId != null) {
-    return `my-cosmetic:${myCosmeticId}`;
+  const candidate = getPouchRowMyCosmeticIdCandidate(item);
+  if (candidate != null) {
+    return `my-cosmetic:${candidate}`;
   }
   return cosmeticNameBrandKey(item.brand, item.name);
 };

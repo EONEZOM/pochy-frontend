@@ -7,12 +7,11 @@ import { useGetPouchDetail } from '@/api/generated/pouch-controller/pouch-contro
 import type { PouchItemDetailDto } from '@/api/model';
 import { PouchSheetChrome } from '@/components/my-cosmetics/PouchSheetChrome';
 import {
-  dedupePouchDetailRowsByProduct,
-  enrichPouchDetailRowWithCosmeticLookup,
-  type PouchDetailEnrichedRow,
+  buildPouchDetailDisplayRows,
+  type PouchDetailDisplayRow,
   usePouchCosmeticsById,
 } from '@/lib/pouch-cosmetic-lookup';
-import { getCosmeticImageSrc } from '@/lib/pouch-canvas';
+import { resolveStoredCosmeticCategories } from '@/lib/cosmetic-category-normalize';
 import { CategoryFilterArea } from '@/components/wishlist/CategoryFilterArea';
 import {
   FILTER_CATEGORIES,
@@ -24,10 +23,6 @@ type PouchDetailBottomSheetProps = {
   pouchId: number;
   isExpanded: boolean;
   onExpandedChange: (isExpanded: boolean) => void;
-};
-
-type PouchDetailRow = PouchDetailEnrichedRow & {
-  imageSrc: string;
 };
 
 export function PouchDetailBottomSheet({
@@ -42,22 +37,18 @@ export function PouchDetailBottomSheet({
   const { data: pouchDetailData, isLoading: isPouchDetailLoading } =
     useGetPouchDetail(pouchId);
   const pouchCosmetics = pouchDetailData?.result?.cosmetics;
-  const { cosmeticsById, cosmeticsByNameBrand, isLoading: isCosmeticsLookupLoading } =
-    usePouchCosmeticsById(pouchCosmetics);
+  const {
+    cosmeticsById,
+    cosmeticsByNameBrand,
+    isLoading: isCosmeticsLookupLoading,
+  } = usePouchCosmeticsById(pouchCosmetics);
 
-  const pouchItems = useMemo((): PouchDetailRow[] => {
-    const cosmetics = pouchCosmetics ?? [];
-    const enriched = cosmetics.map((item) =>
-      enrichPouchDetailRowWithCosmeticLookup(
-        item,
-        cosmeticsById,
-        cosmeticsByNameBrand,
-      ),
+  const pouchItems = useMemo((): PouchDetailDisplayRow[] => {
+    return buildPouchDetailDisplayRows(
+      pouchCosmetics,
+      cosmeticsById,
+      cosmeticsByNameBrand,
     );
-    return dedupePouchDetailRowsByProduct(enriched).map((item) => ({
-      ...item,
-      imageSrc: getCosmeticImageSrc(item),
-    }));
   }, [cosmeticsById, cosmeticsByNameBrand, pouchCosmetics]);
 
   const activeSubCategories = useMemo(
@@ -69,10 +60,14 @@ export function PouchDetailBottomSheet({
 
   const filteredItems = useMemo(() => {
     return pouchItems.filter((item) => {
-      if (currentCategory !== 'All' && item.category !== currentCategory) {
+      const { main, sub } = resolveStoredCosmeticCategories(
+        item.category,
+        item.subCategory,
+      );
+      if (currentCategory !== 'All' && main !== currentCategory) {
         return false;
       }
-      if (currentSub !== 'All' && item.subCategory !== currentSub) {
+      if (currentSub !== 'All' && sub !== currentSub) {
         return false;
       }
       return true;
@@ -84,7 +79,9 @@ export function PouchDetailBottomSheet({
     setCurrentSub('All');
   };
 
-  const isLoading = isPouchDetailLoading || isCosmeticsLookupLoading;
+  const hasPouchCosmetics = (pouchCosmetics?.length ?? 0) > 0;
+  const isLoading =
+    isPouchDetailLoading || (hasPouchCosmetics && isCosmeticsLookupLoading);
 
   return (
     <PouchSheetChrome
@@ -116,17 +113,12 @@ export function PouchDetailBottomSheet({
           </p>
         ) : (
           <ul className="mx-auto flex w-full flex-col gap-4">
-            {filteredItems.map((item) => {
+            {filteredItems.map((item, index) => {
               const linkCosmeticId = item.linkCosmeticId;
               const rowKey =
-                linkCosmeticId != null && linkCosmeticId > 0
-                  ? `cosmetic-${linkCosmeticId}`
-                  : item.id != null
-                    ? `pouch-item-${item.id}`
-                    : null;
-              if (rowKey == null) {
-                return null;
-              }
+                item.id != null
+                  ? `pouch-item-${item.id}`
+                  : `pouch-item-${item.myCosmeticId ?? index}`;
               const memo = (item.memo ?? '').trim();
               const rowContent = (
                 <div className="flex w-full items-start gap-4">
@@ -179,7 +171,7 @@ export function PouchDetailItemText({
   item,
   memo,
 }: {
-  item: Pick<PouchDetailRow, 'brand' | 'name'>;
+  item: Pick<PouchDetailDisplayRow, 'brand' | 'name'>;
   memo: string;
 }) {
   return (

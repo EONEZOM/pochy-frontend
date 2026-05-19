@@ -808,16 +808,6 @@ export function PouchItemsPicker({
   const handleLayersChange = useCallback((nextLayers: CanvasLayer[]) => {
     hasUserEditedCanvasRef.current = true;
     setLayers(nextLayers);
-    setSelectedOrder((prev) => {
-      const cosmeticIdsOnCanvas = new Set(
-        nextLayers
-          .filter(
-            (layer) => layer.kind === 'cosmetic' && layer.myCosmeticId != null,
-          )
-          .map((layer) => layer.myCosmeticId as number),
-      );
-      return prev.filter((id) => cosmeticIdsOnCanvas.has(id));
-    });
   }, []);
 
   const handleNavigateToScanRegister = () => {

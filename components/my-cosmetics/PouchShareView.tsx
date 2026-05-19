@@ -18,6 +18,7 @@ import {
   shareImageFile,
   shareViaKakao,
 } from '@/lib/pouch-share';
+import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
 import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 
@@ -40,7 +41,9 @@ export function PouchShareView({
     if (!imageUrl?.trim()) {
       return null;
     }
-    const resolved = resolveDisplayImageSrc(resolveMediaUrl(imageUrl));
+    const resolved = resolveDisplayImageSrc(
+      resolveMediaUrl(resolveFeedPouchImageUrl(imageUrl)),
+    );
     return resolved || null;
   }, [imageUrl]);
 

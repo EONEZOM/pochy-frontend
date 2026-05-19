@@ -1,7 +1,7 @@
 /**
  * 파우치 생성·수정용 API 래퍼
  *
- * - 생성(POST): multipart `request`(CombinedAddDto) + optional `pouchImage`
+ * - 생성(POST): multipart `request`(CombinedAddDto) + `pouchImage`(필수)
  * - 수정(PATCH): multipart `request`(PouchUpdateDto) + optional `pouchImage`
  * - Spring @RequestPart 패턴 (위시 화장품 수정과 동일)
  *

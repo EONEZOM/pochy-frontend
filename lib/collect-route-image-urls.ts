@@ -89,10 +89,10 @@ export const collectHomeRouteImageUrls = (qc: QueryClient): string[] => {
   for (const row of home?.result?.myList ?? []) {
     const id = row.id;
     const cosmetic = id != null ? myCosmeticsById.get(id) : undefined;
-    const imageUrl = cosmetic
+    const rawImageUrl = cosmetic
       ? pickMyCosmeticsHomeThumbnailUrl(cosmetic, row.imageUrl)
       : String(row.imageUrl ?? '').trim();
-    pushUnique(out, seen, imageUrl);
+    pushUnique(out, seen, resolveFeedPouchImageUrl(rawImageUrl));
   }
 
   for (const row of home?.result?.feed ?? []) {
