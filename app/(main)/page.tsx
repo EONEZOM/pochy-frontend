@@ -59,7 +59,7 @@ type MainHomeListViewProps = {
 };
 
 /**
- * 위시·마이·피드가 하나라도 있을 때
+ * 위시·마이 파우치 중 하나라도 있을 때
  * - 상단 인사·프로필: Figma 1:3210
  * - 섹션 리스트: Figma 1:3190
  */
@@ -245,21 +245,18 @@ function MainPageContent() {
 
   const showHomeSkeleton = !hasMounted || isMainQueriesPending;
 
-  const myListItems = myPouchItems;
-  const feedListItems = feedItems;
-  const isAllSectionsEmpty =
-    !showHomeSkeleton &&
-    wishItems.length === 0 &&
-    myListItems.length === 0 &&
-    feedListItems.length === 0;
+  const hasHomeListContent =
+    wishItems.length > 0 || myPouchItems.length > 0;
+  const shouldShowMainHomeEmptyView =
+    !showHomeSkeleton && !hasHomeListContent;
 
   React.useEffect(() => {
-    setHomeEmptyViewActive(isAllSectionsEmpty);
+    setHomeEmptyViewActive(shouldShowMainHomeEmptyView);
 
     return () => {
       setHomeEmptyViewActive(false);
     };
-  }, [isAllSectionsEmpty, setHomeEmptyViewActive]);
+  }, [shouldShowMainHomeEmptyView, setHomeEmptyViewActive]);
 
   if (isHomeError) {
     return (
@@ -301,7 +298,7 @@ function MainPageContent() {
           nickname={homeData?.nickname}
           profileUrl={headerProfileUrl}
         />
-      ) : isAllSectionsEmpty ? (
+      ) : shouldShowMainHomeEmptyView ? (
         <main className="flex min-h-0 flex-1 flex-col overflow-hidden overscroll-none bg-white p-0">
           <MainHomeEmptyView />
         </main>

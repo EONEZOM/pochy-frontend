@@ -8,7 +8,7 @@ import { MainHomeTopZipperWithLogo } from '@/components/main/MainHomeTopZipperWi
 import { cn } from '@/lib/utils';
 
 /**
- * Figma `홈 - 처음` (1:3590) — 위시·마이·피드에 등록된 항목이 없을 때 메인 전체
+ * Figma `홈 - 처음` (1:3590) — 위시·마이 파우치에 등록된 항목이 없을 때 메인 전체
  * https://www.figma.com/design/ozRGHFE4rnqkqnikqCh7Pg/%ED%8F%AC%EC%B9%98-%EC%9E%84%EC%8B%9C?node-id=1-3590
  *
  * 레이어: 루트 배경 그라데이션 → 그 위에 지퍼·로고·그리드·립 (`public/figma/main/*`).

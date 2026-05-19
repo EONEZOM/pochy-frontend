@@ -135,8 +135,16 @@ const HomeSectionTile = ({ children, className }: HomeSectionTileProps) => {
   );
 };
 
-/** 파우치·피드 썸네일은 투명 PNG가 많아 최적화 비활성화 */
-const shouldPreferUnoptimizedTile = (sectionIndex: number) => sectionIndex !== 0;
+/** 위시(네이버 CDN)·파우치·피드 — Next 최적화 시 깨지는 경우 unoptimized */
+const shouldPreferUnoptimizedTile = (
+  sectionIndex: number,
+  imageSrc: string,
+) => {
+  if (shouldBypassNextImageOptimizer(imageSrc)) {
+    return true;
+  }
+  return sectionIndex === 0;
+};
 
 const getItemDetailHref = (
   sectionIndex: number,
@@ -209,7 +217,10 @@ export function HomeSectionCarousel({
         const itemKey = `${sectionTitle}-${item.id ?? item.imageUrl ?? index}`;
         const imageSrc = resolveDetailImageSrc(item.imageUrl);
         const tileImageClassName = getTileImageClassName(sectionIndex);
-        const preferUnoptimized = shouldPreferUnoptimizedTile(sectionIndex);
+        const preferUnoptimized = shouldPreferUnoptimizedTile(
+          sectionIndex,
+          imageSrc,
+        );
 
         const tileContent = imageSrc ? (
           <HomeSectionTileImage

@@ -107,14 +107,34 @@ export const preparePouchSharePng = async (
   return { blob: withMetadata, filename };
 };
 
+const waitForPaintFrames = (frameCount = 2): Promise<void> => {
+  return new Promise((resolve) => {
+    const tick = (remaining: number) => {
+      if (remaining <= 0) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(() => {
+        tick(remaining - 1);
+      });
+    };
+    tick(frameCount);
+  });
+};
+
 export const captureShareElement = async (
   element: HTMLElement,
 ): Promise<Blob> => {
+  await waitForPaintFrames(2);
+
   const blob = await toBlob(element, {
     cacheBust: true,
     pixelRatio: 2,
     skipFonts: true,
     backgroundColor: null as unknown as string,
+    fetchRequestInit: {
+      credentials: 'same-origin',
+    },
   });
   if (!blob) {
     throw new Error('공유 이미지를 생성하지 못했습니다.');

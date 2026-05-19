@@ -121,14 +121,13 @@ export function PouchShareView({
         pouchName,
       );
       let blob: Blob;
-      if (displayImageUrl) {
-        try {
-          blob = await fetchCompositeImageBlob(displayImageUrl);
-        } catch {
-          blob = await getCaptureBlob();
-        }
-      } else {
+      try {
         blob = await getCaptureBlob();
+      } catch {
+        if (!displayImageUrl) {
+          throw new Error('공유 이미지를 생성하지 못했습니다.');
+        }
+        blob = await fetchCompositeImageBlob(displayImageUrl);
       }
       const prepared = await preparePouchSharePng(blob, {
         pouchId,

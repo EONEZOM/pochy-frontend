@@ -22,6 +22,7 @@ import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
 import {
   buildWishListByIdMap,
   resolveHomeWishThumbnailUrl,
+  type HomeWishListRow,
 } from '@/lib/home-display';
 import {
   getMyCosmeticsWishCardImageProps,
@@ -86,13 +87,22 @@ export const collectHomeRouteImageUrls = (qc: QueryClient): string[] => {
     }
   }
 
-  const wishById = buildWishListByIdMap(
+  const wishListContent =
     qc.getQueryData<ApiResponseDTOSliceReadListDto>(
       getReadWishCosmeticsListQueryKey(WISH_LIST_DEFAULT_PARAMS),
-    )?.result?.content,
-  );
-  for (const row of home?.result?.wishList ?? []) {
-    pushUnique(out, seen, resolveHomeWishThumbnailUrl(row, wishById));
+    )?.result?.content ?? [];
+  const wishById = buildWishListByIdMap(wishListContent);
+  for (const [index, row] of (home?.result?.wishList ?? []).entries()) {
+    pushUnique(
+      out,
+      seen,
+      resolveHomeWishThumbnailUrl(
+        row as HomeWishListRow,
+        wishById,
+        index,
+        wishListContent,
+      ),
+    );
   }
 
   for (const row of home?.result?.myList ?? []) {

@@ -4,6 +4,27 @@ import { pickMyCosmeticsHomeThumbnailUrl } from '@/lib/my-cosmetics-display-imag
 import { buildMyCosmeticsByIdMap } from '@/lib/pouch-cosmetic-lookup';
 import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
 
+/** 홈 wishList — OpenAPI `Detail` 외 런타임 필드 */
+export type HomeWishListRow = Detail & {
+  wishCosmeticsId?: number | string;
+  productImageUrl?: string | null;
+  captureImageUrl?: string | null;
+};
+
+export const parseHomeWishRowId = (row: HomeWishListRow): number | null => {
+  const fromId = row.id;
+  if (typeof fromId === 'number' && Number.isFinite(fromId) && fromId > 0) {
+    return fromId;
+  }
+  if (typeof fromId === 'string') {
+    const parsed = Number.parseInt(fromId, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return parseWishCosmeticsId(row as ReadListDto);
+};
+
 export const parseWishCosmeticsId = (row: ReadListDto): number | null => {
   const raw = row.wishCosmeticsId;
   if (typeof raw === 'number' && Number.isFinite(raw)) {
@@ -31,8 +52,10 @@ export const buildWishListByIdMap = (
 
 /** 홈 wishList 행 → 표시용 썸네일 (imageUrl · productImageUrl · 위시 목록 API 순) */
 export const resolveHomeWishThumbnailUrl = (
-  row: Detail,
+  row: HomeWishListRow,
   wishById: Map<number, ReadListDto>,
+  index?: number,
+  wishList?: ReadListDto[],
 ): string => {
   const fromHome = String(row.imageUrl ?? '').trim();
   if (fromHome) {
@@ -44,17 +67,27 @@ export const resolveHomeWishThumbnailUrl = (
     return fromRowFields;
   }
 
-  const id = row.id;
-  if (id == null || !Number.isFinite(id)) {
-    return '';
+  const id = parseHomeWishRowId(row);
+  if (id != null) {
+    const fromWishList = wishById.get(id);
+    if (fromWishList) {
+      const fromLookup = pickWishListThumbnailUrl(fromWishList);
+      if (fromLookup) {
+        return fromLookup;
+      }
+    }
   }
 
-  const fromWishList = wishById.get(id);
-  if (!fromWishList) {
-    return '';
+  if (
+    index != null &&
+    index >= 0 &&
+    wishList &&
+    index < wishList.length
+  ) {
+    return pickWishListThumbnailUrl(wishList[index]);
   }
 
-  return pickWishListThumbnailUrl(fromWishList);
+  return '';
 };
 
 /** 홈 wishList는 imageUrl이 비어 있을 수 있어 위시 목록 API로 썸네일을 보강합니다. */
@@ -63,14 +96,21 @@ export const mapHomeWishItems = (
   wishCosmetics: ReadListDto[] | undefined,
 ): Detail[] => {
   const wishById = buildWishListByIdMap(wishCosmetics);
+  const wishList = wishCosmetics ?? [];
 
-  return (rows ?? []).flatMap((row) => {
-    const id = row.id;
-    if (id == null || !Number.isFinite(id)) {
+  return (rows ?? []).flatMap((row, index) => {
+    const homeRow = row as HomeWishListRow;
+    const id = parseHomeWishRowId(homeRow);
+    if (id == null) {
       return [];
     }
 
-    const imageUrl = resolveHomeWishThumbnailUrl(row, wishById);
+    const imageUrl = resolveHomeWishThumbnailUrl(
+      homeRow,
+      wishById,
+      index,
+      wishList,
+    );
     return [{ id, imageUrl } satisfies Detail];
   });
 };
