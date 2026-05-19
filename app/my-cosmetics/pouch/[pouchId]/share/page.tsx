@@ -4,7 +4,9 @@ import { Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 
+import { getPouchDetail } from '@/api/generated/pouch-controller/pouch-controller';
 import { PouchShareView } from '@/components/my-cosmetics/PouchShareView';
+import { resolvePouchCompositeImageUrl } from '@/lib/feed-display-image';
 import { fetchPouchList, getPouchListQueryKey } from '@/lib/pouch-setup';
 
 function PouchSharePageContent() {
@@ -19,22 +21,31 @@ function PouchSharePageContent() {
     enabled: Number.isFinite(pouchId) && pouchId > 0,
   });
 
+  const { data: detailData, isLoading: isDetailLoading } = useQuery({
+    queryKey: ['/api/pouches', pouchId],
+    queryFn: () => getPouchDetail(pouchId),
+    enabled: Number.isFinite(pouchId) && pouchId > 0,
+  });
+
   const pouch = data?.result?.pouchList?.find((p) => p.pouchId === pouchId);
-  const pouchName = nameFromQuery || pouch?.name?.trim() || '\uC0C8 \uD30C\uC6B0\uCE58';
-  const imageUrl = pouch?.imageUrl ?? null;
+  const pouchName = nameFromQuery || pouch?.name?.trim() || '새 파우치';
+  const imageUrl = resolvePouchCompositeImageUrl(
+    detailData?.result ?? null,
+    pouch ?? null,
+  );
 
   if (!Number.isFinite(pouchId) || pouchId <= 0) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-500">
-        {'\uD30C\uC6B0\uCE58\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.'}
+        파우치를 찾지 못했습니다.
       </div>
     );
   }
 
-  if (isLoading) {
+  if (isLoading || isDetailLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-500">
-        {'\uBD88\uB7EC\uC624\uB294 \uC911...'}
+        불러오는 중...
       </div>
     );
   }
@@ -49,7 +60,7 @@ export default function PouchSharePage() {
     <Suspense
       fallback={
         <div className="flex min-h-[60vh] items-center justify-center text-sm text-zinc-500">
-          {'\uBD88\uB7EC\uC624\uB294 \uC911...'}
+          불러오는 중...
         </div>
       }
     >

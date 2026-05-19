@@ -70,7 +70,9 @@ import { readPouchCanvasState } from '@/lib/pouch-canvas-state';
 import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import {
   buildSelectionRestoreFromPouchDetailWithLookup,
+  enrichPouchDetailRowWithCosmeticLookup,
   POUCH_COSMETIC_SEARCH_SIZE,
+  resolvePouchDetailRowImageSrc,
   resolvePouchRowCosmeticMatch,
   sanitizeSelectedOrder,
   sortPouchCosmeticRowsByZindex,
@@ -186,6 +188,7 @@ const mergeEditRestorePayload = (
     }
     return {
       ...layer,
+      src: layer.src?.trim() ? layer.src : cached.src,
       x: layer.x,
       y: layer.y,
       zIndex: layer.zIndex,
@@ -258,7 +261,12 @@ const buildEditRestorePayload = (
     if (linkId == null || linkId <= 0) {
       continue;
     }
-    const src = getCosmeticImageSrc(matched);
+    const enriched = enrichPouchDetailRowWithCosmeticLookup(
+      c,
+      cosmeticsById,
+      cosmeticsByNameBrand,
+    );
+    const src = resolvePouchDetailRowImageSrc(enriched);
     if (!src) {
       continue;
     }

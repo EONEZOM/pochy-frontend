@@ -18,6 +18,7 @@ import {
   shareImageFile,
   shareViaKakao,
 } from '@/lib/pouch-share';
+import { waitForCanvasImages } from '@/lib/pouch-canvas';
 import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
 import { resolveDisplayImageSrc } from '@/lib/next-image-src';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
@@ -52,7 +53,20 @@ export function PouchShareView({
     if (!el) {
       throw new Error('공유 영역을 찾지 못했습니다.');
     }
+    await waitForCanvasImages(el);
     return captureShareElement(el);
+  };
+
+  const fetchCompositeImageBlob = async (imageSrc: string): Promise<Blob> => {
+    const response = await fetch(imageSrc, { credentials: 'same-origin' });
+    if (!response.ok) {
+      throw new Error('합성 이미지를 불러오지 못했습니다.');
+    }
+    const blob = await response.blob();
+    if (blob.size === 0) {
+      throw new Error('합성 이미지가 비어 있습니다.');
+    }
+    return blob;
   };
 
   const handleKakao = async () => {
@@ -101,12 +115,21 @@ export function PouchShareView({
   const handleDownload = async () => {
     setIsProcessing(true);
     try {
-      const blob = await getCaptureBlob();
       const linkUrl = buildPouchDetailShareUrl(
         window.location.origin,
         pouchId,
         pouchName,
       );
+      let blob: Blob;
+      if (displayImageUrl) {
+        try {
+          blob = await fetchCompositeImageBlob(displayImageUrl);
+        } catch {
+          blob = await getCaptureBlob();
+        }
+      } else {
+        blob = await getCaptureBlob();
+      }
       const prepared = await preparePouchSharePng(blob, {
         pouchId,
         pouchName,
@@ -164,6 +187,7 @@ export function PouchShareView({
             <img
               src={displayImageUrl}
               alt={pouchName}
+              crossOrigin="anonymous"
               className="relative z-10 max-h-[min(42vh,360px)] w-auto max-w-[85%] object-contain"
             />
           ) : (

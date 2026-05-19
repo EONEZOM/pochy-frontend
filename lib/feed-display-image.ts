@@ -108,3 +108,25 @@ export const resolveFeedPouchImageUrl = (
 
   return transformPouchThumbWebpToOriginalPng(trimmed);
 };
+
+type PouchCompositeImageSource = {
+  pouchImageUrl?: string | null;
+  imageUrl?: string | null;
+} | null | undefined;
+
+/** 파우치 합성 이미지 URL — 상세 pouchImageUrl 우선, 없으면 목록 imageUrl */
+export const resolvePouchCompositeImageUrl = (
+  detail?: PouchCompositeImageSource,
+  listRow?: { imageUrl?: string | null } | null,
+): string | null => {
+  const raw =
+    detail?.pouchImageUrl?.trim() ||
+    detail?.imageUrl?.trim() ||
+    listRow?.imageUrl?.trim() ||
+    '';
+  if (!raw) {
+    return null;
+  }
+  const resolved = resolveFeedPouchImageUrl(raw);
+  return resolved || null;
+};
