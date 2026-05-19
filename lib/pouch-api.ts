@@ -175,16 +175,34 @@ export const createPouchMultipart = async ({
   pouchImage,
 }: CreatePouchMultipartPayload): Promise<ApiResponseDTOString> => {
   const formData = new FormData();
-  appendJsonRequestPart(formData, request);
 
   if (pouchImage) {
     const file = await toPouchImageFile(pouchImage);
     formData.append('pouchImage', file, file.name);
   }
 
+  appendJsonRequestPart(formData, request);
+
   return customInstance({
     url: '/api/pouches',
     method: 'POST',
+    data: formData,
+    timeout: POUCH_MULTIPART_TIMEOUT_MS,
+  });
+};
+
+/** PATCH /api/pouches/{pouchId}/image — 합성 이미지만 업로드 */
+export const uploadPouchCompositeImageMultipart = async (
+  pouchId: number,
+  pouchImage: File | Blob,
+): Promise<ApiResponseDTOString> => {
+  const formData = new FormData();
+  const file = await toPouchImageFile(pouchImage);
+  formData.append('pouchImage', file, file.name);
+
+  return customInstance({
+    url: `/api/pouches/${pouchId}/image`,
+    method: 'PATCH',
     data: formData,
     timeout: POUCH_MULTIPART_TIMEOUT_MS,
   });
@@ -196,12 +214,13 @@ export const updatePouchMultipart = async (
   { request, pouchImage }: UpdatePouchMultipartPayload,
 ): Promise<ApiResponseDTOPouchUpdateDto> => {
   const formData = new FormData();
-  appendJsonRequestPart(formData, request);
 
   if (pouchImage) {
     const file = await toPouchImageFile(pouchImage);
     formData.append('pouchImage', file, file.name);
   }
+
+  appendJsonRequestPart(formData, request);
 
   return customInstance({
     url: `/api/pouches/${pouchId}`,

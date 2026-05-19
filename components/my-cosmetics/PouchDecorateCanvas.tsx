@@ -253,9 +253,15 @@ export const PouchDecorateCanvas = forwardRef<
       return;
     }
     const { width, height } = el.getBoundingClientRect();
-    if (width > 0 && height > 0) {
-      setCanvasRect({ width, height });
+    if (width <= 0 || height <= 0) {
+      return;
     }
+    setCanvasRect((prev) => {
+      if (prev.width === width && prev.height === height) {
+        return prev;
+      }
+      return { width, height };
+    });
   }, []);
 
   useEffect(() => {

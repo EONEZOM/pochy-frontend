@@ -1,11 +1,14 @@
 import type {
   AddCosmeticDetailDto,
   ApiResponseDTOString,
+  CosmeticsDto,
+  PouchUpdateDto,
 } from '@/api/model';
 import { getPouchList } from '@/api/generated/pouch-controller/pouch-controller';
 import {
   createPouchMultipart,
   updatePouchMultipart,
+  uploadPouchCompositeImageMultipart,
 } from '@/lib/pouch-api';
 import {
   buildCombinedAddDto,
@@ -213,6 +216,46 @@ const resolvePouchIdFromListByName = async (
   return lookup();
 };
 
+const mapCosmeticItemsToCosmeticList = (
+  items: AddCosmeticDetailDto[],
+): CosmeticsDto[] => {
+  return items.map((item) => ({
+    cosmeticId: item.myCosmeticId,
+    memo: item.memo,
+    xpoint: item.xpoint,
+    ypoint: item.ypoint,
+    zindex: item.zindex,
+    size: item.size,
+    rotationAngle: item.rotationAngle,
+  }));
+};
+
+const isPouchImageUploadServerError = (err: unknown): boolean => {
+  if (typeof err !== 'object' || err === null) {
+    return false;
+  }
+  const status = (err as { response?: { status?: number } }).response?.status;
+  return status === 500 || status === 413 || status === 502 || status === 503;
+};
+
+const savePouchDecorationWithImage = async (
+  pouchId: number,
+  request: PouchUpdateDto,
+  compositeBlob: Blob,
+) => {
+  try {
+    await updatePouchMultipart(pouchId, {
+      request,
+      pouchImage: compositeBlob,
+    });
+  } catch (err) {
+    if (!isPouchImageUploadServerError(err)) {
+      throw err;
+    }
+    await uploadPouchCompositeImageMultipart(pouchId, compositeBlob);
+  }
+};
+
 const buildPouchCosmeticItems = (
   selections: PouchCosmeticSelection[],
 ): AddCosmeticDetailDto[] => {
@@ -369,35 +412,25 @@ export const savePouchDecoration = async (
       throw new Error('파우치에 넣을 화장품을 선택해 주세요.');
     }
 
-    const createRequest = buildCombinedAddDto({
-      pouchName: trimmedName,
-      cosmeticItems,
-      wappenItems: [],
-    });
+    // POST에 합성 이미지를 함께내면 백엔드·프록시에서 500이 나는 경우가 있어 메타데이터만 먼저 생성합니다.
     const createRes = await createPouchMultipart({
-      request: createRequest,
-      pouchImage: compositeBlob,
+      request: buildCombinedAddDto({
+        pouchName: trimmedName,
+        cosmeticItems,
+        wappenItems,
+      }),
     });
     pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
 
-    if (wappenItems.length > 0) {
-      const cosmeticList = cosmeticItems.map((item) => ({
-        cosmeticId: item.myCosmeticId,
-        memo: item.memo,
-        xpoint: item.xpoint,
-        ypoint: item.ypoint,
-        zindex: item.zindex,
-        size: item.size,
-        rotationAngle: item.rotationAngle,
-      }));
-      await updatePouchMultipart(pouchId, {
-        request: buildPouchUpdateDto({
-          pouchName: trimmedName,
-          cosmeticList,
-          wappenList: wappenItems,
-        }),
-      });
-    }
+    await savePouchDecorationWithImage(
+      pouchId,
+      buildPouchUpdateDto({
+        pouchName: trimmedName,
+        cosmeticList: mapCosmeticItemsToCosmeticList(cosmeticItems),
+        wappenList: wappenItems,
+      }),
+      compositeBlob,
+    );
   } else {
     const { cosmeticList: layerCosmeticList, wappenList } = layersToUpdatePayload(
       layers,
@@ -424,10 +457,7 @@ export const savePouchDecoration = async (
       cosmeticList,
       wappenList,
     });
-    await updatePouchMultipart(pouchId, {
-      request: updateRequest,
-      pouchImage: compositeBlob,
-    });
+    await savePouchDecorationWithImage(pouchId, updateRequest, compositeBlob);
   }
 
   savePendingPouchId(pouchId);

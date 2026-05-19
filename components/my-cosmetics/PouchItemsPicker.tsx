@@ -364,6 +364,7 @@ export function PouchItemsPicker({
   const [cacheRestorePayload, setCacheRestorePayload] =
     useState<EditRestorePayload | null>(null);
   const hasUserEditedCanvasRef = useRef(false);
+  const hasAppliedResumeDraftRef = useRef(false);
   const hasAppliedEditSelectionPreloadRef = useRef(false);
   const hasAppliedLayerRestoreRef = useRef(false);
   const pendingScaleSourceRectRef = useRef<CanvasRect | null>(null);
@@ -575,8 +576,20 @@ export function PouchItemsPicker({
     }
 
     if (isResume) {
-      applyDraft(draft);
+      if (!hasAppliedResumeDraftRef.current) {
+        hasAppliedResumeDraftRef.current = true;
+        applyDraft(draft);
+      }
       setIsDraftReady(true);
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('resume') === '1') {
+          params.delete('resume');
+          const query = params.toString();
+          const nextUrl = query ? `${pathname}?${query}` : pathname;
+          window.history.replaceState(null, '', nextUrl);
+        }
+      }
       return;
     }
 
@@ -591,7 +604,7 @@ export function PouchItemsPicker({
     }
 
     setIsDraftReady(true);
-  }, [applyDraft, isDraftFlow, isFresh, isResume]);
+  }, [applyDraft, isDraftFlow, isFresh, isResume, pathname]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const draftSnapshot = useMemo(
