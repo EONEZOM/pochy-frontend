@@ -18,6 +18,7 @@ import type { Detail } from '@/api/model';
 import type { MyCosmeticsResponseDTO } from '@/api/model';
 import type { ReadListDto } from '@/api/model';
 import { isPendingNicknameSetup } from '@/lib/pending-nickname-setup';
+import { resolveFeedPouchImageUrl } from '@/lib/feed-display-image';
 import { pickMyCosmeticsHomeThumbnailUrl } from '@/lib/my-cosmetics-display-image';
 import { pickWishListThumbnailUrl } from '@/lib/wish-display-image';
 import { useBottomNavVisibility } from '@/providers/bottom-nav-visibility';
@@ -91,16 +92,16 @@ function MainHomeListView({
           />
         </div>
 
-        <div className="relative z-20 mx-auto mt-3 grid min-h-0 w-full flex-1 grid-rows-3 gap-2 overflow-hidden sm:gap-2.5">
+        <div className="relative z-20 mx-auto mt-3 grid min-h-0 w-full flex-1 grid-rows-3 gap-2 overflow-x-hidden overflow-y-visible sm:gap-2.5">
           {sections.map((section, sectionIndex) => (
             <section
               key={section.title}
-              className="flex min-h-0 min-w-0 flex-col gap-0.5 overflow-hidden"
+              className="flex min-h-0 min-w-0 flex-col gap-0.5 overflow-x-hidden overflow-y-visible"
             >
               <h2 className="shrink-0 text-[15px] leading-5 font-bold text-[#161618] sm:text-[17px]">
                 {section.title}
               </h2>
-              <div className="flex min-h-0 flex-1 items-center overflow-hidden">
+              <div className="flex min-h-0 min-w-0 w-full flex-1 items-center overflow-x-hidden overflow-y-visible">
                 <HomeSectionCarousel
                   sectionIndex={sectionIndex}
                   sectionTitle={section.title}
@@ -159,13 +160,13 @@ function MainPageContent() {
   const isMainQueriesPending =
     isHomeLoading || isWishListLoading || isMyCosmeticsLoading;
   /** SSR·클라이언트 캐시 불일치로 스켈레톤/본문이 갈라지는 hydration 방지 */
-  const [hasMounted, setHasMounted] = React.useState(false);
+  const hasMounted = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   const [hasSlowMainLoadingTimedOut, setHasSlowMainLoadingTimedOut] =
     React.useState(false);
-
-  React.useEffect(() => {
-    setHasMounted(true);
-  }, []);
 
   React.useEffect(() => {
     if (!isMainQueriesPending) {
@@ -252,20 +253,32 @@ function MainPageContent() {
     });
   }, [homeData?.myList, myCosmeticsById]);
 
+  const feedItems: Detail[] = React.useMemo(() => {
+    return (homeData?.feed ?? []).flatMap((item) => {
+      const id = item.id;
+      if (id == null || !Number.isFinite(id)) {
+        return [];
+      }
+      return [
+        {
+          id,
+          imageUrl: resolveFeedPouchImageUrl(item.imageUrl),
+        } satisfies Detail,
+      ];
+    });
+  }, [homeData?.feed]);
+
   const sections: Array<{ title: string; items: Detail[] }> = [
     { title: 'Wish List', items: wishItems },
-    { title: 'My Cosmetics', items: myPouchItems },
-    { title: 'My Pouch', items: homeData?.feed ?? [] },
+    { title: 'My Pouch', items: myPouchItems },
+    { title: 'Feed', items: feedItems },
   ];
 
   const showHomeSkeleton =
-    !hasMounted ||
-    isHomeLoading ||
-    isWishListLoading ||
-    isMyCosmeticsLoading;
+    !hasMounted || isHomeLoading || isWishListLoading || isMyCosmeticsLoading;
 
   const myListItems = myPouchItems;
-  const feedListItems = homeData?.feed ?? [];
+  const feedListItems = feedItems;
   const isAllSectionsEmpty =
     !showHomeSkeleton &&
     wishItems.length === 0 &&

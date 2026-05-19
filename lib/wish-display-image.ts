@@ -12,6 +12,19 @@ export type WishReadImageRow = ReadListDto | ReadDetailDto;
  * 네이버 쇼핑 CDN 호스트 여부.
  * COEP 환경에서는 직접 로드가 막힐 수 있어 Next 이미지 최적화(동일 출처) 경로를 쓸 때 구분합니다.
  */
+const NAVER_PSTATIC_HOST_MARKERS = [
+  'shopping-phinf.pstatic.net',
+  'search.pstatic.net',
+  'phinf.pstatic.net',
+] as const;
+
+const MEDIA_PROXY_PATH = '/api/media-proxy';
+
+const stringContainsNaverPstaticHost = (value: string): boolean => {
+  const lower = value.toLowerCase();
+  return NAVER_PSTATIC_HOST_MARKERS.some((marker) => lower.includes(marker));
+};
+
 export const isNaverShoppingCdnUrl = (url: string): boolean => {
   try {
     const host = new URL(url.trim()).hostname.toLowerCase();
@@ -19,6 +32,43 @@ export const isNaverShoppingCdnUrl = (url: string): boolean => {
       host === 'shopping-phinf.pstatic.net' ||
       host === 'search.pstatic.net' ||
       host.endsWith('phinf.pstatic.net')
+    );
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * 네이버 쇼핑 CDN을 가리키는 URL인지 (직접 URL 또는 `/api/media-proxy?url=…` 래핑).
+ * API `imgUrl`이 media-proxy 형태로 저장되면 호스트만 보면 네이버로 인식되지 않습니다.
+ */
+export const urlReferencesNaverShoppingCdn = (raw: string): boolean => {
+  const trimmed = String(raw ?? '').trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  if (isNaverShoppingCdnUrl(trimmed)) {
+    return true;
+  }
+
+  if (stringContainsNaverPstaticHost(trimmed)) {
+    return true;
+  }
+
+  try {
+    const parsed = trimmed.startsWith('/')
+      ? new URL(trimmed, 'http://dummy.example')
+      : new URL(trimmed);
+    if (parsed.pathname !== MEDIA_PROXY_PATH) {
+      return false;
+    }
+    const inner = parsed.searchParams.get('url')?.trim();
+    if (!inner) {
+      return false;
+    }
+    return (
+      isNaverShoppingCdnUrl(inner) || stringContainsNaverPstaticHost(inner)
     );
   } catch {
     return false;

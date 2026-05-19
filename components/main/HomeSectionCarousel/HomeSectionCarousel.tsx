@@ -2,13 +2,13 @@
 
 /**
  * 홈 섹션 가로 리스트
- * - 데이터 있음 (Default): Figma `홈` 메인 리스트 (1:3190) — 타일 100×100, gap 12px, 라운드 12px, 흰 테두리·소프트 섀도
- *   https://www.figma.com/design/ozRGHFE4rnqkqnikqCh7Pg/%ED%8F%AC%EC%B9%98-%EC%9E%84%EC%8B%9C?node-id=1-3190
+ * - 데이터 있음 (Default): Figma `포치 공유용` 메인 리스트 (938:9532) — 타일 96×96, gap 8px, 라운드 8px, White 70 테두리·2단 shadow
+ *   https://www.figma.com/design/tPUqGheWyfmhpK5TU1RNhp/%ED%8F%AC%EC%B9%98-%EA%B3%B5%EC%9C%A0%EC%9A%A9?node-id=938-9532
  * - 데이터 없음 (Empty): 카드 없이 안내 문구만 표시
  * - 가로 스크롤 + 마우스 드래그로 이동 (`useDragScroll`)
  */
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ImageIcon } from 'lucide-react';
@@ -18,13 +18,22 @@ import {
   resolveDisplayImageSrc,
   shouldBypassNextImageOptimizer,
 } from '@/lib/next-image-src';
-import { buildPouchDetailPath } from '@/lib/pouch-setup';
 import { resolveMediaUrl } from '@/lib/resolve-media-url';
 import { cn } from '@/lib/utils';
 import { useDragScroll } from '@/hooks/useDragScroll';
 
-/** 메인 리스트 타일 (Figma 1:3190 기준) */
-const TILE_PX = 100;
+/** 메인 리스트 타일 (Figma 938:9532 기준) */
+const TILE_PX = 96;
+
+const TILE_SURFACE_CLASS = 'relative size-[96px] shrink-0';
+
+const TILE_IMAGE_LAYER_CLASS = 'absolute inset-0 overflow-hidden rounded-lg';
+
+const TILE_FRAME_CLASS =
+  'pointer-events-none absolute inset-0 z-10 rounded-lg border-2 border-white/70 shadow-[1px_1px_3px_0_rgba(0,0,0,0.25)]';
+
+const TILE_IMAGE_SHADOW_CLASS =
+  'drop-shadow-[2px_2px_1px_rgba(0,0,0,0.25)]';
 
 type HomeSectionCarouselProps = {
   /** 섹션 순서(0=위시) — 상단 섹션·앞쪽 타일 이미지 우선 로드에 사용 */
@@ -49,11 +58,11 @@ const TilePlaceholder = () => (
 const getTileImageClassName = (sectionIndex: number): string => {
   switch (sectionIndex) {
     case 1:
-      return 'object-contain p-2';
+      return cn('object-contain p-2', TILE_IMAGE_SHADOW_CLASS);
     case 2:
-      return 'object-contain p-2';
+      return cn('object-contain p-2', TILE_IMAGE_SHADOW_CLASS);
     default:
-      return 'object-cover';
+      return cn('object-cover', TILE_IMAGE_SHADOW_CLASS);
   }
 };
 
@@ -63,6 +72,8 @@ type HomeSectionTileImageProps = {
   priority?: boolean;
   fetchHigh?: boolean;
   imageClassName?: string;
+  /** 파우치·누끼 PNG 투명 영역 — Next 최적화 시 검정 배경으로 깨지는 것 방지 */
+  preferUnoptimized?: boolean;
 };
 
 const HomeSectionTileImage = ({
@@ -71,6 +82,7 @@ const HomeSectionTileImage = ({
   priority = false,
   fetchHigh = false,
   imageClassName = 'object-cover',
+  preferUnoptimized = false,
 }: HomeSectionTileImageProps) => {
   const [failed, setFailed] = useState(false);
 
@@ -85,7 +97,9 @@ const HomeSectionTileImage = ({
       fill
       sizes={`${TILE_PX}px`}
       className={imageClassName}
-      unoptimized={shouldBypassNextImageOptimizer(src)}
+      unoptimized={
+        preferUnoptimized || shouldBypassNextImageOptimizer(src)
+      }
       priority={priority}
       {...(fetchHigh ? { fetchPriority: 'high' as const } : {})}
       decoding="async"
@@ -98,10 +112,27 @@ const HomeSectionTileImage = ({
 };
 
 const scrollTrackClass =
-  'scrollbar-hide flex touch-pan-x gap-3 overflow-x-auto overflow-y-hidden [-webkit-overflow-scrolling:touch]';
+  'scrollbar-hide flex w-full min-w-0 touch-pan-x gap-2 overflow-x-auto overflow-y-visible py-3 [-webkit-overflow-scrolling:touch]';
 
-const tileClassName =
-  'relative size-[100px] shrink-0 overflow-hidden rounded-xl border-2 border-white bg-transparent shadow-[0_2px_10px_rgba(0,0,0,0.08)]';
+type HomeSectionTileProps = {
+  children: ReactNode;
+  className?: string;
+};
+
+/** Figma 938:9532 — 이미지 레이어 + White 70 프레임 오버레이 */
+const HomeSectionTile = ({ children, className }: HomeSectionTileProps) => {
+  return (
+    <div className={cn(TILE_SURFACE_CLASS, className)}>
+      <div className={TILE_IMAGE_LAYER_CLASS}>
+        <div className="relative size-full">{children}</div>
+      </div>
+      <div aria-hidden className={TILE_FRAME_CLASS} />
+    </div>
+  );
+};
+
+/** 파우치·피드 썸네일은 투명 PNG가 많아 최적화 비활성화 */
+const shouldPreferUnoptimizedTile = (sectionIndex: number) => sectionIndex !== 0;
 
 const getItemDetailHref = (
   sectionIndex: number,
@@ -117,7 +148,7 @@ const getItemDetailHref = (
     case 1:
       return `/my-cosmetics/${id}`;
     case 2:
-      return buildPouchDetailPath(id, '');
+      return null;
     default:
       return null;
   }
@@ -134,7 +165,7 @@ export function HomeSectionCarousel({
 
   const trackProps = {
     ref: registerRef,
-    onMouseDown: onDragStart,
+    onMouseDownCapture: onDragStart,
     className: cn(
       scrollTrackClass,
       'select-none',
@@ -146,12 +177,11 @@ export function HomeSectionCarousel({
     return (
       <div {...trackProps}>
         {Array.from({ length: 5 }).map((_, index) => (
-          <div
-            key={`${sectionTitle}-skeleton-${index}`}
-            className="text-mono-dark-gray/40 flex size-[100px] shrink-0 items-center justify-center rounded-xl border-2 border-white bg-transparent shadow-[0_2px_10px_rgba(0,0,0,0.08)]"
-          >
-            <ImageIcon className="size-4" />
-          </div>
+          <HomeSectionTile key={`${sectionTitle}-skeleton-${index}`}>
+            <div className="text-mono-dark-gray/40 flex size-full items-center justify-center bg-zinc-100">
+              <ImageIcon className="size-4" />
+            </div>
+          </HomeSectionTile>
         ))}
       </div>
     );
@@ -159,7 +189,7 @@ export function HomeSectionCarousel({
 
   if (items.length === 0) {
     return (
-      <p className="flex h-[100px] w-full items-center justify-center py-3 text-center text-lg leading-5 font-bold text-[#161618]">
+      <p className="flex h-[96px] w-full items-center justify-center py-3 text-center text-lg leading-5 font-bold text-[#161618]">
         아직 등록된 화장품이 없어요
       </p>
     );
@@ -175,6 +205,7 @@ export function HomeSectionCarousel({
         const itemKey = `${sectionTitle}-${item.id ?? item.imageUrl ?? index}`;
         const imageSrc = resolveDetailImageSrc(item.imageUrl);
         const tileImageClassName = getTileImageClassName(sectionIndex);
+        const preferUnoptimized = shouldPreferUnoptimizedTile(sectionIndex);
 
         const tileContent = imageSrc ? (
           <HomeSectionTileImage
@@ -183,17 +214,14 @@ export function HomeSectionCarousel({
             priority={priority}
             fetchHigh={fetchHigh}
             imageClassName={tileImageClassName}
+            preferUnoptimized={preferUnoptimized}
           />
         ) : (
           <TilePlaceholder />
         );
 
         if (!detailHref) {
-          return (
-            <div key={itemKey} className={tileClassName}>
-              {tileContent}
-            </div>
-          );
+          return <HomeSectionTile key={itemKey}>{tileContent}</HomeSectionTile>;
         }
 
         return (
@@ -205,9 +233,12 @@ export function HomeSectionCarousel({
                 event.preventDefault();
               }
             }}
-            className={cn(tileClassName, 'block transition-shadow hover:shadow-md')}
+            className={cn(TILE_SURFACE_CLASS, 'block')}
           >
-            {tileContent}
+            <div className={TILE_IMAGE_LAYER_CLASS}>
+              <div className="relative size-full">{tileContent}</div>
+            </div>
+            <div aria-hidden className={TILE_FRAME_CLASS} />
           </Link>
         );
       })}
