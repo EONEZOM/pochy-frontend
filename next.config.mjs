@@ -94,7 +94,7 @@ const nextConfig = {
     return {
       afterFiles: [
         {
-          // media-proxy만 BFF(Route Handler). /api/wappens 목록은 백엔드, /api/wappens/:id/image는 app/api Route Handler가 우선
+          // media-proxy·pouches·wappens/:id/image 등은 app/api Route Handler 우선. 그 외 /api/* 는 백엔드 rewrite
           source: '/api/:path((?!media-proxy).*)',
           destination: `${apiBase}/api/:path`,
         },

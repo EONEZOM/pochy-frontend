@@ -1,7 +1,6 @@
 import type {
   AddCosmeticDetailDto,
   ApiResponseDTOString,
-  CosmeticsDto,
   PouchUpdateDto,
 } from '@/api/model';
 import { getPouchList } from '@/api/generated/pouch-controller/pouch-controller';
@@ -216,20 +215,6 @@ const resolvePouchIdFromListByName = async (
   return lookup();
 };
 
-const mapCosmeticItemsToCosmeticList = (
-  items: AddCosmeticDetailDto[],
-): CosmeticsDto[] => {
-  return items.map((item) => ({
-    cosmeticId: item.myCosmeticId,
-    memo: item.memo,
-    xpoint: item.xpoint,
-    ypoint: item.ypoint,
-    zindex: item.zindex,
-    size: item.size,
-    rotationAngle: item.rotationAngle,
-  }));
-};
-
 const isPouchImageUploadServerError = (err: unknown): boolean => {
   if (typeof err !== 'object' || err === null) {
     return false;
@@ -412,25 +397,16 @@ export const savePouchDecoration = async (
       throw new Error('파우치에 넣을 화장품을 선택해 주세요.');
     }
 
-    // POST에 합성 이미지를 함께내면 백엔드·프록시에서 500이 나는 경우가 있어 메타데이터만 먼저 생성합니다.
+    // OpenAPI: POST /api/pouches — pouchImage·request 필수 (BFF: app/api/pouches/route.ts)
     const createRes = await createPouchMultipart({
       request: buildCombinedAddDto({
         pouchName: trimmedName,
         cosmeticItems,
         wappenItems,
       }),
+      pouchImage: compositeBlob,
     });
     pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
-
-    await savePouchDecorationWithImage(
-      pouchId,
-      buildPouchUpdateDto({
-        pouchName: trimmedName,
-        cosmeticList: mapCosmeticItemsToCosmeticList(cosmeticItems),
-        wappenList: wappenItems,
-      }),
-      compositeBlob,
-    );
   } else {
     const { cosmeticList: layerCosmeticList, wappenList } = layersToUpdatePayload(
       layers,

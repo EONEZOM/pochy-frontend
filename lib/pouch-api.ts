@@ -26,7 +26,6 @@ import { normalizeMultipartImageFile } from '@/lib/wish-cosmetics';
 
 const POUCH_MULTIPART_TIMEOUT_MS = 120_000;
 const POUCH_IMAGE_MAX_SIDE_PX = 1920;
-const POUCH_IMAGE_JPEG_QUALITY = 0.88;
 
 export type CreatePouchMultipartPayload = {
   request: CombinedAddDto;
@@ -66,8 +65,8 @@ const loadImageElement = (src: string): Promise<HTMLImageElement> => {
 };
 
 /**
- * 합성 캔버스 PNG(투명·고해상도)를 서버 업로드용 JPEG로 변환합니다.
- * 백엔드 이미지 처리·용량 제한으로 인한 500을 줄이기 위함입니다.
+ * 합성 캔버스(투명 PNG)를 업로드용 PNG로 리사이즈합니다.
+ * JPEG 변환 시 흰 배경이 깔리므로 알파 채널을 유지합니다.
  */
 export const normalizePouchImageForUpload = async (
   image: File | Blob,
@@ -95,27 +94,25 @@ export const normalizePouchImageForUpload = async (
       throw new Error('파우치 이미지 변환 캔버스를 초기화할 수 없습니다.');
     }
 
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-    const jpegBlob = await new Promise<Blob>((resolve, reject) => {
+    const pngBlob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob(
         (blob) => {
           if (!blob) {
-            reject(new Error('파우치 이미지를 JPEG로 변환하지 못했습니다.'));
+            reject(new Error('파우치 이미지를 PNG로 변환하지 못했습니다.'));
             return;
           }
           resolve(blob);
         },
-        'image/jpeg',
-        POUCH_IMAGE_JPEG_QUALITY,
+        'image/png',
       );
     });
 
     return normalizeMultipartImageFile(
-      new File([jpegBlob], 'pouch.jpg', { type: 'image/jpeg' }),
-      'pouch.jpg',
+      new File([pngBlob], 'pouch.png', { type: 'image/png' }),
+      'pouch.png',
     );
   } finally {
     URL.revokeObjectURL(objectUrl);
