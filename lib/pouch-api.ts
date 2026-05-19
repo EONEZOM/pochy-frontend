@@ -54,7 +54,9 @@ const appendJsonRequestPart = (
 ) => {
   formData.append(
     'request',
-    new Blob([JSON.stringify(request)], { type: 'application/json' }),
+    new File([JSON.stringify(request)], 'request.json', {
+      type: 'application/json',
+    }),
   );
 };
 
@@ -247,8 +249,6 @@ export const createPouchMultipart = async ({
 
   const formData = new FormData();
 
-  appendJsonRequestPart(formData, request);
-
   const file = isPouchPlaceholderImage(pouchImage)
     ? normalizeMultipartImageFile(
         pouchImage instanceof File
@@ -258,6 +258,7 @@ export const createPouchMultipart = async ({
       )
     : await toPouchImageFile(pouchImage);
   formData.append('pouchImage', file, file.name);
+  appendJsonRequestPart(formData, request);
 
   return customInstance({
     url: '/api/pouches',

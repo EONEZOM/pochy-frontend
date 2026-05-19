@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import {
   forwardProxyAuthHeaders,
   parseBackendProxyResponse,
-  proxyMultipartPost,
+  proxyRawMultipartPost,
 } from '@/lib/multipart-api-proxy';
 import { getServerApiBase } from '@/lib/server-api-base';
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     request.headers.get('Authorization') ? 'present' : 'missing',
   );
   console.log('[pouches][POST] backend URL:', BACKEND_URL);
-  return proxyMultipartPost(request, BACKEND_URL, 'pouches');
+  return proxyRawMultipartPost(request, BACKEND_URL, 'pouches');
 }
 
 export const maxDuration = 60;

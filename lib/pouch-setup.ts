@@ -381,7 +381,7 @@ export const savePouchDecoration = async (
     const createRequest = buildCombinedAddDto({
       pouchName: trimmedName,
       cosmeticItems,
-      wappenItems: [],
+      wappenItems,
     });
 
     const cosmeticList = buildCosmeticListForSave(
@@ -395,21 +395,36 @@ export const savePouchDecoration = async (
       wappenList: wappenItems,
     });
 
-    const createRes = await createPouchMultipart({
-      request: createRequest,
-      pouchImage: await createMinimalPouchPlaceholderImage(),
-    });
-    pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
-
-    await updatePouchMultipart(pouchId, { request: updateRequest });
+    let createRes: ApiResponseDTOString;
+    let usedPlaceholderImageFallback = false;
 
     try {
-      await uploadPouchCompositeImageMultipart(pouchId, compositeBlob);
+      createRes = await createPouchMultipart({
+        request: createRequest,
+        pouchImage: compositeBlob,
+      });
     } catch (err) {
       if (!isPouchImageUploadServerError(err)) {
         throw err;
       }
-      await savePouchDecorationWithImage(pouchId, updateRequest, compositeBlob);
+      createRes = await createPouchMultipart({
+        request: createRequest,
+        pouchImage: await createMinimalPouchPlaceholderImage(),
+      });
+      usedPlaceholderImageFallback = true;
+    }
+
+    pouchId = await resolvePouchIdAfterAdd(createRes, trimmedName);
+
+    if (usedPlaceholderImageFallback) {
+      try {
+        await uploadPouchCompositeImageMultipart(pouchId, compositeBlob);
+      } catch (err) {
+        if (!isPouchImageUploadServerError(err)) {
+          throw err;
+        }
+        await savePouchDecorationWithImage(pouchId, updateRequest, compositeBlob);
+      }
     }
   } else {
     const { wappenItems: wappenList } = layersToSavePayload(

@@ -173,6 +173,81 @@ export const parseBackendProxyResponse = async (
   );
 };
 
+/**
+ * multipart 본문을 파싱하지 않고 그대로 백엔드로 전달합니다.
+ * Vercel FormData 재조립 시 Spring @RequestPart가 깨지는 500을 방지합니다.
+ */
+export const proxyRawMultipartPost = async (
+  request: NextRequest,
+  backendUrl: string,
+  logLabel: string,
+): Promise<NextResponse> => {
+  try {
+    const contentType = request.headers.get('content-type');
+    const authorization = request.headers.get('Authorization');
+    const body = await request.arrayBuffer();
+
+    console.log(`[${logLabel}][POST] raw forward bytes=${body.byteLength}`);
+    console.log(`[${logLabel}][POST] Content-Type:`, contentType);
+    console.log(`[${logLabel}][POST] backend URL:`, backendUrl);
+
+    const response = await fetch(backendUrl, {
+      method: 'POST',
+      headers: {
+        ...(contentType ? { 'Content-Type': contentType } : {}),
+        ...(authorization ? { Authorization: authorization } : {}),
+      },
+      body,
+    });
+
+    return parseBackendProxyResponse(response, logLabel);
+  } catch (error) {
+    console.error(`[${logLabel}][POST] raw proxy error:`, error);
+    return NextResponse.json(
+      {
+        error: 'Proxy request failed',
+        detail: error instanceof Error ? error.message : String(error),
+      },
+      { status: 502 },
+    );
+  }
+};
+
+export const proxyRawMultipartPatch = async (
+  request: NextRequest,
+  backendUrl: string,
+  logLabel: string,
+): Promise<NextResponse> => {
+  try {
+    const contentType = request.headers.get('content-type');
+    const authorization = request.headers.get('Authorization');
+    const body = await request.arrayBuffer();
+
+    console.log(`[${logLabel}][PATCH] raw forward bytes=${body.byteLength}`);
+    console.log(`[${logLabel}][PATCH] Content-Type:`, contentType);
+
+    const response = await fetch(backendUrl, {
+      method: 'PATCH',
+      headers: {
+        ...(contentType ? { 'Content-Type': contentType } : {}),
+        ...(authorization ? { Authorization: authorization } : {}),
+      },
+      body,
+    });
+
+    return parseBackendProxyResponse(response, logLabel);
+  } catch (error) {
+    console.error(`[${logLabel}][PATCH] raw proxy error:`, error);
+    return NextResponse.json(
+      {
+        error: 'Proxy request failed',
+        detail: error instanceof Error ? error.message : String(error),
+      },
+      { status: 502 },
+    );
+  }
+};
+
 export const proxyMultipartPost = async (
   request: NextRequest,
   backendUrl: string,
@@ -224,17 +299,7 @@ export const proxyMultipartPatch = async (
     const contentType = request.headers.get('Content-Type') ?? '';
 
     if (contentType.includes('multipart/form-data')) {
-      const incomingFormData = await request.formData();
-      logIncomingMultipartFormData(incomingFormData, logLabel, 'PATCH');
-      await logJsonRequestPartPreview(incomingFormData, logLabel, 'PATCH');
-      const outgoingFormData =
-        await prepareMultipartFormDataForBackend(incomingFormData);
-      const response = await fetch(backendUrl, {
-        method: 'PATCH',
-        headers: forwardingHeaders,
-        body: outgoingFormData,
-      });
-      return parseBackendProxyResponse(response, logLabel);
+      return proxyRawMultipartPatch(request, backendUrl, logLabel);
     }
 
     const body = (await request.json()) as { request?: unknown };

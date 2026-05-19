@@ -1022,6 +1022,9 @@ export function PouchItemsPicker({
       await queryClient.invalidateQueries({
         queryKey: getPouchListQueryKey(),
       });
+      await queryClient.refetchQueries({
+        queryKey: getPouchListQueryKey(),
+      });
       await queryClient.invalidateQueries({
         queryKey: getSearchMyCosmeticsQueryKey({
           size: POUCH_COSMETIC_SEARCH_SIZE,
